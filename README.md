@@ -1,7 +1,7 @@
 # Extended OpenAI Conversation
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/outsharked/extended_openai_conversation_2)](https://github.com/outsharked/extended_openai_conversation_2/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/outsharked/extended-openai-conversation-2)](https://github.com/outsharked/extended-openai-conversation-2/releases)
 
 This is custom component of Home Assistant.
 
@@ -27,8 +27,8 @@ Since OpenAI models already know how to call service of Home Assistant in genera
 
 ### HACS (recommended)
 1. In Home Assistant, go to HACS > Integrations > ⋮ (top right) > Custom repositories
-2. Add repository URL `https://github.com/outsharked/extended_openai_conversation_2`, category `Integration`
-   - Or use this one-click link: [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=outsharked&repository=extended_openai_conversation_2&category=integration)
+2. Add repository URL `https://github.com/outsharked/extended-openai-conversation-2`, category `Integration`
+   - Or use this one-click link: [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=outsharked&repository=extended-openai-conversation-2&category=integration)
 3. Find "Extended OpenAI Conversation" in HACS and install it
 
 ### Manual
@@ -162,7 +162,7 @@ Below is a default configuration of functions.
 Specification is a [function schema](https://platform.openai.com/docs/guides/function-calling#defining-functions) defined by openai which will be passed to LLM as a tool.
 
 Reserved Parameters:
-- `delay`: If specified, function will be executed in background after a delay. See [example](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples/function/timer).
+- `delay`: If specified, function will be executed in background after a delay. See [example](https://github.com/outsharked/extended-openai-conversation-2/tree/develop/examples/function/timer).
   - ```yaml
     delay:
       type: object
@@ -196,7 +196,7 @@ Skills are loaded from `<config directory>/extended_openai_conversation/skills/`
    - Go to Settings > Voice Assistants > Edit Assistant > Options
    - Select skills to enable from the list
 
-For detailed information about creating and managing skills, see [Skills Documentation](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples/skills).
+For detailed information about creating and managing skills, see [Skills Documentation](https://github.com/outsharked/extended-openai-conversation-2/tree/develop/examples/skills).
 
 ## Function Usage
 This is an example of configuration of functions.
@@ -207,7 +207,7 @@ Then you will be able to let OpenAI call your function.
 ### 1. template
 #### 1-1. Get current weather
 
-For real world example, see [weather](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples/function/weather).<br/>
+For real world example, see [weather](https://github.com/outsharked/extended-openai-conversation-2/tree/develop/examples/function/weather).<br/>
 This is just an example from [OpenAI documentation](https://platform.openai.com/docs/guides/function-calling/common-use-cases)
 
 ```yaml
@@ -674,7 +674,7 @@ Get last changed date time of state | Get state at specific time
 ```
 
 ## Practical Usage
-See more practical [examples](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples).
+See more practical [examples](https://github.com/outsharked/extended-openai-conversation-2/tree/develop/examples).
 
 For comprehensive documentation, visit [https://extended-openai-conversation.mintlify.app](https://extended-openai-conversation.mintlify.app).
 

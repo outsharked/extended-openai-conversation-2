@@ -15,10 +15,10 @@
     "rest",
     "scrape"
   ],
-  "documentation": "https://github.com/outsharked/extended_openai_conversation_2",
+  "documentation": "https://github.com/outsharked/extended-openai-conversation-2",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/outsharked/extended_openai_conversation_2/issues",
+  "issue_tracker": "https://github.com/outsharked/extended-openai-conversation-2/issues",
   "requirements": [
     "openai>=2.21.0",
     "voluptuous-openapi"
