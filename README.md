@@ -55,11 +55,19 @@ This repository keeps the same integration domain (`extended_openai_conversation
 
 **If you installed the original manually** (copied the folder into `custom_components/` yourself, not through HACS): just overwrite `custom_components/extended_openai_conversation/` with this repository's version and restart Home Assistant. That's it.
 
-**If you installed the original via HACS:** The original is part of HACS's default/curated store (not a custom repository), so you won't find it under Settings > Custom repositories — it's just in your regular HACS Integrations list.
+**If you installed the original via HACS:** The original is part of HACS's default/curated store (not a custom repository), so you won't find it under Settings > Custom repositories — it's just in your regular HACS Integrations list, listed as "Available for download" if not yet installed:
+
+<img width="500" alt="extended_openai_conversation listed in HACS's default store" src="docs/images/migration/hacs-default-store-listing.png">
+
 1. In HACS > Integrations, find "extended_openai_conversation" (search for it if it's not immediately visible) and choose **Remove** from its ⋮ menu.
-2. HACS will warn that the integration is currently configured and refuse to remove it outright. **This is expected — don't be alarmed, and don't follow its suggestion to delete the configuration first** (doing that *would* wipe your API key and options). Instead, proceed through the warning to confirm the removal anyway.
-3. This only deletes the old code files and un-tracks it in HACS — again, your config entry is untouched. Devices & Services may briefly show the integration as missing/broken until step 4; that's expected.
-4. Add *this* repository as a custom repository and install it (see [Installation](#installation) above — this step, unlike removing the original, does use Custom repositories, since this repository isn't in the default store), then restart Home Assistant. Your existing config entry automatically picks up the new code — no need to re-add the integration or redo any settings.
+2. HACS will show a warning that the integration is currently configured, with two buttons: **Ignore** and **Navigate**:
+
+   <img width="500" alt="HACS warning: Integration is configured, with Ignore and Navigate buttons" src="docs/images/migration/hacs-integration-configured-warning.png">
+
+   **Click "Ignore"** — despite the label, this proceeds with the removal, not away from it. **Do not click "Navigate"**: that takes you to delete the config entry first, which *would* wipe your API key and options, and isn't necessary.
+3. A second dialog then asks you to confirm removal (something like "Do you really want to remove extended_openai_conversation?"). **Click "Yes, remove."**
+4. This only deletes the old code files and un-tracks it in HACS — your config entry is untouched throughout. Devices & Services may briefly show the integration as missing/broken until step 5; that's expected.
+5. Add *this* repository as a custom repository and install it (see [Installation](#installation) above — this step, unlike removing the original, does use Custom repositories, since this repository isn't in the default store), then restart Home Assistant. Your existing config entry automatically picks up the new code — no need to re-add the integration or redo any settings.
 
 ## Preparation
 After installed, you need to expose entities from "http://{your-home-assistant}/config/voice-assistants/expose".
