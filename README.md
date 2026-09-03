@@ -1,9 +1,15 @@
 # Extended OpenAI Conversation
+
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/outsharked/extended_openai_conversation_2)](https://github.com/outsharked/extended_openai_conversation_2/releases)
+
 This is custom component of Home Assistant.
+
+> **This is an actively maintained continuation of [jekalmin/extended_openai_conversation](https://github.com/jekalmin/extended_openai_conversation)**, published as an independent repository (not a GitHub fork) because the original project has gone unmaintained. Full credit for the original design and implementation goes to [@jekalmin](https://github.com/jekalmin). See [Fixes in this repository](#fixes-in-this-repository) below for what's changed.
 
 Derived from [OpenAI Conversation](https://www.home-assistant.io/integrations/openai_conversation/) with some new features such as call-service.
 
-📚 **[Documentation](https://extended-openai-conversation.mintlify.app)**
+📚 **[Documentation](https://extended-openai-conversation.mintlify.app)** *(hosted by the original project; generally still accurate, but may not reflect fixes made here)*
 
 ## Additional Features
 - Ability to call service of Home Assistant
@@ -15,10 +21,18 @@ Derived from [OpenAI Conversation](https://www.home-assistant.io/integrations/op
 ## How it works
 Extended OpenAI Conversation uses OpenAI API's feature of [function calling](https://platform.openai.com/docs/guides/function-calling) to call service of Home Assistant.
 
-Since OpenAI models already know how to call service of Home Assistant in general, you just have to let model know what devices you have by [exposing entities](https://github.com/jekalmin/extended_openai_conversation#preparation)
+Since OpenAI models already know how to call service of Home Assistant in general, you just have to let model know what devices you have by [exposing entities](#preparation)
 
 ## Installation
-1. Install via registering as a custom repository of HACS or by copying `extended_openai_conversation` folder into `<config directory>/custom_components`
+
+### HACS (recommended)
+1. In Home Assistant, go to HACS > Integrations > ⋮ (top right) > Custom repositories
+2. Add repository URL `https://github.com/outsharked/extended_openai_conversation_2`, category `Integration`
+   - Or use this one-click link: [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=outsharked&repository=extended_openai_conversation_2&category=integration)
+3. Find "Extended OpenAI Conversation" in HACS and install it
+
+### Manual
+1. Copy the `extended_openai_conversation` folder from `custom_components/` into `<config directory>/custom_components`
 2. Restart Home Assistant
 3. Go to Settings > Devices & Services.
 4. In the bottom right corner, select the Add Integration button.
@@ -34,6 +48,12 @@ Since OpenAI models already know how to call service of Home Assistant in genera
     <img width="500" alt="스크린샷 2023-10-07 오후 6 15 29" src="https://github.com/jekalmin/extended_openai_conversation/assets/2917984/0849d241-0b82-47f6-9956-fdb82d678aca">
 
     </details>
+
+## Fixes in this repository
+Changes made here on top of the last upstream state (`develop` branch of jekalmin/extended_openai_conversation), for anyone tracking why this exists:
+
+- **`openai` dependency version conflict** ([upstream #461](https://github.com/jekalmin/extended_openai_conversation/issues/461)): upstream pins `openai~=2.21.0`, which conflicts with recent Home Assistant Core releases that pin a newer exact `openai` version, causing the integration to fail installing its requirements. Relaxed to `openai>=2.21.0` (matching upstream's own proposed fix in [PR #463](https://github.com/jekalmin/extended_openai_conversation/pull/463), which was never merged) so Core's own pinned version satisfies the requirement.
+- **Missing `voluptuous-openapi` dependency**: the `ai_task` platform (`entity.py`/`ai_task.py`) imports `voluptuous_openapi`, but it was never declared in `manifest.json`, causing `ModuleNotFoundError: No module named 'voluptuous_openapi'` and a failed config entry setup. Added as a requirement.
 
 ## Preparation
 After installed, you need to expose entities from "http://{your-home-assistant}/config/voice-assistants/expose".
@@ -142,7 +162,7 @@ Below is a default configuration of functions.
 Specification is a [function schema](https://platform.openai.com/docs/guides/function-calling#defining-functions) defined by openai which will be passed to LLM as a tool.
 
 Reserved Parameters:
-- `delay`: If specified, function will be executed in background after a delay. See [example](https://github.com/jekalmin/extended_openai_conversation/tree/main/examples/function/timer).
+- `delay`: If specified, function will be executed in background after a delay. See [example](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples/function/timer).
   - ```yaml
     delay:
       type: object
@@ -176,7 +196,7 @@ Skills are loaded from `<config directory>/extended_openai_conversation/skills/`
    - Go to Settings > Voice Assistants > Edit Assistant > Options
    - Select skills to enable from the list
 
-For detailed information about creating and managing skills, see [Skills Documentation](https://github.com/jekalmin/extended_openai_conversation/tree/develop/examples/skills).
+For detailed information about creating and managing skills, see [Skills Documentation](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples/skills).
 
 ## Function Usage
 This is an example of configuration of functions.
@@ -187,7 +207,7 @@ Then you will be able to let OpenAI call your function.
 ### 1. template
 #### 1-1. Get current weather
 
-For real world example, see [weather](https://github.com/jekalmin/extended_openai_conversation/tree/main/examples/function/weather).<br/>
+For real world example, see [weather](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples/function/weather).<br/>
 This is just an example from [OpenAI documentation](https://platform.openai.com/docs/guides/function-calling/common-use-cases)
 
 ```yaml
@@ -240,7 +260,7 @@ This is just an example from [OpenAI documentation](https://platform.openai.com/
 
 #### 2-2. Send messages to another messenger
 
-In order to accomplish "send it to Line" like [example3](https://github.com/jekalmin/extended_openai_conversation#3-hook-with-custom-notify-function), register a notify function like below.
+In order to accomplish "send it to Line" like [example3](#3-hook-with-custom-notify-function), register a notify function like below.
 
 ```yaml
 - spec:
@@ -654,7 +674,7 @@ Get last changed date time of state | Get state at specific time
 ```
 
 ## Practical Usage
-See more practical [examples](https://github.com/jekalmin/extended_openai_conversation/tree/main/examples).
+See more practical [examples](https://github.com/outsharked/extended_openai_conversation_2/tree/develop/examples).
 
 For comprehensive documentation, visit [https://extended-openai-conversation.mintlify.app](https://extended-openai-conversation.mintlify.app).
 
