@@ -88,3 +88,11 @@ tests/
 - All I/O is async; use `async_add_executor_job()` for sync code
 - Custom exceptions in `exceptions.py` (EntityNotFound, CallServiceError, TokenLengthExceededError, etc.)
 - System prompt uses Jinja2 templates with context: `ha_name`, `exposed_entities`, `current_device_id`, `user_input`, `skills`
+
+## Release & Commit Conventions
+
+This is a public repo with real installs via HACS — commits and release notes are user-facing artifacts, not dev notes.
+
+- **Never put a private Claude session URL in a commit message on this repo.** A `Claude-Session: https://claude.ai/code/session_...` trailer is meaningless (and confusing) to anyone else, and it doesn't stay contained to dev process — GitHub's own UI surfaces the target commit's message in several places (the Tags list in particular, which falls back to showing the underlying commit when a tag has no separate annotated message), so a private link baked into a commit ends up effectively public. If attributing AI assistance in a commit at all, use the same generic, public-safe line PR descriptions already use: `🤖 Generated with [Claude Code](https://claude.com/claude-code)` — no session link, no `Co-Authored-By` block front-and-center. Keep it a brief trailing mention, never the first thing a reader sees.
+- **GitHub Release notes must lead with the actual user-facing content** — features and fixes, in plain language, referencing issue/PR numbers — covering everything since the *previous* release, not just the most recent commit's diff. Don't rely on `gh release create` without `--notes`, and don't let the release's summary just restate one commit's message: write it as if a user who never saw the commit history needs to understand what changed and why it matters to them.
+- When cutting a tag, prefer writing real `--notes` over `--generate-notes` for exactly this reason — auto-generated notes tend to surface raw commit/PR titles rather than a synthesized "what changed for users" summary.
