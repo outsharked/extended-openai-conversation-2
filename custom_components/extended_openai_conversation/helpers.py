@@ -91,8 +91,8 @@ def get_token_param_for_model(model: str) -> str:
 
 def convert_to_template(
     settings: Any,
+    hass: HomeAssistant,
     template_keys: list[str] | None = None,
-    hass: HomeAssistant | None = None,
 ) -> None:
     if template_keys is None:
         template_keys = ["data", "event_data", "target", "service"]
@@ -102,7 +102,7 @@ def convert_to_template(
 def _convert_to_template(
     settings: Any,
     template_keys: list[str],
-    hass: HomeAssistant | None,
+    hass: HomeAssistant,
     parents: list[str],
 ) -> None:
     if isinstance(settings, dict):

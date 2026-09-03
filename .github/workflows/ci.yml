@@ -26,6 +26,7 @@ jobs:
       openai-version: ${{ steps.get-versions.outputs.openai-version }}
       hassil-version: ${{ steps.get-versions.outputs.hassil-version }}
       home-assistant-intents-version: ${{ steps.get-versions.outputs.home-assistant-intents-version }}
+      gazetteer-matcher-version: ${{ steps.get-versions.outputs.gazetteer-matcher-version }}
       xmltodict-version: ${{ steps.get-versions.outputs.xmltodict-version }}
       beautifulsoup4-version: ${{ steps.get-versions.outputs.beautifulsoup4-version }}
       lxml-version: ${{ steps.get-versions.outputs.lxml-version }}
@@ -60,6 +61,10 @@ jobs:
           HA_INTENTS_VERSION=$(get_package_version "$CONVERSATION_MANIFEST" "home-assistant-intents")
           echo "home-assistant-intents-version=$HA_INTENTS_VERSION" >> $GITHUB_OUTPUT
           echo "home-assistant-intents version from HA core: $HA_INTENTS_VERSION"
+
+          GAZETTEER_MATCHER_VERSION=$(get_package_version "$CONVERSATION_MANIFEST" "gazetteer-matcher")
+          echo "gazetteer-matcher-version=$GAZETTEER_MATCHER_VERSION" >> $GITHUB_OUTPUT
+          echo "gazetteer-matcher version from HA core: $GAZETTEER_MATCHER_VERSION"
 
           # Get rest dependencies
           REST_MANIFEST=$(curl -fsSL https://raw.githubusercontent.com/${{ env.HA_CORE_REPO }}/${{ env.HA_CORE_BRANCH }}/homeassistant/components/rest/manifest.json)
@@ -121,6 +126,7 @@ jobs:
             "openai==${{ needs.prepare.outputs.openai-version }}" \
             "hassil==${{ needs.prepare.outputs.hassil-version }}" \
             "home-assistant-intents==${{ needs.prepare.outputs.home-assistant-intents-version }}" \
+            "gazetteer-matcher==${{ needs.prepare.outputs.gazetteer-matcher-version }}" \
             "xmltodict==${{ needs.prepare.outputs.xmltodict-version }}" \
             "beautifulsoup4==${{ needs.prepare.outputs.beautifulsoup4-version }}" \
             "lxml==${{ needs.prepare.outputs.lxml-version }}"
@@ -158,6 +164,7 @@ jobs:
             "openai==${{ needs.prepare.outputs.openai-version }}" \
             "hassil==${{ needs.prepare.outputs.hassil-version }}" \
             "home-assistant-intents==${{ needs.prepare.outputs.home-assistant-intents-version }}" \
+            "gazetteer-matcher==${{ needs.prepare.outputs.gazetteer-matcher-version }}" \
             "xmltodict==${{ needs.prepare.outputs.xmltodict-version }}" \
             "beautifulsoup4==${{ needs.prepare.outputs.beautifulsoup4-version }}" \
             "lxml==${{ needs.prepare.outputs.lxml-version }}"
