@@ -1,6 +1,6 @@
 {
   "domain": "extended_openai_conversation",
-  "name": "Extended OpenAI Conversation 2",
+  "name": "EOAIC2: Extended OpenAI Conversation 2",
   "codeowners": [
     "@jekalmin",
     "@jamietre"
@@ -23,5 +23,5 @@
     "openai>=2.21.0",
     "voluptuous-openapi"
   ],
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

@@ -1,4 +1,4 @@
-# Extended OpenAI Conversation 2
+# EOAIC2: Extended OpenAI Conversation 2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/outsharked/extended-openai-conversation-2)](https://github.com/outsharked/extended-openai-conversation-2/releases)
