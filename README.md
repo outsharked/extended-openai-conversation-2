@@ -50,6 +50,14 @@ Since OpenAI models already know how to call service of Home Assistant in genera
 
     </details>
 
+## Migrating from the original repository
+This repository keeps the same integration domain (`extended_openai_conversation`) as the original, so it's a drop-in replacement — your existing config entry, conversation agent selection, per-agent options (model, functions YAML, skills, etc.), and entity IDs all carry over automatically. There's nothing to reconfigure.
+
+- **Installed the original via HACS?** Remove the old `jekalmin/extended_openai_conversation` custom repository in HACS first, then add and install this one as described above. Removing the old one first avoids HACS tracking two different repositories against the same integration folder.
+- **Installed the original manually?** Just replace the `custom_components/extended_openai_conversation/` folder's contents with this repository's version (or install via HACS as above).
+
+Either way, restart Home Assistant afterward — that's the only step required.
+
 ## Preparation
 After installed, you need to expose entities from "http://{your-home-assistant}/config/voice-assistants/expose".
 

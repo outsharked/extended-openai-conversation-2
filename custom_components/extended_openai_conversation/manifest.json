@@ -1,6 +1,6 @@
 {
   "domain": "extended_openai_conversation",
-  "name": "Extended OpenAI Conversation",
+  "name": "Extended OpenAI Conversation 2",
   "codeowners": [
     "@jekalmin",
     "@jamietre"
