@@ -51,12 +51,15 @@ Since OpenAI models already know how to call service of Home Assistant in genera
     </details>
 
 ## Migrating from the original repository
-This repository keeps the same integration domain (`extended_openai_conversation`) as the original, so it's a drop-in replacement — your existing config entry, conversation agent selection, per-agent options (model, functions YAML, skills, etc.), and entity IDs all carry over automatically. There's nothing to reconfigure.
+This repository keeps the same integration domain (`extended_openai_conversation`) as the original, so it's a drop-in replacement. Home Assistant stores your config entry — API key, conversation agent selection, per-agent options (model, functions YAML, skills, etc.) — in its own internal storage, entirely separate from the integration's code files. Swapping the code underneath does **not** touch that data, so nothing needs reconfiguring.
 
-- **Installed the original via HACS?** Remove the old `jekalmin/extended_openai_conversation` custom repository in HACS first, then add and install this one as described above. Removing the old one first avoids HACS tracking two different repositories against the same integration folder.
-- **Installed the original manually?** Just replace the `custom_components/extended_openai_conversation/` folder's contents with this repository's version (or install via HACS as above).
+**If you installed the original manually** (copied the folder into `custom_components/` yourself, not through HACS): just overwrite `custom_components/extended_openai_conversation/` with this repository's version and restart Home Assistant. That's it.
 
-Either way, restart Home Assistant afterward — that's the only step required.
+**If you installed the original via HACS:**
+1. In HACS, find the `extended_openai_conversation` repository (the one by jekalmin) and choose **Remove** from its menu.
+2. HACS will warn that the integration is currently configured and refuse to remove it outright. **This is expected — don't be alarmed, and don't follow its suggestion to delete the configuration first** (doing that *would* wipe your API key and options). Instead, proceed through the warning to confirm the removal anyway.
+3. This only deletes the old code files and un-tracks the old repository in HACS — again, your config entry is untouched. Devices & Services may briefly show the integration as missing/broken until step 4; that's expected.
+4. Add this repository as a custom repository and install it (see [Installation](#installation) above), then restart Home Assistant. Your existing config entry automatically picks up the new code — no need to re-add the integration or redo any settings.
 
 ## Preparation
 After installed, you need to expose entities from "http://{your-home-assistant}/config/voice-assistants/expose".
