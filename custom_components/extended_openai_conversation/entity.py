@@ -26,8 +26,9 @@ from voluptuous_openapi import convert
 
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigSubentry
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, llm
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, TemplateError
+from homeassistant.helpers import device_registry as dr, llm, template
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import slugify
 
@@ -35,6 +36,7 @@ from .const import (
     CONF_CHAT_MODEL,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EXTRA_BODY,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     CONF_MAX_TOKENS,
     CONF_REASONING_EFFORT,
@@ -45,6 +47,7 @@ from .const import (
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+    DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
     DEFAULT_REASONING_EFFORT,
@@ -113,6 +116,38 @@ def _format_structured_output(
     _adjust_schema(result)
 
     return result
+
+
+def _render_extra_body(
+    extra_body_raw: str, hass: HomeAssistant, model: str
+) -> dict[str, Any] | None:
+    """Render the extra_body template option to a dict, or None if unset/invalid.
+
+    extra_body_raw is a Jinja-templatable JSON string (e.g. from the
+    CONF_EXTRA_BODY option); an empty/whitespace-only string means the
+    feature is disabled. A template or JSON error is logged as a warning
+    and treated as unset, rather than failing the conversation turn.
+    """
+    if not extra_body_raw.strip():
+        return None
+
+    try:
+        rendered = template.Template(extra_body_raw, hass).async_render(
+            parse_result=False
+        )
+    except TemplateError as err:
+        _LOGGER.warning("Invalid extra_body template for %s, ignoring: %s", model, err)
+        return None
+
+    if not rendered.strip():
+        return None
+
+    try:
+        parsed: dict[str, Any] = json.loads(rendered)
+        return parsed
+    except json.JSONDecodeError as err:
+        _LOGGER.warning("Invalid extra_body JSON for %s, ignoring: %s", model, err)
+        return None
 
 
 def encode_attachments(
@@ -343,6 +378,17 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             api_kwargs["service_tier"] = options.get(
                 CONF_SERVICE_TIER, DEFAULT_SERVICE_TIER
             )
+
+        # Add extra_body if configured - passthrough for OpenAI-compatible
+        # backends that accept extra request-body fields (ollama, llama.cpp,
+        # vLLM, LM Studio, etc.). E.g. {"chat_template_kwargs":
+        # {"enable_thinking": false}} to disable Qwen3 reasoning, or
+        # {"cache_prompt": true} for llama.cpp prompt caching.
+        extra_body = _render_extra_body(
+            options.get(CONF_EXTRA_BODY, DEFAULT_EXTRA_BODY) or "", self.hass, model
+        )
+        if extra_body is not None:
+            api_kwargs["extra_body"] = extra_body
 
         # Add structured output format if provided
         if structure is not None:

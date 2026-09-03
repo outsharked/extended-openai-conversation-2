@@ -4,6 +4,7 @@ from pathlib import Path
 
 from custom_components.extended_openai_conversation.entity import (
     _convert_content_to_param,
+    _render_extra_body,
     encode_attachments,
 )
 from homeassistant.components import conversation
@@ -129,3 +130,49 @@ def test_assistant_text_only_content_unchanged():
 
     assert len(messages) == 1
     assert messages[0]["content"] == "Hello there"
+
+
+def test_render_extra_body_empty_string_returns_none(hass):
+    """An empty/unset extra_body option disables the feature."""
+
+    assert _render_extra_body("", hass, "test-model") is None
+    assert _render_extra_body("   ", hass, "test-model") is None
+
+
+def test_render_extra_body_parses_plain_json(hass):
+    """A plain (non-templated) JSON string is parsed as-is."""
+
+    result = _render_extra_body(
+        '{"chat_template_kwargs": {"enable_thinking": false}}', hass, "test-model"
+    )
+
+    assert result == {"chat_template_kwargs": {"enable_thinking": False}}
+
+
+def test_render_extra_body_renders_jinja_before_parsing(hass):
+    """Jinja templating is rendered before the result is parsed as JSON.
+
+    Uses a numeric substitution rather than a Jinja boolean: {{ true }}
+    renders to Python's "True" (capitalized), which isn't valid JSON on
+    its own (json.loads requires lowercase "true") - a real limitation
+    inherited from the reference implementation, not something this test
+    should paper over.
+    """
+
+    result = _render_extra_body('{"seed": {{ 42 }} }', hass, "test-model")
+
+    assert result == {"seed": 42}
+
+
+def test_render_extra_body_invalid_json_returns_none_not_raises(hass):
+    """Malformed JSON logs a warning and disables the feature for this call,
+    rather than failing the conversation turn."""
+
+    assert _render_extra_body("{not valid json", hass, "test-model") is None
+
+
+def test_render_extra_body_invalid_template_returns_none_not_raises(hass):
+    """A broken Jinja template also degrades gracefully rather than raising."""
+
+    # Unclosed {% if %} block - guaranteed Jinja syntax error
+    assert _render_extra_body("{% if true %}", hass, "test-model") is None

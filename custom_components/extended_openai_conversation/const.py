@@ -245,6 +245,12 @@ CONF_REASONING_EFFORT = "reasoning_effort"
 DEFAULT_REASONING_EFFORT = "low"
 REASONING_EFFORT_OPTIONS = ["low", "medium", "high"]
 
+# Extra body passthrough for OpenAI-compatible backends (ollama, llama.cpp,
+# vLLM, LM Studio, etc.) that accept provider-specific request fields outside
+# the standard schema
+CONF_EXTRA_BODY = "extra_body"
+DEFAULT_EXTRA_BODY = ""
+
 SERVICE_QUERY_IMAGE = "query_image"
 
 CONF_PAYLOAD_TEMPLATE = "payload_template"
