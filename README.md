@@ -154,6 +154,12 @@ options and two new options.
 - `Maximum Function Calls Per Conversation`: limit the number of function calls
   in a single conversation. (Sometimes function is called over and over again,
   possibly running into infinite loop)
+- `Extra body`: a Jinja-templatable JSON string merged into the chat
+  completions request body — passthrough for OpenAI-compatible backends
+  (Ollama, llama.cpp, vLLM, LM Studio) that accept provider-specific fields
+  outside the standard schema. Only shown on the Advanced options step. Empty
+  disables it. Example: `{"chat_template_kwargs": {"enable_thinking": false}}`
+  to disable Qwen3's reasoning/"thinking" mode per-request.
 - `Functions`: A list of mappings of function spec to function.
   - `spec`: Function which would be passed to
     [functions](https://platform.openai.com/docs/api-reference/chat/create#chat-create-functions)
