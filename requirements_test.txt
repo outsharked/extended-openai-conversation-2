@@ -19,6 +19,10 @@ pytest-homeassistant-custom-component>=0.12.0
 voluptuous>=0.13.0
 voluptuous-openapi>=0.4.1
 
+# ai_task -> camera -> img_util imports this at module load time (not an
+# extra/optional import), needed for our ai_task.py tests to even collect
+PyTurboJPEG>=1.8.3
+
 # YAML parsing
 PyYAML>=6.0
 types-PyYAML>=6.0
