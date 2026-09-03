@@ -17,6 +17,7 @@ pytest-homeassistant-custom-component>=0.12.0
 
 # Schema validation
 voluptuous>=0.13.0
+voluptuous-openapi>=0.4.1
 
 # YAML parsing
 PyYAML>=6.0
