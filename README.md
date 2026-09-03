@@ -5,7 +5,7 @@
 
 This is custom component of Home Assistant.
 
-> **This is an actively maintained continuation of [jekalmin/extended_openai_conversation](https://github.com/jekalmin/extended_openai_conversation)**, published as an independent repository (not a GitHub fork) because the original project has gone unmaintained. Full credit for the original design and implementation goes to [@jekalmin](https://github.com/jekalmin).
+> **This is a continuation of [jekalmin/extended_openai_conversation](https://github.com/jekalmin/extended_openai_conversation)**, published as an independent repository (not a GitHub fork) because the original project has gone unmaintained. Full credit for the original design and implementation goes to [@jekalmin](https://github.com/jekalmin).
 
 Derived from [OpenAI Conversation](https://www.home-assistant.io/integrations/openai_conversation/) with some new features such as call-service.
 
