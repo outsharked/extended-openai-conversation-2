@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 import re
 
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, llm

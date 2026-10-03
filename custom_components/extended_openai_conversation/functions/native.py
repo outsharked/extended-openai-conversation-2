@@ -8,7 +8,7 @@ import os
 import time
 from typing import Any
 
-import voluptuous as vol
+import probatio as vol
 import yaml
 
 from homeassistant.components import automation, energy, recorder

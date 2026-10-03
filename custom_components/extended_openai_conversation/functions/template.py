@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, llm

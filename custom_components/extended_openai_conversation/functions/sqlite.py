@@ -8,7 +8,7 @@ import sqlite3
 from typing import Any
 from urllib import parse
 
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.components import recorder
 from homeassistant.core import HomeAssistant

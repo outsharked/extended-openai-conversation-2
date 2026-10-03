@@ -7,7 +7,7 @@ import types
 from typing import Any
 
 from openai._exceptions import APIConnectionError, AuthenticationError
-import voluptuous as vol
+import probatio as vol
 import yaml
 
 from homeassistant.config_entries import (

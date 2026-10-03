@@ -35,7 +35,7 @@ select = [
 
 ignore = [
     "E501",  # line too long
-    "B008",  # function call in argument default (voluptuous pattern)
+    "B008",  # function call in argument default (probatio/voluptuous pattern)
 ]
 
 [tool.ruff.lint.isort]
@@ -45,7 +45,7 @@ combine-as-imports = true
 split-on-trailing-comma = false
 
 [tool.ruff.lint.flake8-import-conventions.extend-aliases]
-voluptuous = "vol"
+probatio = "vol"
 "homeassistant.helpers.config_validation" = "cv"
 "homeassistant.helpers.device_registry" = "dr"
 "homeassistant.helpers.entity_registry" = "er"

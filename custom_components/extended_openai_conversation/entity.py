@@ -21,8 +21,7 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 import orjson
-import voluptuous as vol
-from voluptuous_openapi import convert
+import probatio as vol
 
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigSubentry
@@ -106,7 +105,7 @@ def _format_structured_output(
     schema: vol.Schema, llm_api: llm.APIInstance | None
 ) -> dict[str, Any]:
     """Format the schema to be compatible with OpenAI API."""
-    result: dict[str, Any] = convert(
+    result: dict[str, Any] = vol.to_openapi(
         schema,
         custom_serializer=(
             llm_api.custom_serializer if llm_api else llm.selector_serializer
@@ -116,6 +115,33 @@ def _format_structured_output(
     _adjust_schema(result)
 
     return result
+
+
+def _make_tool_result_content(
+    agent_id: str, tool_call_id: str, tool_name: str, data: dict[str, Any]
+) -> conversation.ToolResultContent:
+    """Build a ToolResultContent across HA versions.
+
+    HA 2026.10 replaced the `tool_result` dict field with `result`, an
+    `llm.ToolResult` wrapper; older versions only accept `tool_result`.
+    """
+    tool_result_cls = getattr(llm, "ToolResult", None)
+    payload: dict[str, Any] = (
+        {"result": tool_result_cls(data=data)}
+        if tool_result_cls is not None
+        else {"tool_result": data}
+    )
+    return conversation.ToolResultContent(
+        agent_id=agent_id, tool_call_id=tool_call_id, tool_name=tool_name, **payload
+    )
+
+
+def _tool_result_data(content: conversation.ToolResultContent) -> Any:
+    """Return a tool result's data, avoiding HA 2026.10's deprecated accessor."""
+    result = getattr(content, "result", None)
+    if result is not None:
+        return result.data
+    return content.tool_result
 
 
 def _render_extra_body(
@@ -265,7 +291,7 @@ def _convert_content_to_param(
                     "tool_call_id": _shorten_tool_call_id(content.tool_call_id)
                     if shorten_tool_call_id
                     else content.tool_call_id,
-                    "content": orjson.dumps(content.tool_result).decode(),
+                    "content": orjson.dumps(_tool_result_data(content)).decode(),
                 }
             )
 
@@ -603,11 +629,11 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 self.hass, function_config, arguments, llm_context, exposed_entities
             )
 
-        return conversation.ToolResultContent(
+        return _make_tool_result_content(
             agent_id=self.entity_id,
             tool_call_id=tool_input.id,
             tool_name=tool_input.tool_name,
-            tool_result={"result": str(result)},
+            data={"result": str(result)},
         )
 
     def should_run_in_background(self, arguments: dict[str, Any]) -> bool:

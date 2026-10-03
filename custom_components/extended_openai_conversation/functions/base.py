@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import llm

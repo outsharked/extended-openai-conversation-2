@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
+import probatio as vol
 import pytest
-import voluptuous as vol
 
 # Import Tools
 from custom_components.extended_openai_conversation.exceptions import (

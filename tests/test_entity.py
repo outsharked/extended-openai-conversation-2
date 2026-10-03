@@ -1,9 +1,14 @@
 """Tests for entity.py message serialization helpers."""
 
+import json
 from pathlib import Path
+
+import probatio as vol
 
 from custom_components.extended_openai_conversation.entity import (
     _convert_content_to_param,
+    _format_structured_output,
+    _make_tool_result_content,
     _render_extra_body,
     encode_attachments,
 )
@@ -176,3 +181,41 @@ def test_render_extra_body_invalid_template_returns_none_not_raises(hass):
 
     # Unclosed {% if %} block - guaranteed Jinja syntax error
     assert _render_extra_body("{% if true %}", hass, "test-model") is None
+
+
+def test_tool_result_content_round_trips_to_tool_message():
+    """A function result is serialized as a tool message on any HA version."""
+    content = _make_tool_result_content(
+        agent_id="conversation.test",
+        tool_call_id="call_1",
+        tool_name="get_weather",
+        data={"result": "sunny"},
+    )
+
+    messages = _convert_content_to_param([content])
+
+    assert len(messages) == 1
+    assert messages[0]["role"] == "tool"
+    assert messages[0]["tool_call_id"] == "call_1"
+    assert json.loads(messages[0]["content"]) == {"result": "sunny"}
+
+
+def test_format_structured_output_converts_probatio_schema():
+    """AI Task structures (probatio schemas since HA 2026.9) convert to JSON schema."""
+    schema = vol.Schema(
+        {
+            vol.Required("name", description="The name"): str,
+            vol.Optional("count"): int,
+        }
+    )
+
+    result = _format_structured_output(schema, None)
+
+    assert result["type"] == "object"
+    assert result["properties"]["name"] == {
+        "type": "string",
+        "description": "The name",
+    }
+    # _adjust_schema makes every property required, optional ones nullable
+    assert result["properties"]["count"]["type"] == ["integer", "null"]
+    assert sorted(result["required"]) == ["count", "name"]

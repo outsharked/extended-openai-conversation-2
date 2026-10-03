@@ -20,8 +20,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/outsharked/extended-openai-conversation-2/issues",
   "requirements": [
-    "openai>=2.21.0",
-    "voluptuous-openapi"
+    "openai>=2.21.0"
   ],
   "version": "1.1.0"
 }

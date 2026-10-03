@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from bs4 import BeautifulSoup
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.components import rest, scrape
 from homeassistant.const import (

@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from openai._exceptions import OpenAIError
-import voluptuous as vol
+import probatio as vol
 
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import (
