@@ -68,12 +68,44 @@ _LOGGER = logging.getLogger(__name__)
 # Max number of back and forth with the LLM to generate a response
 MAX_TOOL_ITERATIONS = 20
 
+_NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY = "tool_call_extra_content_by_id"
+
 
 def _shorten_tool_call_id(tool_call_id: str) -> str:
     """Shorten tool call ID to exactly 9 alphanumeric characters as Mistral requires."""
     import hashlib
 
     return hashlib.sha256(tool_call_id.encode()).hexdigest()[:9]
+
+
+def _extract_extra_content(value: Any) -> dict[str, Any] | None:
+    """Extract opaque provider-specific extra_content from an SDK response model."""
+    extra_content = getattr(value, "extra_content", None)
+    if isinstance(extra_content, dict):
+        return extra_content
+
+    model_extra = getattr(value, "model_extra", None)
+    if isinstance(model_extra, dict):
+        extra_content = model_extra.get("extra_content")
+        if isinstance(extra_content, dict):
+            return extra_content
+
+    return None
+
+
+def _get_tool_call_extra_content(
+    native: Any, tool_call_id: str
+) -> dict[str, Any] | None:
+    """Return provider metadata stored in an AssistantContent native payload."""
+    if not isinstance(native, dict):
+        return None
+
+    extra_content_by_id = native.get(_NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY)
+    if not isinstance(extra_content_by_id, dict):
+        return None
+
+    extra_content = extra_content_by_id.get(tool_call_id)
+    return extra_content if isinstance(extra_content, dict) else None
 
 
 def _adjust_schema(schema: dict[str, Any]) -> None:
@@ -261,19 +293,30 @@ def _convert_content_to_param(
             if content.content:
                 msg["content"] = content.content
             if content.tool_calls:
-                msg["tool_calls"] = [
-                    {
-                        "id": _shorten_tool_call_id(tool_call.id)
-                        if shorten_tool_call_id
-                        else tool_call.id,
+                serialized_tool_calls: list[Any] = []
+                for tool_call in content.tool_calls:
+                    serialized_tool_call: dict[str, Any] = {
+                        "id": (
+                            _shorten_tool_call_id(tool_call.id)
+                            if shorten_tool_call_id
+                            else tool_call.id
+                        ),
                         "type": "function",
                         "function": {
                             "name": tool_call.tool_name,
                             "arguments": json.dumps(tool_call.tool_args),
                         },
                     }
-                    for tool_call in content.tool_calls
-                ]
+
+                    extra_content = _get_tool_call_extra_content(
+                        content.native, tool_call.id
+                    )
+                    if extra_content is not None:
+                        serialized_tool_call["extra_content"] = extra_content
+
+                    serialized_tool_calls.append(serialized_tool_call)
+
+                msg["tool_calls"] = serialized_tool_calls
             # Some OpenAI-compatible APIs (like Mistral) reject empty tool_calls arrays
             # Remove tool_calls field if it's an empty array to maintain compatibility
             if msg.get("tool_calls") == []:
@@ -504,6 +547,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     ]:
         """Transform OpenAI stream to Home Assistant format."""
         current_tool_calls: dict[int, dict[str, Any]] = {}
+        # Collect provider metadata across the whole response and attach it
+        # once. HA only allows AssistantContent.native to be set a single time
+        # per message; yielding native on every tool_calls finish_reason would
+        # raise RuntimeError on loosely compatible servers that emit that
+        # finish reason more than once.
+        tool_call_extra_content_by_id: dict[str, dict[str, Any]] = {}
         first_chunk = True
 
         async for chunk in result:
@@ -557,6 +606,13 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                             "arguments": "",
                         }
 
+                    if tool_call_delta.id:
+                        current_tool_calls[idx]["id"] = tool_call_delta.id
+
+                    extra_content = _extract_extra_content(tool_call_delta)
+                    if extra_content is not None:
+                        current_tool_calls[idx]["extra_content"] = extra_content
+
                     if tool_call_delta.function:
                         if tool_call_delta.function.name:
                             current_tool_calls[idx]["name"] = (
@@ -576,6 +632,11 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         args = json.loads(tool_call["arguments"])
                     except json.JSONDecodeError as err:
                         raise ParseArgumentsFailed(tool_call["arguments"]) from err
+
+                    extra_content = tool_call.get("extra_content")
+                    if tool_call["id"] and isinstance(extra_content, dict):
+                        tool_call_extra_content_by_id[tool_call["id"]] = extra_content
+
                     tool_calls_list.append(
                         llm.ToolInput(
                             id=tool_call["id"],
@@ -594,6 +655,13 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
             if choice.finish_reason == "stop":
                 break
+
+        if not first_chunk and tool_call_extra_content_by_id:
+            yield {
+                "native": {
+                    _NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY: tool_call_extra_content_by_id
+                }
+            }
 
     async def _execute_function_tool(
         self,
