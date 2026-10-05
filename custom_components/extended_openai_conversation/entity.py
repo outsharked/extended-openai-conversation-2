@@ -634,7 +634,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         raise ParseArgumentsFailed(tool_call["arguments"]) from err
 
                     extra_content = tool_call.get("extra_content")
-                    if tool_call["id"] and isinstance(extra_content, dict):
+                    if tool_call["id"] and extra_content is not None:
                         tool_call_extra_content_by_id[tool_call["id"]] = extra_content
 
                     tool_calls_list.append(

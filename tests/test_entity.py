@@ -243,17 +243,18 @@ def test_assistant_tool_call_without_provider_metadata_unchanged():
 def test_extract_extra_content_from_model_extra():
     """Unknown SDK response fields can be recovered from model_extra."""
 
-    class ResponsePart:
-        extra_content = None
-        model_extra = {
+    response_part = SimpleNamespace(
+        extra_content=None,
+        model_extra={
             "extra_content": {
                 "google": {
                     "thought_signature": "encrypted-signature",
                 }
             }
-        }
+        },
+    )
 
-    assert _extract_extra_content(ResponsePart()) == {
+    assert _extract_extra_content(response_part) == {
         "google": {
             "thought_signature": "encrypted-signature",
         }
