@@ -52,6 +52,13 @@ probatio = "vol"
 "homeassistant.util.dt" = "dt_util"
 
 [tool.pytest.ini_options]
+# HA core (2026.11+) aliases httpx to httpx2 in homeassistant/__init__.py and
+# raises if httpx was already imported. pytest-homeassistant-custom-component's
+# plugin imports respx (which imports httpx) before it imports homeassistant, so
+# early-load a homeassistant module to run the alias first. Not `-p
+# homeassistant`: that's the PHCC plugin's own entry-point name. Can likely be
+# dropped once PHCC is regenerated from a 2026.11 HA release.
+addopts = "-p homeassistant.const"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 

@@ -1,0 +1,58 @@
+# Local dev toolchain. CI does not use this file: it reads the Python version
+# and component dependency pins from HA core's dev branch at run time (see
+# .github/workflows/ci.yml), so keep this to the same minor version.
+
+[tools]
+python = "3.14"
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.setup]
+description = "Install dev/test deps, component deps, and Home Assistant stable"
+run = [
+  "pip install --upgrade pip",
+  "pip install -e '.[dev]' -r requirements_test.txt",
+  # Pinned in CI from HA core's component manifests; unpinned here
+  "pip install openai hassil home-assistant-intents gazetteer-matcher xmltodict beautifulsoup4 lxml",
+  "pip install --upgrade homeassistant",
+]
+
+[tasks.ha-stable]
+description = "Switch the venv to the latest Home Assistant release"
+# Pin explicitly: pip sees an installed 2026.N+1.dev0 as newer than the latest
+# release, so a plain --upgrade won't move back off core@dev
+run = """
+v=$(python -c "import json, urllib.request; print(json.load(urllib.request.urlopen('https://pypi.org/pypi/homeassistant/json'))['info']['version'])")
+pip install "homeassistant==$v"
+"""
+
+[tasks.ha-dev]
+description = "Switch the venv to Home Assistant core@dev (what the CI 'Test (HA dev)' job runs)"
+run = "pip install --upgrade git+https://github.com/home-assistant/core.git@dev"
+
+[tasks.lint]
+description = "Ruff lint + format check"
+run = [
+  "ruff check custom_components/",
+  "ruff format --check custom_components/",
+]
+
+[tasks.format]
+description = "Ruff auto-fix + format"
+run = [
+  "ruff check --fix custom_components/",
+  "ruff format custom_components/",
+]
+
+[tasks.typecheck]
+description = "MyPy"
+run = "mypy custom_components/extended_openai_conversation"
+
+[tasks.test]
+description = "Pytest with coverage, same flags as CI"
+run = "pytest tests/ -v --asyncio-mode=auto --timeout=30 --cov=custom_components/extended_openai_conversation --cov-report=term-missing"
+
+[tasks.check]
+description = "Lint, typecheck, and test"
+depends = ["lint", "typecheck", "test"]

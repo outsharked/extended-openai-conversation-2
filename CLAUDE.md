@@ -35,6 +35,16 @@ pytest tests/functions/test_native.py::test_function_name -v
 ```
 
 ### Dev Setup
+With [mise](https://mise.jdx.dev) (installs Python 3.14 and creates/activates `.venv`):
+```bash
+mise install
+mise run setup       # deps + HA stable
+mise run check       # lint + typecheck + test
+mise run ha-dev      # switch venv to HA core@dev (reproduces CI's "Test (HA dev)" job)
+mise run ha-stable   # switch back to the latest HA release
+```
+
+Without mise (needs Python 3.14):
 ```bash
 pip install -e ".[dev]"
 pip install -r requirements_test.txt
