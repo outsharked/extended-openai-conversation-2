@@ -28,6 +28,7 @@ jobs:
       home-assistant-intents-version: ${{ steps.get-versions.outputs.home-assistant-intents-version }}
       gazetteer-matcher-version: ${{ steps.get-versions.outputs.gazetteer-matcher-version }}
       xmltodict-version: ${{ steps.get-versions.outputs.xmltodict-version }}
+      jsonpath-python-version: ${{ steps.get-versions.outputs.jsonpath-python-version }}
       beautifulsoup4-version: ${{ steps.get-versions.outputs.beautifulsoup4-version }}
       lxml-version: ${{ steps.get-versions.outputs.lxml-version }}
     steps:
@@ -71,6 +72,10 @@ jobs:
           XMLTODICT_VERSION=$(get_package_version "$REST_MANIFEST" "xmltodict")
           echo "xmltodict-version=$XMLTODICT_VERSION" >> $GITHUB_OUTPUT
           echo "xmltodict version from HA core: $XMLTODICT_VERSION"
+
+          JSONPATH_VERSION=$(get_package_version "$REST_MANIFEST" "jsonpath-python")
+          echo "jsonpath-python-version=$JSONPATH_VERSION" >> $GITHUB_OUTPUT
+          echo "jsonpath-python version from HA core: $JSONPATH_VERSION"
 
           # Get scrape dependencies
           SCRAPE_MANIFEST=$(curl -fsSL https://raw.githubusercontent.com/${{ env.HA_CORE_REPO }}/${{ env.HA_CORE_BRANCH }}/homeassistant/components/scrape/manifest.json)
@@ -128,6 +133,7 @@ jobs:
             "home-assistant-intents==${{ needs.prepare.outputs.home-assistant-intents-version }}" \
             "gazetteer-matcher==${{ needs.prepare.outputs.gazetteer-matcher-version }}" \
             "xmltodict==${{ needs.prepare.outputs.xmltodict-version }}" \
+            "jsonpath-python==${{ needs.prepare.outputs.jsonpath-python-version }}" \
             "beautifulsoup4==${{ needs.prepare.outputs.beautifulsoup4-version }}" \
             "lxml==${{ needs.prepare.outputs.lxml-version }}"
           pip install -r requirements_test.txt
@@ -166,6 +172,7 @@ jobs:
             "home-assistant-intents==${{ needs.prepare.outputs.home-assistant-intents-version }}" \
             "gazetteer-matcher==${{ needs.prepare.outputs.gazetteer-matcher-version }}" \
             "xmltodict==${{ needs.prepare.outputs.xmltodict-version }}" \
+            "jsonpath-python==${{ needs.prepare.outputs.jsonpath-python-version }}" \
             "beautifulsoup4==${{ needs.prepare.outputs.beautifulsoup4-version }}" \
             "lxml==${{ needs.prepare.outputs.lxml-version }}"
           pip install -r requirements_test.txt

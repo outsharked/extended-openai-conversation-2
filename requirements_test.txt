@@ -5,7 +5,7 @@
 # Component dependencies installed dynamically from HA core:
 # - openai_conversation: openai
 # - conversation: hassil, home-assistant-intents
-# - rest: xmltodict
+# - rest: jsonpath-python, xmltodict
 # - scrape: beautifulsoup4, lxml
 
 # Testing frameworks

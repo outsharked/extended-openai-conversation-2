@@ -14,7 +14,7 @@ run = [
   "pip install --upgrade pip",
   "pip install -e '.[dev]' -r requirements_test.txt",
   # Pinned in CI from HA core's component manifests; unpinned here
-  "pip install openai hassil home-assistant-intents gazetteer-matcher xmltodict beautifulsoup4 lxml",
+  "pip install openai hassil home-assistant-intents gazetteer-matcher jsonpath-python xmltodict beautifulsoup4 lxml",
   "pip install --upgrade homeassistant",
 ]
 
