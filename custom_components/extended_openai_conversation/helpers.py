@@ -6,8 +6,9 @@ from functools import partial
 import logging
 import re
 from typing import Any, cast
+from urllib.parse import urlparse
 
-from openai import AsyncAzureOpenAI, AsyncClient, AsyncOpenAI
+from openai import AsyncAzureOpenAI, AsyncClient, AsyncOpenAI, BadRequestError
 
 from homeassistant.components import conversation
 from homeassistant.components.homeassistant.exposed_entities import async_should_expose
@@ -17,10 +18,13 @@ from homeassistant.helpers.httpx_client import get_async_client
 from homeassistant.helpers.template import Template
 
 from .const import (
+    ALTERNATE_REQUEST_PARAMS,
     DEFAULT_MODEL_CONFIG,
-    DEFAULT_TOKEN_PARAM,
     MODEL_CONFIG_PATTERNS,
-    MODEL_TOKEN_PARAMETER_SUPPORT,
+    OPENAI_API_HOST,
+    OPENAI_DEFAULT_MODEL_CONFIG,
+    OPTIONAL_REQUEST_PARAMS,
+    UNSUPPORTED_PARAM_ERROR_CODES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,19 +33,25 @@ _LOGGER = logging.getLogger(__name__)
 AZURE_DOMAIN_PATTERN = r"\.(openai\.azure\.com|azure-api\.net|services\.ai\.azure\.com)"
 
 
-def get_model_config(model: str) -> dict[str, bool]:
-    """Get model-specific parameter configuration."""
+def get_model_config(model: str, base_url: str | None = None) -> dict[str, bool]:
+    """Get model-specific parameter configuration.
+
+    A base_url of None means the default OpenAI endpoint.
+    """
     # Check patterns in order; first match wins
     for entry in MODEL_CONFIG_PATTERNS:
         pattern = str(entry["pattern"])
         entry_config = entry["config"]
-        if re.match(pattern, model, re.IGNORECASE):
+        if re.search(pattern, model, re.IGNORECASE):
             # Type assertion since we know the structure from MODEL_CONFIG_PATTERNS
             return (
                 dict(entry_config)
                 if isinstance(entry_config, dict)
                 else DEFAULT_MODEL_CONFIG
             )
+
+    if is_openai_url(base_url):
+        return OPENAI_DEFAULT_MODEL_CONFIG
 
     # Default configuration for standard models (gpt-4, gpt-4o, etc.)
     return DEFAULT_MODEL_CONFIG
@@ -80,13 +90,9 @@ def is_azure_url(base_url: str | None) -> bool:
     return bool(base_url and re.search(AZURE_DOMAIN_PATTERN, base_url))
 
 
-def get_token_param_for_model(model: str) -> str:
-    """Return the token parameter name for a model."""
-    model_lower = model.lower()
-    for entry in MODEL_TOKEN_PARAMETER_SUPPORT:
-        if re.search(entry["pattern"], model_lower):
-            return entry["token_param"]
-    return DEFAULT_TOKEN_PARAM
+def is_openai_url(base_url: str | None) -> bool:
+    """Check if the base URL is OpenAI's own API (None means the default)."""
+    return base_url is None or urlparse(base_url).hostname == OPENAI_API_HOST
 
 
 def convert_to_template(
@@ -165,3 +171,49 @@ async def get_authenticated_client(
     async for _ in response:
         break
     return client
+
+
+def _remove_unsupported_param(
+    kwargs: dict[str, Any], param: str, unsupported_params: set[str]
+) -> None:
+    """Drop a rejected parameter, moving its value to the alternate if allowed."""
+    value = kwargs.pop(param)
+    alternate = ALTERNATE_REQUEST_PARAMS.get(param)
+    if alternate and alternate not in unsupported_params and alternate not in kwargs:
+        kwargs[alternate] = value
+
+
+async def async_create_chat_completion(
+    client: AsyncClient, unsupported_params: set[str], **kwargs: Any
+) -> Any:
+    """Create a chat completion, retrying without parameters the model rejects.
+
+    Newer OpenAI models reject parameters older ones accepted (max_tokens,
+    temperature, top_p, ...) with a 400 naming the parameter. Rather than
+    tracking every model's quirks, drop (or swap) the named parameter and
+    retry. Rejections are recorded in unsupported_params so callers can share
+    them across requests and skip the failing round trip next time.
+    """
+    for known in unsupported_params:
+        if known in kwargs:
+            _remove_unsupported_param(kwargs, known, unsupported_params)
+
+    while True:
+        try:
+            return await client.chat.completions.create(**kwargs)
+        except BadRequestError as err:
+            param = err.param
+            if (
+                err.code not in UNSUPPORTED_PARAM_ERROR_CODES
+                or param not in OPTIONAL_REQUEST_PARAMS
+                or param not in kwargs
+            ):
+                raise
+            _LOGGER.warning(
+                "Model %s does not support '%s', retrying without it: %s",
+                kwargs.get("model"),
+                param,
+                err.message,
+            )
+            unsupported_params.add(param)
+            _remove_unsupported_param(kwargs, param, unsupported_params)

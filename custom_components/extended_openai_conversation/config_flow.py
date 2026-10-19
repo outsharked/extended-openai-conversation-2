@@ -320,7 +320,9 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
 
         # Build schema for advanced options based on selected model
         chat_model = (self._temp_data or {}).get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
-        model_config = get_model_config(chat_model)
+        model_config = get_model_config(
+            chat_model, self._get_entry().data.get(CONF_BASE_URL)
+        )
 
         schema: dict[Any, Any] = {}
 
@@ -597,7 +599,9 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
 
         # Build schema for advanced options based on selected model
         chat_model = (self._temp_data or {}).get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
-        model_config = get_model_config(chat_model)
+        model_config = get_model_config(
+            chat_model, self._get_entry().data.get(CONF_BASE_URL)
+        )
 
         schema: dict[Any, Any] = {}
 

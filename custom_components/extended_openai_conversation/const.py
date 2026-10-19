@@ -79,14 +79,6 @@ When a skill file references a relative path, resolve it against the skill's loc
 """
 CONF_CHAT_MODEL = "chat_model"
 DEFAULT_CHAT_MODEL = "gpt-5-mini"
-
-MODEL_TOKEN_PARAMETER_SUPPORT = (
-    {
-        "pattern": r"(^|-)(gpt-4o|gpt-5|o1|o3|o4)",
-        "token_param": "max_completion_tokens",
-    },
-)
-DEFAULT_TOKEN_PARAM = "max_tokens"
 CONF_MAX_TOKENS = "max_tokens"
 DEFAULT_MAX_TOKENS = 500
 CONF_TOP_P = "top_p"
@@ -270,13 +262,24 @@ DEFAULT_MODEL_CONFIG = {
     "supports_service_tier": False,
 }
 
+# Unrecognized models on api.openai.com: OpenAI has deprecated max_tokens in
+# favour of max_completion_tokens, which every current chat model accepts.
+# Compatible servers (ollama, vLLM, ...) often only understand max_tokens.
+OPENAI_DEFAULT_MODEL_CONFIG = {
+    **DEFAULT_MODEL_CONFIG,
+    "supports_max_tokens": False,
+    "supports_max_completion_tokens": True,
+}
+OPENAI_API_HOST = "api.openai.com"
+
 # Pattern-based model configurations
 # Each entry: {"pattern": regex_string, "config": config_dict}
-# Patterns are matched in order; first match wins
+# Patterns are searched in order; first match wins
 MODEL_CONFIG_PATTERNS = [
-    # Reasoning models (o1, o3, o4, gpt-5, etc.)
+    # Reasoning models (o1, o3, gpt-5, gpt-6.1, ...), optionally behind a
+    # router prefix such as "openai/"
     {
-        "pattern": r"^o[1-4]|^gpt-5",
+        "pattern": r"(?:^|/)(?:o\d|gpt-(?:[5-9]|\d{2,}))",
         "config": {
             "supports_top_p": False,
             "supports_temperature": False,
@@ -287,6 +290,22 @@ MODEL_CONFIG_PATTERNS = [
         },
     },
 ]
+
+# Request parameters that may be dropped (or swapped for their alternate) and
+# retried when the API rejects them as unsupported for the selected model
+OPTIONAL_REQUEST_PARAMS = (
+    "max_tokens",
+    "max_completion_tokens",
+    "temperature",
+    "top_p",
+    "reasoning_effort",
+    "service_tier",
+)
+ALTERNATE_REQUEST_PARAMS = {
+    "max_tokens": "max_completion_tokens",
+    "max_completion_tokens": "max_tokens",
+}
+UNSUPPORTED_PARAM_ERROR_CODES = ("unsupported_parameter", "unsupported_value")
 
 # AI Task default options (simpler than conversation - no prompt, just model/token settings)
 DEFAULT_AI_TASK_OPTIONS = {
