@@ -32,6 +32,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.util import slugify
 
 from .const import (
+    CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -58,7 +59,7 @@ from .const import (
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
-from .helpers import get_model_config
+from .helpers import async_create_chat_completion, get_model_config
 
 if TYPE_CHECKING:
     from . import ExtendedOpenAIConfigEntry
@@ -361,6 +362,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             model=subentry.data.get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL),
             entry_type=dr.DeviceEntryType.SERVICE,
         )
+        # Request parameters the API has rejected, per model, so later
+        # requests skip them instead of failing first
+        self._unsupported_params: dict[str, set[str]] = {}
 
     @property
     def _client(self) -> AsyncClient:
@@ -389,7 +393,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         )
 
         # Get model-specific configuration
-        model_config = get_model_config(model)
+        model_config = get_model_config(model, self.entry.data.get(CONF_BASE_URL))
 
         # Encoding reads attachment files from disk - run in an executor, and
         # do it once up front since chat_log.content only grows (attachments
@@ -485,7 +489,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
             _LOGGER.info("Prompt for %s: %s", model, json.dumps(messages))
 
-            stream = await self._client.chat.completions.create(
+            stream = await async_create_chat_completion(
+                self._client,
+                self._unsupported_params.setdefault(model, set()),
                 messages=messages,
                 **api_kwargs,
                 **tool_kwargs,

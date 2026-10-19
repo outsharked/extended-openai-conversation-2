@@ -37,7 +37,11 @@ from .const import (
     SERVICE_QUERY_IMAGE,
     SERVICE_RELOAD_SKILLS,
 )
-from .helpers import get_authenticated_client, get_token_param_for_model
+from .helpers import (
+    async_create_chat_completion,
+    get_authenticated_client,
+    get_model_config,
+)
 
 QUERY_IMAGE_SCHEMA = vol.Schema(
     {
@@ -106,13 +110,19 @@ async def async_setup_services(hass: HomeAssistant, config: ConfigType) -> None:
 
             client = entry.runtime_data
 
-            token_param = get_token_param_for_model(model)
-            token_kwargs = {token_param: call.data["max_tokens"]}
+            model_config = get_model_config(model, entry.data.get(CONF_BASE_URL))
+            token_param = (
+                "max_completion_tokens"
+                if model_config["supports_max_completion_tokens"]
+                else "max_tokens"
+            )
 
-            response = await client.chat.completions.create(
+            response = await async_create_chat_completion(
+                client,
+                set(),
                 model=model,
                 messages=messages,
-                **token_kwargs,
+                **{token_param: call.data["max_tokens"]},
             )
             response_dict: dict = response.model_dump()
             _LOGGER.info("Response %s", response_dict)
