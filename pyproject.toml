@@ -58,7 +58,10 @@ probatio = "vol"
 # early-load a homeassistant module to run the alias first. Not `-p
 # homeassistant`: that's the PHCC plugin's own entry-point name. Can likely be
 # dropped once PHCC is regenerated from a 2026.11 HA release.
-addopts = "-p homeassistant.const"
+# tests.ha_dev_compat restores names HA core@dev removed that PHCC still
+# imports (see that module).
+addopts = "-p homeassistant.const -p tests.ha_dev_compat"
+pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
