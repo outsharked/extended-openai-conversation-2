@@ -24,6 +24,8 @@ from .const import (
     OPENAI_API_HOST,
     OPENAI_DEFAULT_MODEL_CONFIG,
     OPTIONAL_REQUEST_PARAMS,
+    REASONING_EFFORT_NONE,
+    REASONING_EFFORT_WITH_TOOLS,
     UNSUPPORTED_PARAM_ERROR_CODES,
 )
 
@@ -183,6 +185,12 @@ def _remove_unsupported_param(
         kwargs[alternate] = value
 
 
+def _disable_reasoning_with_tools(kwargs: dict[str, Any]) -> None:
+    """Set reasoning_effort to none on a request that sends tools."""
+    if "tools" in kwargs and "reasoning_effort" in kwargs:
+        kwargs["reasoning_effort"] = REASONING_EFFORT_NONE
+
+
 async def async_create_chat_completion(
     client: AsyncClient, unsupported_params: set[str], **kwargs: Any
 ) -> Any:
@@ -197,12 +205,31 @@ async def async_create_chat_completion(
     for known in unsupported_params:
         if known in kwargs:
             _remove_unsupported_param(kwargs, known, unsupported_params)
+    if REASONING_EFFORT_WITH_TOOLS in unsupported_params:
+        _disable_reasoning_with_tools(kwargs)
 
     while True:
         try:
             return await client.chat.completions.create(**kwargs)
         except BadRequestError as err:
             param = err.param
+            # Some models only allow reasoning_effort "none" when tools are
+            # sent; the error has no code, so match on the param and context
+            if (
+                param == "reasoning_effort"
+                and "tools" in kwargs
+                and kwargs.get(param, REASONING_EFFORT_NONE) != REASONING_EFFORT_NONE
+            ):
+                _LOGGER.warning(
+                    "Model %s does not support reasoning_effort with tools, "
+                    "retrying with '%s': %s",
+                    kwargs.get("model"),
+                    REASONING_EFFORT_NONE,
+                    err.message,
+                )
+                unsupported_params.add(REASONING_EFFORT_WITH_TOOLS)
+                _disable_reasoning_with_tools(kwargs)
+                continue
             if (
                 err.code not in UNSUPPORTED_PARAM_ERROR_CODES
                 or param not in OPTIONAL_REQUEST_PARAMS

@@ -235,7 +235,8 @@ SERVICE_TIER_OPTIONS = ["auto", "default", "flex", "priority"]
 # Reasoning Effort options (for o1, o3, o4, gpt-5 models)
 CONF_REASONING_EFFORT = "reasoning_effort"
 DEFAULT_REASONING_EFFORT = "low"
-REASONING_EFFORT_OPTIONS = ["low", "medium", "high"]
+REASONING_EFFORT_NONE = "none"
+REASONING_EFFORT_OPTIONS = [REASONING_EFFORT_NONE, "low", "medium", "high"]
 
 # Extra body passthrough for OpenAI-compatible backends (ollama, llama.cpp,
 # vLLM, LM Studio, etc.) that accept provider-specific request fields outside
@@ -306,6 +307,9 @@ ALTERNATE_REQUEST_PARAMS = {
     "max_completion_tokens": "max_tokens",
 }
 UNSUPPORTED_PARAM_ERROR_CODES = ("unsupported_parameter", "unsupported_value")
+# Recorded in a model's unsupported params when it rejects reasoning_effort
+# alongside function tools on chat completions (only "none" is allowed then)
+REASONING_EFFORT_WITH_TOOLS = "reasoning_effort+tools"
 
 # AI Task default options (simpler than conversation - no prompt, just model/token settings)
 DEFAULT_AI_TASK_OPTIONS = {
