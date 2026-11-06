@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, cast, override
 
-import httpx
+import httpx2 as httpx
 
 from homeassistant.components.application_credentials import AuthorizationServer
 from homeassistant.config_entries import ConfigEntry

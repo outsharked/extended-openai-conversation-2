@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
-import httpx
-from mcp.client.auth.exceptions import OAuthRegistrationError
-from mcp.client.auth.oauth2 import (
+import httpx2 as httpx
+from mcp.client.auth import OAuthRegistrationError
+from mcp.client.auth.utils import (
     build_oauth_authorization_server_metadata_discovery_urls,
     build_protected_resource_metadata_discovery_urls,
+    handle_registration_response,
 )
-from mcp.client.auth.utils import handle_registration_response
 from mcp.shared.auth import (
     OAuthClientMetadata,
     OAuthMetadata,

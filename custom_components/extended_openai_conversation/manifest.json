@@ -21,7 +21,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/outsharked/extended-openai-conversation-2/issues",
   "requirements": [
-    "mcp==1.28.1",
+    "mcp>=2.3.0",
     "openai>=2.21.0",
     "regex>=2024.11.6"
   ],

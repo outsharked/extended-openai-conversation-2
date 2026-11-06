@@ -8,6 +8,7 @@ from mcp.types import (
     Implementation,
     InitializeResult,
     ListToolsResult,
+    PaginatedRequestParams,
     ServerCapabilities,
     TextContent,
     Tool,
@@ -128,8 +129,8 @@ async def test_list_tools_exhausts_sdk_cursor_pages():
 
     session.initialize.assert_awaited_once_with()
     assert session.list_tools.await_args_list == [
-        call(cursor=None),
-        call(cursor="page-2"),
+        call(params=None),
+        call(params=PaginatedRequestParams(cursor="page-2")),
     ]
     assert [tool.name for tool in tools] == ["upload_file", "download_file"]
     assert tools[0].input_schema == {"type": "object"}

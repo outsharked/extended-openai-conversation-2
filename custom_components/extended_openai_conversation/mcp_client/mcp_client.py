@@ -5,13 +5,18 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
-from datetime import timedelta
 from typing import Any
 
-import httpx
+import httpx2 as httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
-from mcp.types import CallToolResult, InitializeResult, ListToolsResult, Tool
+from mcp.types import (
+    CallToolResult,
+    InitializeResult,
+    ListToolsResult,
+    PaginatedRequestParams,
+    Tool,
+)
 
 from .config import MCPServerConfig
 from .mcp_datatypes import (
@@ -57,7 +62,7 @@ class MCPClient:
             write=connect_timeout,
             pool=connect_timeout,
         )
-        self._session_read_timeout: timedelta = timedelta(seconds=read_timeout)
+        self._session_read_timeout: float = read_timeout
         self._operation_lock: asyncio.Lock = asyncio.Lock()
         self._closed: bool = False
 
@@ -103,9 +108,9 @@ class MCPClient:
     def _server_information(self, result: InitializeResult) -> MCPServerInformation:
         """Convert an SDK initialization result to the public model."""
         return MCPServerInformation(
-            name=result.serverInfo.name,
-            version=result.serverInfo.version,
-            protocol_version=str(result.protocolVersion),
+            name=result.server_info.name,
+            version=result.server_info.version,
+            protocol_version=str(result.protocol_version),
             instructions=result.instructions,
             capabilities=result.capabilities.model_dump(
                 mode="json", by_alias=True, exclude_none=True
@@ -123,10 +128,14 @@ class MCPClient:
             name=tool.name,
             title=tool.title,
             description=tool.description,
-            input_schema=dict(tool.inputSchema),
-            output_schema=dict(tool.outputSchema) if tool.outputSchema is not None else None,
+            input_schema=dict(tool.input_schema),
+            output_schema=(
+                dict(tool.output_schema) if tool.output_schema is not None else None
+            ),
             annotations=annotations or None,
-            task_support=tool.execution.taskSupport if tool.execution is not None else None,
+            task_support=(
+                tool.execution.task_support if tool.execution is not None else None
+            ),
         )
 
     def _tool_result(self, result: CallToolResult) -> MCPToolResult:
@@ -137,11 +146,11 @@ class MCPClient:
                 for item in result.content
             ),
             structured_content=(
-                dict(result.structuredContent)
-                if result.structuredContent is not None
+                dict(result.structured_content)
+                if isinstance(result.structured_content, Mapping)
                 else None
             ),
-            is_error=result.isError,
+            is_error=result.is_error,
         )
 
     async def _list_session_tools(self, session: ClientSession) -> tuple[MCPTool, ...]:
@@ -150,10 +159,13 @@ class MCPClient:
         cursor: str | None = None
         seen_cursors: set[str] = set()
         while True:
-            result: ListToolsResult = await session.list_tools(cursor=cursor)
+            params = (
+                PaginatedRequestParams(cursor=cursor) if cursor is not None else None
+            )
+            result: ListToolsResult = await session.list_tools(params=params)
             tools.extend(self._tool_definition(tool) for tool in result.tools)
 
-            next_cursor: str | None = result.nextCursor
+            next_cursor: str | None = result.next_cursor
             if next_cursor is None:
                 return tuple(tools)
             if next_cursor in seen_cursors:

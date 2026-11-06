@@ -6,7 +6,7 @@ requires-python = ">=3.14"
 license = {text = "MIT"}
 dynamic = ["version"]
 dependencies = [
-    "mcp==1.28.1",
+    "mcp>=2.3.0",
     "openai>=2.21.0",
     "regex>=2024.11.6",
 ]

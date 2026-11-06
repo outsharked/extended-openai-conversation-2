@@ -10,7 +10,7 @@ import logging
 import types
 from typing import Any, override
 
-import httpx
+import httpx2 as httpx
 from openai._exceptions import APIConnectionError, APIStatusError, AuthenticationError
 import probatio as vol
 import yaml

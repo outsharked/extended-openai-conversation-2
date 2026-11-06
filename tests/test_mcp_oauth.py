@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-import httpx
+import httpx2 as httpx
 
 from custom_components.extended_openai_conversation.mcp_oauth import (
     HomeAssistantOAuthAuth,

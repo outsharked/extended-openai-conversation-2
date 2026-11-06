@@ -1,6 +1,6 @@
 """Tests for framework-independent MCP OAuth discovery and registration."""
 
-import httpx
+import httpx2 as httpx
 import pytest
 
 from custom_components.extended_openai_conversation.mcp_client import (

@@ -13,7 +13,7 @@ doesn't behave like the real flow manager.
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2 as httpx
 from openai import APIConnectionError, APIStatusError, AuthenticationError
 import pytest
 
