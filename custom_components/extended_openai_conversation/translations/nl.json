@@ -22,6 +22,16 @@
             }
         }
     },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Afzonderlijke systeemprompt",
+                "combined_system": "Gecombineerde systeemprompt",
+                "user": "Gebruikersinvoer",
+                "disabled": "Uitgeschakeld"
+            }
+        }
+    },
     "config_subentries": {
         "conversation": {
             "entry_type": "Conversation agent",

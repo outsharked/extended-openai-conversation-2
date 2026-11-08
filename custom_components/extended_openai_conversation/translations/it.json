@@ -22,6 +22,16 @@
             }
         }
     },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Prompt di sistema dedicato",
+                "combined_system": "Prompt di sistema combinato",
+                "user": "Input utente",
+                "disabled": "Disabilitato"
+            }
+        }
+    },
     "config_subentries": {
         "conversation": {
             "entry_type": "Conversation agent",

@@ -22,6 +22,16 @@
             }
         }
     },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Ξεχωριστή προτροπή συστήματος",
+                "combined_system": "Συνδυασμένη προτροπή συστήματος",
+                "user": "Είσοδος χρήστη",
+                "disabled": "Απενεργοποιημένο"
+            }
+        }
+    },
     "config_subentries": {
         "conversation": {
             "entry_type": "Conversation agent",

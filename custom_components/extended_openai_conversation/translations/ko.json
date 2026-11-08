@@ -22,6 +22,16 @@
             }
         }
     },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "전용 시스템 프롬프트",
+                "combined_system": "결합된 시스템 프롬프트",
+                "user": "사용자 입력",
+                "disabled": "사용 안 함"
+            }
+        }
+    },
     "config_subentries": {
         "conversation": {
             "entry_type": "Conversation agent",
