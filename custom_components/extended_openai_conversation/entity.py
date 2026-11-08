@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 import json
 import logging
 from mimetypes import guess_file_type
@@ -42,6 +43,8 @@ from .const import (
     CONF_EXTRA_BODY,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     CONF_MAX_TOKENS,
+    CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    CONF_MCP_CONTEXT_PLACEMENT,
     CONF_MCP_SERVERS,
     CONF_REASONING_EFFORT,
     CONF_SERVICE_TIER,
@@ -54,12 +57,18 @@ from .const import (
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    DEFAULT_MCP_CONTEXT_PLACEMENT,
     DEFAULT_REASONING_EFFORT,
     DEFAULT_SERVICE_TIER,
     DEFAULT_SHORTEN_TOOL_CALL_ID,
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_P,
     DOMAIN,
+    MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM,
+    MCP_CONTEXT_PLACEMENT_DEDICATED_SYSTEM,
+    MCP_CONTEXT_PLACEMENT_DISABLED,
+    MCP_CONTEXT_PLACEMENT_USER,
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
@@ -95,6 +104,82 @@ _SUPPORTED_AUDIO_MIME_TYPES: dict[str, Literal["mp3", "wav"]] = {
     "audio/wav": "wav",
     "audio/x-wav": "wav",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class MCPAgentContext:
+    """MCP prompt values and automatic context for one agent request."""
+
+    default_prompt: str = ""
+    permanent_tools: str = ""
+    permanent_tool_messages: tuple[str, ...] = ()
+    add_default_prompt: bool = False
+
+    @property
+    def automatic_content(self) -> str:
+        """Return all MCP content configured for automatic placement."""
+        blocks = []
+        if self.add_default_prompt and self.default_prompt:
+            blocks.append(self.default_prompt)
+        blocks.extend(self.permanent_tool_messages)
+        return "\n\n".join(blocks)
+
+
+def _place_mcp_context(
+    messages: list[ChatCompletionMessageParam],
+    content: str,
+    placement: str,
+) -> None:
+    """Place automatic MCP context in the configured message location."""
+    if not content or placement == MCP_CONTEXT_PLACEMENT_DISABLED:
+        return
+
+    if placement == MCP_CONTEXT_PLACEMENT_DEDICATED_SYSTEM:
+        messages.insert(0,ChatCompletionSystemMessageParam(role="system", content=content))
+        return
+
+    target_role = ("system" if placement == MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM else "user")
+    if placement not in (
+        MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM,
+        MCP_CONTEXT_PLACEMENT_USER,
+    ):
+        raise ValueError(f"Unsupported MCP context placement: {placement}")
+
+    for index, message in enumerate(messages):
+        if message["role"] != target_role:
+            continue
+        existing = message.get("content")
+        if isinstance(existing, str):
+            merged_content = f"{content}\n\n{existing}" if existing else content
+            if target_role == "system":
+                messages[index] = ChatCompletionSystemMessageParam(
+                    role="system", content=merged_content
+                )
+            else:
+                messages[index] = ChatCompletionUserMessageParam(
+                    role="user", content=merged_content
+                )
+            return
+        if isinstance(existing, list) and target_role == "user":
+            messages[index] = ChatCompletionUserMessageParam(
+                role="user",
+                content=[
+                    ChatCompletionContentPartTextParam(type="text", text=content),
+                    *existing,
+                ],
+            )
+            return
+
+    if target_role == "system":
+        messages.insert(
+            0,
+            ChatCompletionSystemMessageParam(role="system", content=content),
+        )
+    else:
+        messages.insert(
+            0,
+            ChatCompletionUserMessageParam(role="user", content=content),
+        )
 
 
 def _shorten_tool_call_id(tool_call_id: str) -> str:
@@ -554,36 +639,57 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             return []
         return [build_mcp_function_tool(server_ids)]
 
-    async def _async_get_mcp_context_messages(
+    async def _async_get_mcp_agent_context(
         self, language: str
-    ) -> list[ChatCompletionSystemMessageParam]:
-        """Return stable context for configured tools already known to the agent."""
+    ) -> MCPAgentContext:
+        """Build template values and automatic context for assigned MCP services."""
         server_ids = self.subentry.data.get(CONF_MCP_SERVERS, []) or []
         if not server_ids:
-            return []
+            return MCPAgentContext()
 
         services = MCPServiceManager(self.hass).scope(server_ids).list_loaded()
-        messages: list[ChatCompletionSystemMessageParam] = []
-        if any(service.config.provide_default_prompt for service in services):
-            messages.append(
-                ChatCompletionSystemMessageParam(
-                    role="system",
-                    content=await async_get_mcp_default_prompt(self.hass, language),
-                )
-            )
+        if not services:
+            return MCPAgentContext()
 
+        permanent_tool_messages: list[str] = []
         for service in services:
             context = MCPContextRenderer.render_permanent_context(
                 service.config,
                 default_prompt=None,
             )
             if context.content:
-                messages.append(
-                    ChatCompletionSystemMessageParam(
-                        role="system",
-                        content=context.content,
-                    )
+                permanent_tool_messages.append(context.content)
+
+        default_prompt = await async_get_mcp_default_prompt(self.hass, language)
+        return MCPAgentContext(
+            default_prompt=default_prompt,
+            permanent_tools="\n\n".join(permanent_tool_messages),
+            permanent_tool_messages=tuple(permanent_tool_messages),
+            add_default_prompt=any(
+                service.config.provide_default_prompt for service in services
+            ),
+        )
+
+    def _mcp_context_messages(
+        self, context: MCPAgentContext
+    ) -> list[ChatCompletionSystemMessageParam]:
+        """Return the separately added MCP system messages for a conversation."""
+        messages: list[ChatCompletionSystemMessageParam] = []
+        if context.add_default_prompt and context.default_prompt:
+            messages.append(
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content=context.default_prompt,
                 )
+            )
+        if self.subentry.data.get(
+            CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+            DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+        ):
+            messages.extend(
+                ChatCompletionSystemMessageParam(role="system", content=content)
+                for content in context.permanent_tool_messages
+            )
         return messages
 
     async def _async_handle_chat_log(
@@ -594,6 +700,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         llm_context: llm.LLMContext | None = None,
         structure_name: str | None = None,
         structure: vol.Schema | None = None,
+        mcp_context: MCPAgentContext | None = None,
     ) -> None:
         """Generate an answer for the chat log with streaming support."""
         options = self.subentry.data
@@ -623,13 +730,27 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             if llm_context is not None and llm_context.language is not None
             else self.hass.config.language
         )
-        mcp_context_messages = await self._async_get_mcp_context_messages(language)
-        messages: list[ChatCompletionMessageParam] = [
-            *mcp_context_messages,
-            *_convert_content_to_param(
-                chat_log.content, shorten_tool_call_id, attachment_parts
-            ),
-        ]
+        if mcp_context is None:
+            mcp_context = await self._async_get_mcp_agent_context(language)
+
+        converted_messages = _convert_content_to_param(
+            chat_log.content, shorten_tool_call_id, attachment_parts
+        )
+        placement = self.subentry.data.get(CONF_MCP_CONTEXT_PLACEMENT)
+        if placement is None:
+            mcp_context_messages = self._mcp_context_messages(mcp_context)
+            messages: list[ChatCompletionMessageParam] = [
+                *mcp_context_messages,
+                *converted_messages,
+            ]
+        else:
+            mcp_context_messages = []
+            _place_mcp_context(
+                converted_messages,
+                mcp_context.automatic_content,
+                placement or DEFAULT_MCP_CONTEXT_PLACEMENT,
+            )
+            messages = converted_messages
         tool_media_parts: dict[
             str,
             list[
@@ -776,15 +897,21 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     tool_media_parts[tool_input.id] = media_parts
 
             # Update messages for next iteration
-            messages = [
-                *mcp_context_messages,
-                *_convert_content_to_param(
-                    chat_log.content,
-                    shorten_tool_call_id,
-                    attachment_parts,
-                    tool_media_parts,
-                ),
-            ]
+            converted_messages = _convert_content_to_param(
+                chat_log.content,
+                shorten_tool_call_id,
+                attachment_parts,
+                tool_media_parts,
+            )
+            if placement is None:
+                messages = [*mcp_context_messages, *converted_messages]
+            else:
+                _place_mcp_context(
+                    converted_messages,
+                    mcp_context.automatic_content,
+                    placement or DEFAULT_MCP_CONTEXT_PLACEMENT,
+                )
+                messages = converted_messages
 
             # Check if we need to continue (if there are pending tool results)
             if not chat_log.unresponded_tool_results:

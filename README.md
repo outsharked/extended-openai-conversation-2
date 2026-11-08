@@ -193,6 +193,25 @@ options and two new options.
 will disable any tools that contain the word `delete` (case sensitive) in the name
 - `Regular expression timeout`: When the integration attempts a search with regular expressions (including if an agent is also performing a search and is using regular expressions to search for a tool/server), this timeout is used to prevent the integration from getting stuck. This can be a decimal number
 
+Conversation agents also provide `Automatically add permanent MCP tools`, which
+adds each assigned server's permanent catalogue as a separate system message.
+The main prompt template can independently place MCP context using these Jinja variables:
+
+- `{{ permanent_mcp_tools }}`: The permanent catalogues for all assigned and
+  loaded MCP servers, or an empty string when none are available.
+- `{{ default_mcp_prompt }}`: The default MCP dispatcher instructions, or an
+  empty string when no assigned MCP server is loaded.
+
+Enabling automatic addition while also using `{{ permanent_mcp_tools }}` will result in the 
+agent receiving the same data more than once in a single message.
+
+AI Task agents provide `Automatic MCP context placement` instead of an editable
+prompt. `Dedicated system prompt` adds the automatic MCP instructions and
+permanent catalogues as an additional system message. `Combined system prompt`
+prepends them to the existing system message for models that only support one
+system message. `User input` prepends them to the existing user message, and
+`Disabled` omits automatic MCP context.
+
 **NOTES:**
 - If `On-Demand Discovery` is disabled and no permanent tools are provided, then the Agent will not be able to call any MCP tool.
 - Setting permanent and specific disabled tools is only possible if `Perform initial tool discovery` was enabled. Setting specific disabled tools also requires `On-Demand Discovery` to be enabled. Regex based disabling of tools is only available if `On-Demand Discovery` is enabled.

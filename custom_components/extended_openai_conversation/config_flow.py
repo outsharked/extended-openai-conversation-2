@@ -77,6 +77,8 @@ from .const import (
     CONF_FUNCTION_TOOLS,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     CONF_MAX_TOKENS,
+    CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    CONF_MCP_CONTEXT_PLACEMENT,
     CONF_MCP_OAUTH_ACTION,
     CONF_MCP_OAUTH_TIMEOUT,
     CONF_MCP_SERVERS,
@@ -104,6 +106,8 @@ from .const import (
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    DEFAULT_MCP_CONTEXT_PLACEMENT,
     DEFAULT_MCP_OAUTH_TIMEOUT,
     DEFAULT_NAME,
     DEFAULT_PROMPT,
@@ -114,6 +118,7 @@ from .const import (
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_P,
     DOMAIN,
+    MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     REASONING_EFFORT_OPTIONS,
@@ -305,6 +310,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CHAT_MODEL: DEFAULT_CHAT_MODEL,
         CONF_MAX_TOKENS: DEFAULT_MAX_TOKENS,
         CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION: DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
+        CONF_MCP_AUTO_ADD_PERMANENT_TOOLS: DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
         CONF_TOP_P: DEFAULT_TOP_P,
         CONF_TEMPERATURE: DEFAULT_TEMPERATURE,
         CONF_FUNCTION_TOOLS: DEFAULT_CONF_FUNCTION_TOOLS_STR,
@@ -1878,6 +1884,10 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             ),
             vol.Optional(
+                CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+                default=DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+            ): BooleanSelector(),
+            vol.Optional(
                 CONF_FUNCTION_TOOLS,
                 default=DEFAULT_CONF_FUNCTION_TOOLS_STR,
             ): TemplateSelector(),
@@ -1992,6 +2002,16 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                         options=_mcp_server_options(self.hass),
                         mode=SelectSelectorMode.DROPDOWN,
                         multiple=True,
+                    )
+                ),
+                vol.Optional(
+                    CONF_MCP_CONTEXT_PLACEMENT,
+                    default=DEFAULT_MCP_CONTEXT_PLACEMENT,
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(MCP_CONTEXT_PLACEMENTS),
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key="mcp_context_placement",
                     )
                 ),
                 vol.Optional(

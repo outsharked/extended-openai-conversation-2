@@ -35,6 +35,8 @@ from custom_components.extended_openai_conversation.const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_FUNCTION_TOOLS,
+    CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    CONF_MCP_CONTEXT_PLACEMENT,
     CONF_MCP_OAUTH_ACTION,
     CONF_MCP_OAUTH_TIMEOUT,
     CONF_MCP_SERVERS,
@@ -43,7 +45,10 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_CONF_BASE_URL,
+    DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    DEFAULT_MCP_CONTEXT_PLACEMENT,
     DOMAIN,
+    MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     SERVICE_TYPE_AI_ENDPOINT,
@@ -1692,6 +1697,14 @@ def test_openai_config_option_schema_includes_core_options():
     assert CONF_FUNCTION_TOOLS in keys
     assert CONF_SKILLS in keys
     assert CONF_MCP_SERVERS in keys
+    assert CONF_MCP_AUTO_ADD_PERMANENT_TOOLS in keys
+
+    auto_add_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_MCP_AUTO_ADD_PERMANENT_TOOLS
+    )
+    assert auto_add_key.default() is DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS
 
 
 def test_openai_config_option_schema_omits_skills_field_when_none_available():
@@ -1793,3 +1806,12 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
         key for key in schema if getattr(key, "schema", key) == CONF_MCP_SERVERS
     )
     assert servers_key.default() == ["vault"]
+    placement_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_MCP_CONTEXT_PLACEMENT
+    )
+    assert placement_key.default() == DEFAULT_MCP_CONTEXT_PLACEMENT
+    placement_selector = schema[placement_key]
+    assert placement_selector.config["options"] == list(MCP_CONTEXT_PLACEMENTS)
+    assert placement_selector.config["translation_key"] == "mcp_context_placement"

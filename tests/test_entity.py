@@ -20,6 +20,7 @@ from custom_components.extended_openai_conversation.entity import (
     _format_structured_output,
     _make_tool_result_content,
     _messages_contain_media,
+    _place_mcp_context,
     _render_extra_body,
     encode_attachments,
 )
@@ -136,7 +137,8 @@ async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue(
             new=AsyncMock(return_value="Instructions MCP traduites"),
         ) as get_prompt,
     ):
-        messages = await entity._async_get_mcp_context_messages("fr")
+        context = await entity._async_get_mcp_agent_context("fr")
+        messages = entity._mcp_context_messages(context)
 
     manager.scope.assert_called_once_with(["vault", "weather"])
     scope.list_loaded.assert_called_once_with()
@@ -144,6 +146,8 @@ async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue(
     assert len(messages) == 2
     assert messages[0]["role"] == "system"
     assert messages[0]["content"] == "Instructions MCP traduites"
+    assert context.default_prompt == "Instructions MCP traduites"
+    assert context.permanent_tools == messages[1]["content"]
     context = json.loads(messages[1]["content"])
     assert context["server_id"] == "vault"
     assert context["tools"] == [
@@ -162,6 +166,97 @@ async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue(
     assert "instructions" not in context
 
 
+async def test_mcp_context_auto_permanent_tools_can_be_disabled():
+    """Conversation templates retain MCP values when automatic messages are off."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    )
+
+    entity = ExtendedOpenAIBaseLLMEntity.__new__(ExtendedOpenAIBaseLLMEntity)
+    entity.hass = MagicMock()
+    entity.subentry = MagicMock()
+    entity.subentry.data = {
+        "mcp_servers": ["vault"],
+        CONF_MCP_AUTO_ADD_PERMANENT_TOOLS: False,
+    }
+    tool = MCPTool(
+        name="read_secret",
+        title=None,
+        description="Read a stored secret.",
+        input_schema={"type": "object"},
+        output_schema=None,
+    )
+    service = MagicMock()
+    service.config = MCPServiceConfig(
+        server=MCPServerConfig(
+            server_id="vault",
+            name="Vault MCP",
+            url="https://vault.example.com/mcp",
+        ),
+        permanent_tools=(tool,),
+        provide_default_prompt=False,
+    )
+    manager = MagicMock()
+    manager.scope.return_value.list_loaded.return_value = (service,)
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.entity.MCPServiceManager",
+            return_value=manager,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity.async_get_mcp_default_prompt",
+            new=AsyncMock(return_value="MCP instructions"),
+        ),
+    ):
+        context = await entity._async_get_mcp_agent_context("en")
+
+    assert context.default_prompt == "MCP instructions"
+    assert "read_secret" in context.permanent_tools
+    assert entity._mcp_context_messages(context) == []
+
+
+def test_place_mcp_context_uses_dedicated_system_message():
+    """AI Task MCP context can use an additional system message."""
+    messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    _place_mcp_context(messages, "MCP context", "dedicated_system")
+    assert messages == [
+        {"role": "system", "content": "MCP context"},
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+
+
+def test_place_mcp_context_merges_into_selected_role():
+    """AI Task MCP context can be merged into an existing message."""
+    system_messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    _place_mcp_context(system_messages, "MCP context", "combined_system")
+    assert system_messages == [
+        {"role": "system", "content": "MCP context\n\nExisting system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+
+    user_messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    _place_mcp_context(user_messages, "MCP context", "user")
+    assert user_messages[1] == {
+        "role": "user",
+        "content": "MCP context\n\nDo the task",
+    }
+
+    disabled_messages = [{"role": "user", "content": "Do the task"}]
+    _place_mcp_context(disabled_messages, "MCP context", "disabled")
+    assert disabled_messages == [{"role": "user", "content": "Do the task"}]
+
+
 async def test_mcp_context_messages_skip_manager_without_assigned_servers():
     """An agent without assigned MCP servers receives no MCP context."""
     entity = ExtendedOpenAIBaseLLMEntity.__new__(ExtendedOpenAIBaseLLMEntity)
@@ -172,7 +267,10 @@ async def test_mcp_context_messages_skip_manager_without_assigned_servers():
     with patch(
         "custom_components.extended_openai_conversation.entity.MCPServiceManager"
     ) as manager:
-        assert await entity._async_get_mcp_context_messages("en") == []
+        context = await entity._async_get_mcp_agent_context("en")
+
+    assert context.permanent_tools == ""
+    assert context.default_prompt == ""
 
     manager.assert_not_called()
 

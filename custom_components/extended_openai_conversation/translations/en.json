@@ -181,6 +181,14 @@
                 "proceed": "Proceed with OAuth",
                 "return": "Return to Configure Service"
             }
+        },
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Dedicated system prompt",
+                "combined_system": "Merged system prompt",
+                "user": "User input",
+                "disabled": "Disabled"
+            }
         }
     },
     "config_subentries": {
@@ -199,13 +207,17 @@
                         "max_function_calls_per_conversation": "Maximum function calls per conversation",
                         "skills": "Skills",
                         "mcp_servers": "MCP servers",
+                        "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tools",
                         "functions": "Functions",
                         "attach_username": "Attach Username to Message",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "prompt": "Use the `permanent_mcp_tools` Jinja variable to insert the assigned permanent MCP tool catalogues and `default_mcp_prompt` to insert the localized MCP usage instructions.",
+                        "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tool catalogues as separate system messages. Template variables remain independent, so enabling this while inserting `permanent_mcp_tools` may intentionally duplicate the catalogue."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -236,7 +248,11 @@
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
                         "mcp_servers": "MCP servers",
+                        "mcp_context_placement": "Automatic MCP context placement",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_context_placement": "Choose whether automatic MCP instructions and permanent tool catalogues use a dedicated system prompt, are merged into the existing system prompt, are prepended to the user input, or are disabled."
                     }
                 },
                 "advanced": {
