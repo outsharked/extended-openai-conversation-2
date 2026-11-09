@@ -18,7 +18,6 @@ from .mcp_const import (
     CONF_MCP_PERMANENT_TOOL_CATALOGUE,
     CONF_MCP_PERMANENT_TOOL_MODE,
     CONF_MCP_PERMANENT_TOOLS,
-    CONF_MCP_PROVIDE_DEFAULT_PROMPT,
     CONF_MCP_REGEX_TIMEOUT,
     CONF_MCP_SERVER_INFORMATION,
     CONF_MCP_TOOL_NAME_PATTERN,
@@ -27,7 +26,6 @@ from .mcp_const import (
     DEFAULT_MCP_ON_DEMAND_DISCOVERY,
     DEFAULT_MCP_PERFORM_TOOL_DISCOVERY,
     DEFAULT_MCP_PERMANENT_TOOL_MODE,
-    DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT,
     DEFAULT_MCP_REGEX_TIMEOUT,
     DEFAULT_MCP_TOOL_NAME_PATTERN,
     MCP_TOOL_FILTER_SELECTED,
@@ -45,7 +43,6 @@ class MCPServiceConfig:
 
     server: MCPServerConfig
     perform_tool_discovery: bool = DEFAULT_MCP_PERFORM_TOOL_DISCOVERY
-    provide_default_prompt: bool = DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT
     permanent_tool_mode: str = DEFAULT_MCP_PERMANENT_TOOL_MODE
     permanent_tool_selection: tuple[str, ...] = ()
     permanent_tools: tuple[MCPTool, ...] = ()
@@ -87,7 +84,6 @@ class MCPServiceConfig:
         discovery: MCPDiscoveryResult | None,
         *,
         perform_tool_discovery: bool,
-        provide_default_prompt: bool,
         permanent_tool_mode: str,
         selected_tool_names: Collection[str],
         include_permanent_schemas: bool,
@@ -117,7 +113,6 @@ class MCPServiceConfig:
         config: MCPServiceConfig = cls(
             server=server,
             perform_tool_discovery=perform_tool_discovery,
-            provide_default_prompt=provide_default_prompt,
             permanent_tool_mode=permanent_tool_mode,
             permanent_tool_selection=tuple(sorted(permanent_names)),
             include_permanent_schemas=include_permanent_schemas,
@@ -204,9 +199,6 @@ class MCPServiceConfig:
             perform_tool_discovery=data.get(
                 CONF_MCP_PERFORM_TOOL_DISCOVERY, DEFAULT_MCP_PERFORM_TOOL_DISCOVERY
             ),
-            provide_default_prompt=data.get(
-                CONF_MCP_PROVIDE_DEFAULT_PROMPT, DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT
-            ),
             permanent_tool_mode=data.get(
                 CONF_MCP_PERMANENT_TOOL_MODE, DEFAULT_MCP_PERMANENT_TOOL_MODE
             ),
@@ -251,7 +243,6 @@ class MCPServiceConfig:
         """Return normalized tool-discovery policy values."""
         return {
             CONF_MCP_PERFORM_TOOL_DISCOVERY: self.perform_tool_discovery,
-            CONF_MCP_PROVIDE_DEFAULT_PROMPT: self.provide_default_prompt,
             CONF_MCP_PERMANENT_TOOL_MODE: self.permanent_tool_mode,
             CONF_MCP_PERMANENT_TOOLS: list(self.permanent_tool_selection),
             CONF_MCP_INCLUDE_PERMANENT_SCHEMAS: self.include_permanent_schemas,

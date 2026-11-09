@@ -117,7 +117,6 @@ class MCPAgentContext:
     default_prompt: str = ""
     permanent_tools: str = ""
     permanent_tool_messages: tuple[str, ...] = ()
-    add_default_prompt: bool = False
 
 def _place_mcp_context(
     messages: list[ChatCompletionMessageParam],
@@ -186,7 +185,7 @@ def _place_mcp_agent_context(
     placements = (
         (context.permanent_tools, permanent_tools_placement),
         (
-            context.default_prompt if context.add_default_prompt else "",
+            context.default_prompt,
             default_prompt_placement,
         ),
     )
@@ -670,7 +669,6 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         for service in services:
             context = MCPContextRenderer.render_permanent_context(
                 service.config,
-                default_prompt=None,
             )
             if context.content:
                 permanent_tool_messages.append(context.content)
@@ -680,9 +678,6 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             default_prompt=default_prompt,
             permanent_tools="\n\n".join(permanent_tool_messages),
             permanent_tool_messages=tuple(permanent_tool_messages),
-            add_default_prompt=any(
-                service.config.provide_default_prompt for service in services
-            ),
         )
 
     def _mcp_context_messages(
@@ -690,13 +685,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     ) -> list[ChatCompletionSystemMessageParam]:
         """Return the separately added MCP system messages for a conversation."""
         messages: list[ChatCompletionSystemMessageParam] = []
-        if (
-            context.add_default_prompt
-            and context.default_prompt
-            and self.subentry.data.get(
-                CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
-                DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
-            )
+        if context.default_prompt and self.subentry.data.get(
+            CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
+            DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
         ):
             messages.append(
                 ChatCompletionSystemMessageParam(

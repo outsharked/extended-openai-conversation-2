@@ -96,7 +96,6 @@
                     "headers": "HTTP headers",
                     "use_oauth": "Server uses OAuth",
                     "perform_tool_discovery": "Perform initial tool discovery",
-                    "provide_default_prompt": "Provide default MCP prompt",
                     "on_demand_discovery": "Enable on-demand discovery"
                 },
                 "data_description": {
@@ -105,7 +104,6 @@
                     "headers": "Enter a YAML or JSON object of header names and string values. Example: Authorization: \"Bearer token\". Do not include an outer headers key. Quote numeric, boolean, or null-like values so they remain strings.",
                     "use_oauth": "Use Home Assistant's OAuth and Application Credentials support instead of static authentication headers.",
                     "perform_tool_discovery": "Connect and cache the server's current tool catalogue when this page is submitted. Disable this to perform only a connection check.\nDisabling this will prevent configuring permanent tools and disabling tools will be limited to Regular Expressions only",
-                    "provide_default_prompt": "Automatically tell the model how to use list_servers, list_tools, and execute_tool.\nLeaving this blank will require the instructions added to the AI Endpoint prompt manually",
                     "on_demand_discovery": "Allow the model to discover non-permanent tools during conversations."
                 }
             },
@@ -158,7 +156,7 @@
             },
             "mcp_review": {
                 "title": "Review MCP context",
-                "description": "Connection succeeded: {connection_status}\n\nInitial discovery succeeded: {discovery_status}\n\nDiscovered tools: {discovered_tool_count}\n\nPermanent selection uses selected tools: {permanent_tools_selected}\n\nResolved permanent tools: {selected_tool_count}\n\nSchemas included: {schemas_included}\n\nDefault MCP prompt: {default_prompt}\n\nOn-demand discovery: {on_demand_discovery}\n\nDisabled selection disables selected tools: {disabled_tools_selected}\n\nSelected disabled tools: {disabled_tool_count}\n\nTool-name regular expression: {tool_name_pattern}\n\nRegular-expression timeout: {regex_timeout} seconds\n\nPermanent context size: {character_count} characters ({byte_count} bytes)\n\nEstimated context cost per request: approximately {estimated_tokens} tokens",
+                "description": "Connection succeeded: {connection_status}\n\nInitial discovery succeeded: {discovery_status}\n\nDiscovered tools: {discovered_tool_count}\n\nPermanent selection uses selected tools: {permanent_tools_selected}\n\nResolved permanent tools: {selected_tool_count}\n\nSchemas included: {schemas_included}\n\nOn-demand discovery: {on_demand_discovery}\n\nDisabled selection disables selected tools: {disabled_tools_selected}\n\nSelected disabled tools: {disabled_tool_count}\n\nTool-name regular expression: {tool_name_pattern}\n\nRegular-expression timeout: {regex_timeout} seconds\n\nPermanent context size: {character_count} characters ({byte_count} bytes)\n\nEstimated context cost per request: approximately {estimated_tokens} tokens",
                 "submit": "Return to workflow"
             }
         }

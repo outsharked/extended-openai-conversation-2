@@ -133,6 +133,7 @@ def test_service_config_round_trips_complete_permanent_catalogue():
     assert persisted["permanent_tool_catalogue"][0]["input_schema"] == (
         tool.input_schema
     )
+    assert "provide_default_prompt" not in persisted
     assert "definition" not in persisted["permanent_tool_catalogue"][0]
     assert MCPServiceConfig.from_dict(persisted) == config
 
@@ -159,7 +160,6 @@ def test_service_config_selection_keeps_only_selected_tool_snapshots():
         server,
         discovery,
         perform_tool_discovery=True,
-        provide_default_prompt=True,
         permanent_tool_mode="selected",
         selected_tool_names=["write_secret"],
         include_permanent_schemas=True,
@@ -187,7 +187,6 @@ def test_service_config_applies_filters_only_to_on_demand_tools():
         server,
         discovery,
         perform_tool_discovery=True,
-        provide_default_prompt=True,
         permanent_tool_mode="selected",
         selected_tool_names=["write_secret"],
         include_permanent_schemas=False,
@@ -266,7 +265,6 @@ def test_service_config_rejects_permanent_disabled_tool_conflict():
             server,
             discovery,
             perform_tool_discovery=True,
-            provide_default_prompt=True,
             permanent_tool_mode="selected",
             selected_tool_names=["write_secret"],
             include_permanent_schemas=False,
@@ -291,7 +289,6 @@ def test_empty_disabled_selection_does_not_conflict_with_permanent_tools():
         server,
         discovery,
         perform_tool_discovery=True,
-        provide_default_prompt=True,
         permanent_tool_mode="selected",
         selected_tool_names=["write_secret"],
         include_permanent_schemas=False,
@@ -315,7 +312,6 @@ def test_service_config_selection_rejects_unknown_tool():
             server,
             discovery,
             perform_tool_discovery=True,
-            provide_default_prompt=True,
             permanent_tool_mode="selected",
             selected_tool_names=["not_advertised"],
             include_permanent_schemas=True,
@@ -336,7 +332,6 @@ def test_service_config_without_catalogue_has_no_permanent_tools():
         _server(),
         None,
         perform_tool_discovery=False,
-        provide_default_prompt=True,
         permanent_tool_mode="selected",
         selected_tool_names=[],
         include_permanent_schemas=True,
@@ -408,7 +403,6 @@ def test_permanent_context_estimate_uses_the_rendered_schema_content():
             server=config,
             permanent_tools=tools,
             include_permanent_schemas=False,
-            provide_default_prompt=True,
             disabled_tools=("read_secret",),
             tool_name_pattern="write_.*",
         )
@@ -418,7 +412,6 @@ def test_permanent_context_estimate_uses_the_rendered_schema_content():
             server=config,
             permanent_tools=tools,
             include_permanent_schemas=True,
-            provide_default_prompt=True,
             disabled_tools=("read_secret",),
             tool_name_pattern="write_.*",
         )

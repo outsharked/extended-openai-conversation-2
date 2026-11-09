@@ -133,7 +133,6 @@ from .const import (
 )
 from .helpers import (
     async_check_openai_connection,
-    async_get_mcp_default_prompt,
     get_authenticated_client,
     get_model_config,
     get_service_type,
@@ -152,7 +151,6 @@ from .mcp_client import (
     CONF_MCP_PERFORM_TOOL_DISCOVERY,
     CONF_MCP_PERMANENT_TOOL_MODE,
     CONF_MCP_PERMANENT_TOOLS,
-    CONF_MCP_PROVIDE_DEFAULT_PROMPT,
     CONF_MCP_REGEX_TIMEOUT,
     CONF_MCP_SERVER_ID,
     CONF_MCP_SERVER_URL,
@@ -164,7 +162,6 @@ from .mcp_client import (
     DEFAULT_MCP_ON_DEMAND_DISCOVERY,
     DEFAULT_MCP_PERFORM_TOOL_DISCOVERY,
     DEFAULT_MCP_PERMANENT_TOOL_MODE,
-    DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT,
     DEFAULT_MCP_REGEX_TIMEOUT,
     DEFAULT_MCP_TOOL_NAME_PATTERN,
     MCP_TOOL_FILTER_SELECTED,
@@ -612,10 +609,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                     CONF_MCP_PERFORM_TOOL_DISCOVERY,
                     DEFAULT_MCP_PERFORM_TOOL_DISCOVERY,
                 ),
-                CONF_MCP_PROVIDE_DEFAULT_PROMPT: user_input.get(
-                    CONF_MCP_PROVIDE_DEFAULT_PROMPT,
-                    DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT,
-                ),
                 CONF_MCP_ON_DEMAND_DISCOVERY: user_input.get(
                     CONF_MCP_ON_DEMAND_DISCOVERY,
                     DEFAULT_MCP_ON_DEMAND_DISCOVERY,
@@ -667,13 +660,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                     default=values.get(
                         CONF_MCP_PERFORM_TOOL_DISCOVERY,
                         DEFAULT_MCP_PERFORM_TOOL_DISCOVERY,
-                    ),
-                ): BooleanSelector(),
-                vol.Required(
-                    CONF_MCP_PROVIDE_DEFAULT_PROMPT,
-                    default=values.get(
-                        CONF_MCP_PROVIDE_DEFAULT_PROMPT,
-                        DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT,
                     ),
                 ): BooleanSelector(),
                 vol.Required(
@@ -1206,7 +1192,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         """Return complete policy values using the current draft and defaults."""
         return {
             CONF_MCP_PERFORM_TOOL_DISCOVERY: DEFAULT_MCP_PERFORM_TOOL_DISCOVERY,
-            CONF_MCP_PROVIDE_DEFAULT_PROMPT: DEFAULT_MCP_PROVIDE_DEFAULT_PROMPT,
             CONF_MCP_PERMANENT_TOOL_MODE: DEFAULT_MCP_PERMANENT_TOOL_MODE,
             CONF_MCP_PERMANENT_TOOLS: [],
             CONF_MCP_INCLUDE_PERMANENT_SCHEMAS: DEFAULT_MCP_INCLUDE_PERMANENT_SCHEMAS,
@@ -1267,7 +1252,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 self._mcp_service_config,
                 server=self._mcp_config,
                 perform_tool_discovery=options[CONF_MCP_PERFORM_TOOL_DISCOVERY],
-                provide_default_prompt=options[CONF_MCP_PROVIDE_DEFAULT_PROMPT],
                 permanent_tool_mode=options[CONF_MCP_PERMANENT_TOOL_MODE],
                 permanent_tool_selection=tuple(
                     options[CONF_MCP_PERMANENT_TOOLS]
@@ -1296,7 +1280,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 self._mcp_config,
                 self._mcp_discovery,
                 perform_tool_discovery=options[CONF_MCP_PERFORM_TOOL_DISCOVERY],
-                provide_default_prompt=options[CONF_MCP_PROVIDE_DEFAULT_PROMPT],
                 permanent_tool_mode=options[CONF_MCP_PERMANENT_TOOL_MODE],
                 selected_tool_names=options[CONF_MCP_PERMANENT_TOOLS],
                 include_permanent_schemas=options[CONF_MCP_INCLUDE_PERMANENT_SCHEMAS],
@@ -1335,14 +1318,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         else:
             await self._async_test_mcp_server(run_requested_discovery=False)
 
-        default_prompt = await async_get_mcp_default_prompt(
-            self.hass, self.hass.config.language
-        )
         estimate: MCPContextEstimate = MCPContextEstimate.from_context(
-            MCPContextRenderer.render_permanent_context(
-                service_config,
-                default_prompt=default_prompt,
-            )
+            MCPContextRenderer.render_permanent_context(service_config)
         )
 
         return self.async_show_form(
@@ -1361,9 +1338,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 ),
                 "on_demand_discovery": self._status_icon(
                     service_config.on_demand_discovery
-                ),
-                "default_prompt": self._status_icon(
-                    service_config.provide_default_prompt
                 ),
                 "disabled_tools_selected": self._status_icon(
                     service_config.disabled_tool_mode == MCP_TOOL_FILTER_SELECTED

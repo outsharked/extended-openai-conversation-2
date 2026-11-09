@@ -76,7 +76,6 @@ from custom_components.extended_openai_conversation.mcp_client.mcp_const import 
     CONF_MCP_PERFORM_TOOL_DISCOVERY,
     CONF_MCP_PERMANENT_TOOL_MODE,
     CONF_MCP_PERMANENT_TOOLS,
-    CONF_MCP_PROVIDE_DEFAULT_PROMPT,
     CONF_MCP_REGEX_TIMEOUT,
     CONF_MCP_SERVER_ID,
     CONF_MCP_SERVER_URL,
@@ -161,7 +160,6 @@ def _mcp_form_values(
         CONF_MCP_HEADERS: dict(config.headers),
         CONF_MCP_USE_OAUTH: config.use_oauth,
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
         **overrides,
     }
@@ -177,7 +175,6 @@ def _configure_mcp_tool_policy(
     flow._mcp_discovery = _mcp_discovery(*tools)
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_PERMANENT_TOOL_MODE: "selected",
         CONF_MCP_PERMANENT_TOOLS: permanent,
         CONF_MCP_INCLUDE_PERMANENT_SCHEMAS: False,
@@ -275,7 +272,6 @@ async def test_mcp_step_keeps_config_and_returns_to_service_menu(hass):
         CONF_MCP_HEADERS: {"Authorization": "Bearer test-token"},
         CONF_MCP_USE_OAUTH: False,
         CONF_MCP_PERFORM_TOOL_DISCOVERY: False,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
     }
 
@@ -315,7 +311,6 @@ async def test_mcp_form_includes_oauth_choice(hass):
     assert {
         CONF_MCP_USE_OAUTH,
         CONF_MCP_PERFORM_TOOL_DISCOVERY,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT,
         CONF_MCP_ON_DEMAND_DISCOVERY,
     } <= _schema_keys(schema.schema)
 
@@ -456,7 +451,6 @@ async def test_oauth_callback_completion_returns_to_service_menu(hass):
     flow._mcp_config = _mcp_server_config(use_oauth=True)
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
     }
     flow._mcp_oauth_data = {
@@ -944,7 +938,6 @@ async def test_requested_initial_discovery_caches_catalogue(hass):
     flow._mcp_config = config
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
     }
 
@@ -1180,7 +1173,6 @@ async def test_filter_submission_clears_omitted_optional_values(hass):
     )
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_PERMANENT_TOOL_MODE: "selected",
         CONF_MCP_PERMANENT_TOOLS: ["read_secret"],
         CONF_MCP_INCLUDE_PERMANENT_SCHEMAS: False,
@@ -1224,7 +1216,6 @@ async def test_filter_submission_can_be_reviewed_and_saved(hass):
     flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
     selection = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_PERMANENT_TOOL_MODE: "selected",
         CONF_MCP_PERMANENT_TOOLS: ["read_secret"],
         CONF_MCP_INCLUDE_PERMANENT_SCHEMAS: True,
@@ -1246,10 +1237,6 @@ async def test_filter_submission_can_be_reviewed_and_saved(hass):
         "custom_components.extended_openai_conversation.config_flow."
         "MCPClientConfigFlow.check_connection",
         new=AsyncMock(return_value=flow._mcp_discovery.server),
-    ), patch(
-        "custom_components.extended_openai_conversation.config_flow."
-        "async_get_mcp_default_prompt",
-        new=AsyncMock(return_value="Localized MCP prompt"),
     ):
         result = await flow.async_step_mcp_review()
 
@@ -1293,7 +1280,6 @@ async def test_mcp_without_initial_discovery_can_be_reviewed_and_saved(hass):
     flow._mcp_discovery = None
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: False,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
     }
     flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
@@ -1323,7 +1309,6 @@ async def test_mcp_filter_tools_rejects_tool_outside_discovered_catalogue(hass):
     flow._mcp_discovery = _mcp_discovery()
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
     }
     flow.async_show_form = MagicMock(return_value={"type": "form"})
@@ -1357,7 +1342,6 @@ async def test_mcp_filter_tools_rejects_permanent_disabled_conflict(hass):
     )
     flow._mcp_options = {
         CONF_MCP_PERFORM_TOOL_DISCOVERY: True,
-        CONF_MCP_PROVIDE_DEFAULT_PROMPT: True,
         CONF_MCP_ON_DEMAND_DISCOVERY: True,
     }
     flow.async_show_form = MagicMock(return_value={"type": "form"})

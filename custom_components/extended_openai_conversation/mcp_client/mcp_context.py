@@ -46,18 +46,11 @@ class MCPContextEstimate:
 
 class MCPContextRenderer:
     @staticmethod
-    def render_permanent_context(
-        config: MCPServiceConfig,
-        *,
-        default_prompt: str | None = DEFAULT_MCP_PROMPT,
-    ) -> MCPRenderedContext:
+    def render_permanent_context(config: MCPServiceConfig) -> MCPRenderedContext:
         """Render stable model context without calculating display estimates."""
 
         tools = config.permanent_tools
-        include_default_prompt = (
-            config.provide_default_prompt and default_prompt is not None
-        )
-        if not tools and not include_default_prompt:
+        if not tools:
             return MCPRenderedContext(content="", selected_tool_count=0)
 
         rendered_tools: list[dict[str, object]] = []
@@ -78,9 +71,6 @@ class MCPContextRenderer:
             "server_description": config.server.description,
             "tools": rendered_tools,
         }
-        if include_default_prompt:
-            context["instructions"] = default_prompt
-
         return MCPRenderedContext(
             content=json.dumps(
                 context,

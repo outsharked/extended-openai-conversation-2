@@ -112,7 +112,6 @@ async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue(
         ),
         permanent_tools=(tool, on_demand_disabled_tool),
         include_permanent_schemas=True,
-        provide_default_prompt=True,
         disabled_tools=("delete_secret",),
     )
     second_service = MagicMock()
@@ -122,7 +121,6 @@ async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue(
             name="Weather MCP",
             url="https://weather.example.com/mcp",
         ),
-        provide_default_prompt=True,
     )
     scope = MagicMock()
     scope.list_loaded.return_value = (service, second_service)
@@ -198,7 +196,6 @@ async def test_mcp_context_automatic_messages_can_be_disabled():
             url="https://vault.example.com/mcp",
         ),
         permanent_tools=(tool,),
-        provide_default_prompt=True,
     )
     manager = MagicMock()
     manager.scope.return_value.list_loaded.return_value = (service,)
@@ -229,7 +226,6 @@ def test_place_mcp_agent_context_uses_independent_placements():
     context = MCPAgentContext(
         default_prompt="MCP instructions",
         permanent_tools="Permanent tools",
-        add_default_prompt=True,
     )
 
     _place_mcp_agent_context(
