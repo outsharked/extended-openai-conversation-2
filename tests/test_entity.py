@@ -14,12 +14,14 @@ import probatio as vol
 
 from custom_components.extended_openai_conversation.entity import (
     ExtendedOpenAIBaseLLMEntity,
+    MCPAgentContext,
     _convert_content_to_param,
     _extract_extra_content,
     _extract_mcp_media_content,
     _format_structured_output,
     _make_tool_result_content,
     _messages_contain_media,
+    _place_mcp_agent_context,
     _place_mcp_context,
     _render_extra_body,
     encode_attachments,
@@ -166,9 +168,10 @@ async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue(
     assert "instructions" not in context
 
 
-async def test_mcp_context_auto_permanent_tools_can_be_disabled():
+async def test_mcp_context_automatic_messages_can_be_disabled():
     """Conversation templates retain MCP values when automatic messages are off."""
     from custom_components.extended_openai_conversation.const import (
+        CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
         CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
     )
 
@@ -177,6 +180,7 @@ async def test_mcp_context_auto_permanent_tools_can_be_disabled():
     entity.subentry = MagicMock()
     entity.subentry.data = {
         "mcp_servers": ["vault"],
+        CONF_MCP_AUTO_ADD_DEFAULT_PROMPT: False,
         CONF_MCP_AUTO_ADD_PERMANENT_TOOLS: False,
     }
     tool = MCPTool(
@@ -194,7 +198,7 @@ async def test_mcp_context_auto_permanent_tools_can_be_disabled():
             url="https://vault.example.com/mcp",
         ),
         permanent_tools=(tool,),
-        provide_default_prompt=False,
+        provide_default_prompt=True,
     )
     manager = MagicMock()
     manager.scope.return_value.list_loaded.return_value = (service,)
@@ -214,6 +218,32 @@ async def test_mcp_context_auto_permanent_tools_can_be_disabled():
     assert context.default_prompt == "MCP instructions"
     assert "read_secret" in context.permanent_tools
     assert entity._mcp_context_messages(context) == []
+
+
+def test_place_mcp_agent_context_uses_independent_placements():
+    """AI Task prompt and permanent tools use independent placements."""
+    messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    context = MCPAgentContext(
+        default_prompt="MCP instructions",
+        permanent_tools="Permanent tools",
+        add_default_prompt=True,
+    )
+
+    _place_mcp_agent_context(
+        messages,
+        context,
+        permanent_tools_placement="dedicated_system",
+        default_prompt_placement="combined_system",
+    )
+
+    assert messages == [
+        {"role": "system", "content": "Permanent tools"},
+        {"role": "system", "content": "MCP instructions\n\nExisting system"},
+        {"role": "user", "content": "Do the task"},
+    ]
 
 
 def test_place_mcp_context_uses_dedicated_system_message():

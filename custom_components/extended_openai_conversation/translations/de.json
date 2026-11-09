@@ -47,13 +47,19 @@
                         "prompt": "Prompt Vorlage",
                         "max_function_calls_per_conversation": "Maximale Anzahl an Funktionsaufrufen pro Konversation",
                         "skills": "Skills",
+                        "mcp_servers": "MCP-Server",
+                        "mcp_auto_add_permanent_tools": "Permanente MCP-Werkzeuge automatisch hinzufügen",
+                        "mcp_auto_add_default_prompt": "Standard-MCP-Prompt automatisch hinzufügen",
                         "functions": "Funktionen",
                         "attach_username": "Benutzernamen mitgeben",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Fügt permanente MCP-Werkzeugkataloge automatisch als separate Systemnachrichten hinzu. Wenn dies aktiviert ist und zugleich `permanent_mcp_tools` eingefügt wird, wird der Katalog dupliziert.",
+                        "mcp_auto_add_default_prompt": "Fügt die MCP-Nutzungshinweise automatisch als separate Systemnachricht hinzu. Wenn dies aktiviert ist und zugleich `default_mcp_prompt` eingefügt wird, werden die Anweisungen dupliziert."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP-Server",
+                        "mcp_permanent_tools_placement": "Platzierung permanenter MCP-Werkzeuge",
+                        "mcp_default_prompt_placement": "Platzierung des Standard-MCP-Prompts",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Legt fest, wo permanente MCP-Werkzeugkataloge automatisch eingefügt werden, oder deaktiviert das automatische Einfügen.",
+                        "mcp_default_prompt_placement": "Legt fest, wo die Standard-MCP-Nutzungshinweise automatisch eingefügt werden, oder deaktiviert das automatische Einfügen."
                     }
                 },
                 "advanced": {

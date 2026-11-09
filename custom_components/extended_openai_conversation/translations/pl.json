@@ -47,13 +47,19 @@
                         "prompt": "Prompt",
                         "max_function_calls_per_conversation": "Maksymalna liczba wywołań funkcji na rozmowę",
                         "skills": "Skills",
+                        "mcp_servers": "Serwery MCP",
+                        "mcp_auto_add_permanent_tools": "Automatycznie dodawaj stałe narzędzia MCP",
+                        "mcp_auto_add_default_prompt": "Automatycznie dodawaj domyślny monit MCP",
                         "functions": "Funkcje",
                         "attach_username": "Dodaj nazwę użytkownika do wiadomości",
                         "context_threshold": "Limit kontekstu",
                         "context_truncate_strategy": "Co zrobić z kontekstem, gdy przekroczony limit",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Automatycznie dodaje katalogi stałych narzędzi MCP jako osobne komunikaty systemowe. Włączenie tej opcji wraz z użyciem `permanent_mcp_tools` spowoduje powielenie katalogu.",
+                        "mcp_auto_add_default_prompt": "Automatycznie dodaje instrukcje użycia MCP jako osobny komunikat systemowy. Włączenie tej opcji wraz z użyciem `default_mcp_prompt` spowoduje powielenie instrukcji."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "Serwery MCP",
+                        "mcp_permanent_tools_placement": "Umiejscowienie stałych narzędzi MCP",
+                        "mcp_default_prompt_placement": "Umiejscowienie domyślnego monitu MCP",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Wybierz, gdzie automatycznie wstawiać katalogi stałych narzędzi MCP, lub wyłącz ich automatyczne wstawianie.",
+                        "mcp_default_prompt_placement": "Wybierz, gdzie automatycznie wstawiać domyślne instrukcje użycia MCP, lub wyłącz ich automatyczne wstawianie."
                     }
                 },
                 "advanced": {

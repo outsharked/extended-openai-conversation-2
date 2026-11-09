@@ -77,10 +77,12 @@ from .const import (
     CONF_FUNCTION_TOOLS,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     CONF_MAX_TOKENS,
+    CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
-    CONF_MCP_CONTEXT_PLACEMENT,
+    CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
     CONF_MCP_OAUTH_ACTION,
     CONF_MCP_OAUTH_TIMEOUT,
+    CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
     CONF_MCP_SERVERS,
     CONF_ORGANIZATION,
     CONF_PROMPT,
@@ -106,9 +108,11 @@ from .const import (
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
     DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
-    DEFAULT_MCP_CONTEXT_PLACEMENT,
+    DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
     DEFAULT_MCP_OAUTH_TIMEOUT,
+    DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
     DEFAULT_NAME,
     DEFAULT_PROMPT,
     DEFAULT_REASONING_EFFORT,
@@ -310,6 +314,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CHAT_MODEL: DEFAULT_CHAT_MODEL,
         CONF_MAX_TOKENS: DEFAULT_MAX_TOKENS,
         CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION: DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
+        CONF_MCP_AUTO_ADD_DEFAULT_PROMPT: DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
         CONF_MCP_AUTO_ADD_PERMANENT_TOOLS: DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
         CONF_TOP_P: DEFAULT_TOP_P,
         CONF_TEMPERATURE: DEFAULT_TEMPERATURE,
@@ -1885,7 +1890,17 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             ),
             vol.Optional(
                 CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
-                default=DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+                default=options.get(
+                    CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+                    DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
+                ),
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
+                default=options.get(
+                    CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
+                    DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
+                ),
             ): BooleanSelector(),
             vol.Optional(
                 CONF_FUNCTION_TOOLS,
@@ -2005,8 +2020,24 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     )
                 ),
                 vol.Optional(
-                    CONF_MCP_CONTEXT_PLACEMENT,
-                    default=DEFAULT_MCP_CONTEXT_PLACEMENT,
+                    CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
+                    default=self.options.get(
+                        CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
+                        DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                    ),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(MCP_CONTEXT_PLACEMENTS),
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key="mcp_context_placement",
+                    )
+                ),
+                vol.Optional(
+                    CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
+                    default=self.options.get(
+                        CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
+                        DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
+                    ),
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=list(MCP_CONTEXT_PLACEMENTS),

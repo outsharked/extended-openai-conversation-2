@@ -43,8 +43,10 @@ from .const import (
     CONF_EXTRA_BODY,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     CONF_MAX_TOKENS,
+    CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
-    CONF_MCP_CONTEXT_PLACEMENT,
+    CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
+    CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
     CONF_MCP_SERVERS,
     CONF_REASONING_EFFORT,
     CONF_SERVICE_TIER,
@@ -57,8 +59,10 @@ from .const import (
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
     DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
-    DEFAULT_MCP_CONTEXT_PLACEMENT,
+    DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
+    DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
     DEFAULT_REASONING_EFFORT,
     DEFAULT_SERVICE_TIER,
     DEFAULT_SHORTEN_TOOL_CALL_ID,
@@ -115,16 +119,6 @@ class MCPAgentContext:
     permanent_tool_messages: tuple[str, ...] = ()
     add_default_prompt: bool = False
 
-    @property
-    def automatic_content(self) -> str:
-        """Return all MCP content configured for automatic placement."""
-        blocks = []
-        if self.add_default_prompt and self.default_prompt:
-            blocks.append(self.default_prompt)
-        blocks.extend(self.permanent_tool_messages)
-        return "\n\n".join(blocks)
-
-
 def _place_mcp_context(
     messages: list[ChatCompletionMessageParam],
     content: str,
@@ -180,6 +174,27 @@ def _place_mcp_context(
             0,
             ChatCompletionUserMessageParam(role="user", content=content),
         )
+
+
+def _place_mcp_agent_context(
+    messages: list[ChatCompletionMessageParam],
+    context: MCPAgentContext,
+    permanent_tools_placement: str,
+    default_prompt_placement: str,
+) -> None:
+    """Place permanent tools and the default prompt independently."""
+    placements = (
+        (context.permanent_tools, permanent_tools_placement),
+        (
+            context.default_prompt if context.add_default_prompt else "",
+            default_prompt_placement,
+        ),
+    )
+    for content, placement in sorted(
+        placements,
+        key=lambda item: item[1] != MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM,
+    ):
+        _place_mcp_context(messages, content, placement)
 
 
 def _shorten_tool_call_id(tool_call_id: str) -> str:
@@ -675,7 +690,14 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     ) -> list[ChatCompletionSystemMessageParam]:
         """Return the separately added MCP system messages for a conversation."""
         messages: list[ChatCompletionSystemMessageParam] = []
-        if context.add_default_prompt and context.default_prompt:
+        if (
+            context.add_default_prompt
+            and context.default_prompt
+            and self.subentry.data.get(
+                CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
+                DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
+            )
+        ):
             messages.append(
                 ChatCompletionSystemMessageParam(
                     role="system",
@@ -736,8 +758,13 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         converted_messages = _convert_content_to_param(
             chat_log.content, shorten_tool_call_id, attachment_parts
         )
-        placement = self.subentry.data.get(CONF_MCP_CONTEXT_PLACEMENT)
-        if placement is None:
+        permanent_tools_placement = self.subentry.data.get(
+            CONF_MCP_PERMANENT_TOOLS_PLACEMENT
+        )
+        default_prompt_placement = self.subentry.data.get(
+            CONF_MCP_DEFAULT_PROMPT_PLACEMENT
+        )
+        if permanent_tools_placement is None and default_prompt_placement is None:
             mcp_context_messages = self._mcp_context_messages(mcp_context)
             messages: list[ChatCompletionMessageParam] = [
                 *mcp_context_messages,
@@ -745,10 +772,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             ]
         else:
             mcp_context_messages = []
-            _place_mcp_context(
+            _place_mcp_agent_context(
                 converted_messages,
-                mcp_context.automatic_content,
-                placement or DEFAULT_MCP_CONTEXT_PLACEMENT,
+                mcp_context,
+                permanent_tools_placement
+                or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
             )
             messages = converted_messages
         tool_media_parts: dict[
@@ -903,13 +932,18 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 attachment_parts,
                 tool_media_parts,
             )
-            if placement is None:
+            if (
+                permanent_tools_placement is None
+                and default_prompt_placement is None
+            ):
                 messages = [*mcp_context_messages, *converted_messages]
             else:
-                _place_mcp_context(
+                _place_mcp_agent_context(
                     converted_messages,
-                    mcp_context.automatic_content,
-                    placement or DEFAULT_MCP_CONTEXT_PLACEMENT,
+                    mcp_context,
+                    permanent_tools_placement
+                    or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                    default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
                 )
                 messages = converted_messages
 

@@ -35,18 +35,18 @@ from custom_components.extended_openai_conversation.const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_FUNCTION_TOOLS,
+    CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
-    CONF_MCP_CONTEXT_PLACEMENT,
+    CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
     CONF_MCP_OAUTH_ACTION,
     CONF_MCP_OAUTH_TIMEOUT,
+    CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
     CONF_MCP_SERVERS,
     CONF_PROMPT,
     CONF_SERVICE_TYPE,
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_CONF_BASE_URL,
-    DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
-    DEFAULT_MCP_CONTEXT_PLACEMENT,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
@@ -1686,7 +1686,10 @@ def test_openai_config_option_schema_includes_core_options():
     handler.context = {"source": "user"}
 
     schema = handler.openai_config_option_schema(
-        {},
+        {
+            CONF_MCP_AUTO_ADD_DEFAULT_PROMPT: False,
+            CONF_MCP_AUTO_ADD_PERMANENT_TOOLS: False,
+        },
         skills=[{"name": "skill_a"}],
         mcp_servers=[SelectOptionDict(value="vault", label="Vault MCP")],
     )
@@ -1697,6 +1700,7 @@ def test_openai_config_option_schema_includes_core_options():
     assert CONF_FUNCTION_TOOLS in keys
     assert CONF_SKILLS in keys
     assert CONF_MCP_SERVERS in keys
+    assert CONF_MCP_AUTO_ADD_DEFAULT_PROMPT in keys
     assert CONF_MCP_AUTO_ADD_PERMANENT_TOOLS in keys
 
     auto_add_key = next(
@@ -1704,7 +1708,14 @@ def test_openai_config_option_schema_includes_core_options():
         for key in schema
         if getattr(key, "schema", key) == CONF_MCP_AUTO_ADD_PERMANENT_TOOLS
     )
-    assert auto_add_key.default() is DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS
+    assert auto_add_key.default() is False
+
+    auto_add_prompt_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_MCP_AUTO_ADD_DEFAULT_PROMPT
+    )
+    assert auto_add_prompt_key.default() is False
 
 
 def test_openai_config_option_schema_omits_skills_field_when_none_available():
@@ -1786,7 +1797,11 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
     handler = ExtendedOpenAIAITaskSubentryFlowHandler()
     handler.hass = hass
     handler.context = {"source": "reconfigure"}
-    handler.options = {CONF_MCP_SERVERS: ["vault"]}
+    handler.options = {
+        CONF_MCP_SERVERS: ["vault"],
+        CONF_MCP_PERMANENT_TOOLS_PLACEMENT: "user",
+        CONF_MCP_DEFAULT_PROMPT_PLACEMENT: "disabled",
+    }
     entry = MagicMock()
     entry.state = ConfigEntryState.LOADED
     handler._get_entry = MagicMock(return_value=entry)
@@ -1806,12 +1821,18 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
         key for key in schema if getattr(key, "schema", key) == CONF_MCP_SERVERS
     )
     assert servers_key.default() == ["vault"]
-    placement_key = next(
-        key
-        for key in schema
-        if getattr(key, "schema", key) == CONF_MCP_CONTEXT_PLACEMENT
-    )
-    assert placement_key.default() == DEFAULT_MCP_CONTEXT_PLACEMENT
-    placement_selector = schema[placement_key]
-    assert placement_selector.config["options"] == list(MCP_CONTEXT_PLACEMENTS)
-    assert placement_selector.config["translation_key"] == "mcp_context_placement"
+    expected_placements = {
+        CONF_MCP_PERMANENT_TOOLS_PLACEMENT: "user",
+        CONF_MCP_DEFAULT_PROMPT_PLACEMENT: "disabled",
+    }
+    for option, default in expected_placements.items():
+        placement_key = next(
+            key for key in schema if getattr(key, "schema", key) == option
+        )
+        assert placement_key.default() == default
+        placement_selector = schema[placement_key]
+        assert placement_selector.config["options"] == list(MCP_CONTEXT_PLACEMENTS)
+        assert (
+            placement_selector.config["translation_key"]
+            == "mcp_context_placement"
+        )

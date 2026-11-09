@@ -47,13 +47,19 @@
                         "prompt": "Kiindulási szöveg sablon",
                         "max_function_calls_per_conversation": "Beszélgetésenkénti maximum funkcióhívások száma",
                         "skills": "Skills",
+                        "mcp_servers": "MCP-kiszolgálók",
+                        "mcp_auto_add_permanent_tools": "Állandó MCP-eszközök automatikus hozzáadása",
+                        "mcp_auto_add_default_prompt": "Alapértelmezett MCP-prompt automatikus hozzáadása",
                         "functions": "Funkciók",
                         "attach_username": "Felhasználónév hozzácsatolása az üzenethez",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Az állandó MCP-eszközkatalógusokat automatikusan külön rendszerüzenetekként adja hozzá. Ha ezt engedélyezi, miközben a `permanent_mcp_tools` változót is beilleszti, a katalógus megkettőződik.",
+                        "mcp_auto_add_default_prompt": "Az MCP-használati utasításokat automatikusan külön rendszerüzenetként adja hozzá. Ha ezt engedélyezi, miközben a `default_mcp_prompt` változót is beilleszti, az utasítások megkettőződnek."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP-kiszolgálók",
+                        "mcp_permanent_tools_placement": "Állandó MCP-eszközök elhelyezése",
+                        "mcp_default_prompt_placement": "Alapértelmezett MCP-prompt elhelyezése",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Válassza ki, hová kerüljenek automatikusan az állandó MCP-eszközkatalógusok, vagy tiltsa le az automatikus beillesztést.",
+                        "mcp_default_prompt_placement": "Válassza ki, hová kerüljenek automatikusan az alapértelmezett MCP-használati utasítások, vagy tiltsa le az automatikus beillesztést."
                     }
                 },
                 "advanced": {

@@ -208,6 +208,7 @@
             "skills": "Skills",
             "mcp_servers": "MCP servers",
             "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tools",
+            "mcp_auto_add_default_prompt": "Automatically add default MCP prompt",
             "functions": "Functions",
             "attach_username": "Attach Username to Message",
             "context_threshold": "Context Threshold",
@@ -216,7 +217,8 @@
           },
           "data_description": {
             "prompt": "Use the `permanent_mcp_tools` Jinja variable to insert the assigned permanent MCP tool catalogues and `default_mcp_prompt` to insert the localized MCP usage instructions.",
-            "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tool catalogues as separate system messages. Template variables remain independent, so enabling this while inserting `permanent_mcp_tools` may intentionally duplicate the catalogue."
+            "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tool catalogues as separate system messages. Enabling this while inserting `permanent_mcp_tools` will duplicate the catalogue.",
+            "mcp_auto_add_default_prompt": "Automatically add the MCP usage instructions as a separate system message. Enabling this while inserting `default_mcp_prompt` will duplicate the instructions."
           }
         },
         "advanced": {
@@ -248,11 +250,13 @@
             "chat_model": "Model",
             "max_tokens": "Maximum tokens to return in response",
             "mcp_servers": "MCP servers",
-            "mcp_context_placement": "Automatic MCP context placement",
+            "mcp_permanent_tools_placement": "Permanent MCP tools placement",
+            "mcp_default_prompt_placement": "Default MCP prompt placement",
             "advanced_options": "Advanced options"
           },
           "data_description": {
-            "mcp_context_placement": "Choose whether automatic MCP instructions and permanent tool catalogues use a dedicated system prompt, are merged into the existing system prompt, are prepended to the user input, or are disabled."
+            "mcp_permanent_tools_placement": "Choose where permanent MCP tool catalogues are automatically inserted, or disable their automatic insertion.",
+            "mcp_default_prompt_placement": "Choose where the default MCP usage instructions are automatically inserted, or disable their automatic insertion."
           }
         },
         "advanced": {

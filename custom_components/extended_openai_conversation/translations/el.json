@@ -47,13 +47,19 @@
                         "prompt": "Πρότυπο Προτροπής",
                         "max_function_calls_per_conversation": "Μέγιστες κλήσεις συναρτήσεων ανά συνομιλία",
                         "skills": "Skills",
+                        "mcp_servers": "Διακομιστές MCP",
+                        "mcp_auto_add_permanent_tools": "Αυτόματη προσθήκη μόνιμων εργαλείων MCP",
+                        "mcp_auto_add_default_prompt": "Αυτόματη προσθήκη προεπιλεγμένης προτροπής MCP",
                         "functions": "Συναρτήσεις",
                         "attach_username": "Επισύναψη Ονόματος Χρήστη στο Μήνυμα",
                         "context_threshold": "Όριο Περιεχομένου",
                         "context_truncate_strategy": "Στρατηγική περικοπής περιεχομένου όταν ξεπεραστεί το όριο",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Προσθέτει αυτόματα τους καταλόγους μόνιμων εργαλείων MCP ως ξεχωριστά μηνύματα συστήματος. Η ενεργοποίηση αυτής της επιλογής μαζί με την εισαγωγή του `permanent_mcp_tools` θα διπλασιάσει τον κατάλογο.",
+                        "mcp_auto_add_default_prompt": "Προσθέτει αυτόματα τις οδηγίες χρήσης MCP ως ξεχωριστό μήνυμα συστήματος. Η ενεργοποίηση αυτής της επιλογής μαζί με την εισαγωγή του `default_mcp_prompt` θα διπλασιάσει τις οδηγίες."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "Διακομιστές MCP",
+                        "mcp_permanent_tools_placement": "Τοποθέτηση μόνιμων εργαλείων MCP",
+                        "mcp_default_prompt_placement": "Τοποθέτηση προεπιλεγμένης προτροπής MCP",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Επιλέξτε πού θα εισάγονται αυτόματα οι κατάλογοι μόνιμων εργαλείων MCP ή απενεργοποιήστε την αυτόματη εισαγωγή τους.",
+                        "mcp_default_prompt_placement": "Επιλέξτε πού θα εισάγονται αυτόματα οι προεπιλεγμένες οδηγίες χρήσης MCP ή απενεργοποιήστε την αυτόματη εισαγωγή τους."
                     }
                 },
                 "advanced": {

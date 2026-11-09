@@ -47,13 +47,19 @@
                         "prompt": "Prompt Sjabloon",
                         "max_function_calls_per_conversation": "Maximale keren functies mogen worden aangeroepen per conversatie",
                         "skills": "Skills",
+                        "mcp_servers": "MCP-servers",
+                        "mcp_auto_add_permanent_tools": "Permanente MCP-hulpmiddelen automatisch toevoegen",
+                        "mcp_auto_add_default_prompt": "Standaard MCP-prompt automatisch toevoegen",
                         "functions": "Functies",
                         "attach_username": "Gebruikersnaam aan bericht toevoegen",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Voegt catalogi met permanente MCP-hulpmiddelen automatisch toe als afzonderlijke systeemberichten. Als dit is ingeschakeld en ook `permanent_mcp_tools` wordt ingevoegd, wordt de catalogus gedupliceerd.",
+                        "mcp_auto_add_default_prompt": "Voegt de MCP-gebruiksinstructies automatisch toe als een afzonderlijk systeembericht. Als dit is ingeschakeld en ook `default_mcp_prompt` wordt ingevoegd, worden de instructies gedupliceerd."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP-servers",
+                        "mcp_permanent_tools_placement": "Plaatsing van permanente MCP-hulpmiddelen",
+                        "mcp_default_prompt_placement": "Plaatsing van de standaard MCP-prompt",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Kies waar catalogi met permanente MCP-hulpmiddelen automatisch worden ingevoegd, of schakel automatisch invoegen uit.",
+                        "mcp_default_prompt_placement": "Kies waar de standaard MCP-gebruiksinstructies automatisch worden ingevoegd, of schakel automatisch invoegen uit."
                     }
                 },
                 "advanced": {

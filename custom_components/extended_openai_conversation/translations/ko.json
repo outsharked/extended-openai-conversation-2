@@ -47,13 +47,19 @@
                         "prompt": "Prompt Template",
                         "max_function_calls_per_conversation": "Maximum function calls per conversation",
                         "skills": "Skills",
+                        "mcp_servers": "MCP 서버",
+                        "mcp_auto_add_permanent_tools": "영구 MCP 도구 자동 추가",
+                        "mcp_auto_add_default_prompt": "기본 MCP 프롬프트 자동 추가",
                         "functions": "Functions",
                         "attach_username": "Attach Username to Message",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "영구 MCP 도구 카탈로그를 별도의 시스템 메시지로 자동 추가합니다. 이 옵션을 활성화한 상태에서 `permanent_mcp_tools`도 삽입하면 카탈로그가 중복됩니다.",
+                        "mcp_auto_add_default_prompt": "MCP 사용 지침을 별도의 시스템 메시지로 자동 추가합니다. 이 옵션을 활성화한 상태에서 `default_mcp_prompt`도 삽입하면 지침이 중복됩니다."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP 서버",
+                        "mcp_permanent_tools_placement": "영구 MCP 도구 배치",
+                        "mcp_default_prompt_placement": "기본 MCP 프롬프트 배치",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "영구 MCP 도구 카탈로그를 자동으로 삽입할 위치를 선택하거나 자동 삽입을 비활성화합니다.",
+                        "mcp_default_prompt_placement": "기본 MCP 사용 지침을 자동으로 삽입할 위치를 선택하거나 자동 삽입을 비활성화합니다."
                     }
                 },
                 "advanced": {

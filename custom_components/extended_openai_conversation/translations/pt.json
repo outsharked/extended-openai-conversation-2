@@ -47,13 +47,19 @@
                         "prompt": "Template do Prompt",
                         "max_function_calls_per_conversation": "Quantidade máxima de chamadas por conversação",
                         "skills": "Skills",
+                        "mcp_servers": "Servidores MCP",
+                        "mcp_auto_add_permanent_tools": "Adicionar automaticamente ferramentas MCP permanentes",
+                        "mcp_auto_add_default_prompt": "Adicionar automaticamente o prompt MCP predefinido",
                         "functions": "Funções",
                         "attach_username": "Anexar nome do usuário na mensagem",
                         "context_threshold": "Limite do contexto",
                         "context_truncate_strategy": "Estratégia de limite de contexto quando o limite é excedido",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Adiciona automaticamente os catálogos de ferramentas MCP permanentes como mensagens de sistema separadas. Ativar esta opção e também inserir `permanent_mcp_tools` duplicará o catálogo.",
+                        "mcp_auto_add_default_prompt": "Adiciona automaticamente as instruções de utilização do MCP como uma mensagem de sistema separada. Ativar esta opção e também inserir `default_mcp_prompt` duplicará as instruções."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -82,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "Servidores MCP",
+                        "mcp_permanent_tools_placement": "Posicionamento das ferramentas MCP permanentes",
+                        "mcp_default_prompt_placement": "Posicionamento do prompt MCP predefinido",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Escolha onde inserir automaticamente os catálogos de ferramentas MCP permanentes ou desative a inserção automática.",
+                        "mcp_default_prompt_placement": "Escolha onde inserir automaticamente as instruções de utilização predefinidas do MCP ou desative a inserção automática."
                     }
                 },
                 "advanced": {
