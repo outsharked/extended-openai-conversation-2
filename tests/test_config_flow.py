@@ -334,7 +334,6 @@ async def test_service_menu_exposes_filtering_without_connecting(hass):
     assert flow.async_show_menu.call_args.kwargs == {
         "step_id": "service_menu",
         "menu_options": [
-            "switch_to_ai_endpoint",
             "mcp",
             "mcp_filter_tools",
         ],
@@ -344,8 +343,8 @@ async def test_service_menu_exposes_filtering_without_connecting(hass):
     }
 
 
-async def test_ai_endpoint_menu_only_offers_switch_and_save(hass):
-    """A configured AI endpoint needs neither another configure step nor review."""
+async def test_ai_endpoint_menu_only_offers_edit_and_save(hass):
+    """A configured AI endpoint can be edited or saved without review."""
     flow = _config_flow(hass)
     flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
     flow._ai_endpoint_data = {
@@ -359,7 +358,7 @@ async def test_ai_endpoint_menu_only_offers_switch_and_save(hass):
     await flow.async_step_service_menu()
 
     assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
-        "switch_to_mcp",
+        "ai_endpoint",
         "service_save",
     ]
 
@@ -428,7 +427,6 @@ async def test_oauth_server_requires_authentication_before_filtering(hass):
     await flow.async_step_service_menu()
 
     assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
-        "switch_to_ai_endpoint",
         "mcp",
         "mcp_authenticate",
     ]
@@ -437,7 +435,6 @@ async def test_oauth_server_requires_authentication_before_filtering(hass):
     await flow.async_step_service_menu()
 
     assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
-        "switch_to_ai_endpoint",
         "mcp",
         "mcp_authenticate",
         "mcp_filter_tools",
@@ -845,8 +842,8 @@ async def test_service_menu_offers_optional_review_and_immediate_save(hass):
     assert "service_save" in options
 
 
-async def test_reconfigure_menu_keeps_existing_service_type(hass):
-    """Reconfiguration does not offer an unsupported entry-type conversion."""
+async def test_reconfigure_menu_only_offers_current_service_actions(hass):
+    """Reconfiguration offers only actions for the current service type."""
     flow = _config_flow(hass)
     flow._selected_service_type = SERVICE_TYPE_MCP
     flow._reconfigure_entry = MagicMock()
@@ -856,7 +853,6 @@ async def test_reconfigure_menu_keeps_existing_service_type(hass):
     await flow.async_step_service_menu()
 
     options = flow.async_show_menu.call_args.kwargs["menu_options"]
-    assert "switch_to_ai_endpoint" not in options
     assert options == ["mcp", "mcp_filter_tools"]
 
 
@@ -1593,7 +1589,7 @@ async def test_ai_endpoint_authentication_error_is_reported(hass):
     assert flow._ai_connection_status is False
     assert flow._ai_error_reason == "invalid_auth"
     assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
-        "switch_to_mcp",
+        "ai_endpoint",
         "service_save",
     ]
 

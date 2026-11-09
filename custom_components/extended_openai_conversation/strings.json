@@ -15,8 +15,6 @@
         "title": "Configure service",
         "description": "Complete the available steps. Options appear when their prerequisites are valid.\n\n{status_lines}",
         "menu_options": {
-          "switch_to_ai_endpoint": "Switch to Configure AI Endpoint",
-          "switch_to_mcp": "Switch to Configure MCP Server",
           "ai_endpoint": "Configure AI Endpoint",
           "mcp": "Configure MCP Server",
           "mcp_authenticate": "OAuth Settings",

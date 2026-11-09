@@ -425,19 +425,14 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             return await self.async_step_user()
 
         options: list[str] = []
-        allow_type_switch: bool = self._reconfigure_entry is None
         is_mcp: bool = self._selected_service_type == SERVICE_TYPE_MCP
         if is_mcp:
-            if allow_type_switch:
-                options.append("switch_to_ai_endpoint")
             options.append("mcp")
             if self._mcp_config is not None:
                 if self._mcp_config.use_oauth:
                     options.append("mcp_authenticate")
                 if not self._mcp_config.use_oauth or self._mcp_oauth_authenticated:
                     options.append("mcp_filter_tools")
-        elif allow_type_switch:
-            options.append("switch_to_mcp")
         else:
             options.append("ai_endpoint")
 
@@ -510,20 +505,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             lines.append(error_template.format(error=error))
 
         return "\n\n".join(lines)
-
-    async def async_step_switch_to_ai_endpoint(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Switch this draft to an AI endpoint service."""
-        self._select_service_type(SERVICE_TYPE_AI_ENDPOINT)
-        return await self.async_step_ai_endpoint()
-
-    async def async_step_switch_to_mcp(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Switch this draft to an MCP service."""
-        self._select_service_type(SERVICE_TYPE_MCP)
-        return await self.async_step_mcp()
 
     async def async_step_ai_endpoint(
         self, user_input: dict[str, Any] | None = None
@@ -1494,12 +1475,6 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         ):
             await self._async_test_mcp_server(run_requested_discovery=True)
         return await self.async_step_service_menu()
-
-    def _select_service_type(self, service_type: str) -> None:
-        """Select a draft service type."""
-        if service_type != self._selected_service_type:
-            self._selected_service_type = service_type
-            self._mcp_error_reason = None
 
     @staticmethod
     def _status_icon(status: bool | None) -> str:
