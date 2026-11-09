@@ -30,6 +30,12 @@
                 "user": "Είσοδος χρήστη",
                 "disabled": "Απενεργοποιημένο"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Εκκαθάριση όλων των μηνυμάτων",
+                "compact": "Σύνοψη και συμπύκνωση μηνυμάτων"
+            }
         }
     },
     "config_subentries": {
@@ -68,10 +74,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου."
                     }
                 }
             }
@@ -91,6 +99,8 @@
                         "mcp_servers": "Διακομιστές MCP",
                         "mcp_permanent_tools_placement": "Τοποθέτηση μόνιμων εργαλείων MCP",
                         "mcp_default_prompt_placement": "Τοποθέτηση προεπιλεγμένης προτροπής MCP",
+                        "context_threshold": "Όριο περιεχομένου",
+                        "context_truncate_strategy": "Στρατηγική όταν ξεπεραστεί το όριο περιεχομένου",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -105,10 +115,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου."
                     }
                 }
             }

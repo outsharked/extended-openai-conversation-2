@@ -185,6 +185,12 @@
                 "user": "User input",
                 "disabled": "Disabled"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Clear all messages",
+                "compact": "Summarize and compact messages"
+            }
         }
     },
     "config_subentries": {
@@ -225,10 +231,12 @@
                         "reasoning_effort": "Reasoning effort",
                         "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Compacted context target (% of token threshold)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "After summarization, target this percentage of the configured context token threshold."
                     }
                 }
             }
@@ -248,6 +256,8 @@
                         "mcp_servers": "MCP servers",
                         "mcp_permanent_tools_placement": "Permanent MCP tools placement",
                         "mcp_default_prompt_placement": "Default MCP prompt placement",
+                        "context_threshold": "Context Threshold",
+                        "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -263,10 +273,12 @@
                         "reasoning_effort": "Reasoning effort",
                         "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Compacted context target (% of token threshold)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "After summarization, target this percentage of the configured context token threshold."
                     }
                 }
             }

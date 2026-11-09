@@ -71,6 +71,7 @@ from .const import (
     CONF_API_VERSION,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EXTRA_BODY,
@@ -102,6 +103,7 @@ from .const import (
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONF_BASE_URL,
     DEFAULT_CONF_FUNCTION_TOOLS,
+    DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
@@ -316,6 +318,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_TOP_P: DEFAULT_TOP_P,
         CONF_TEMPERATURE: DEFAULT_TEMPERATURE,
         CONF_FUNCTION_TOOLS: DEFAULT_CONF_FUNCTION_TOOLS_STR,
+        CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
         CONF_SHORTEN_TOOL_CALL_ID: DEFAULT_SHORTEN_TOOL_CALL_ID,
@@ -1765,6 +1768,20 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             )
         ] = BooleanSelector()
 
+        if (self._temp_data or {}).get(
+            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        ) == "compact":
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_TARGET,
+                    default=DEFAULT_CONTEXT_COMPACTION_TARGET,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=1, max=100, step=1, unit_of_measurement="%"
+                )
+            )
+
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
@@ -1864,11 +1881,9 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 default=DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
             ): SelectSelector(
                 SelectSelectorConfig(
-                    options=[
-                        SelectOptionDict(value=strategy["key"], label=strategy["label"])
-                        for strategy in CONTEXT_TRUNCATE_STRATEGIES
-                    ],
+                    options=list(CONTEXT_TRUNCATE_STRATEGIES),
                     mode=SelectSelectorMode.DROPDOWN,
+                    translation_key="context_truncate_strategy",
                 )
             ),
             vol.Optional(
@@ -1995,6 +2010,25 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     )
                 ),
                 vol.Optional(
+                    CONF_CONTEXT_THRESHOLD,
+                    default=self.options.get(
+                        CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD
+                    ),
+                ): int,
+                vol.Optional(
+                    CONF_CONTEXT_TRUNCATE_STRATEGY,
+                    default=self.options.get(
+                        CONF_CONTEXT_TRUNCATE_STRATEGY,
+                        DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                    ),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(CONTEXT_TRUNCATE_STRATEGIES),
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key="context_truncate_strategy",
+                    )
+                ),
+                vol.Optional(
                     CONF_ADVANCED_OPTIONS,
                     default=DEFAULT_ADVANCED_OPTIONS,
                 ): BooleanSelector(),
@@ -2106,6 +2140,20 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 default=DEFAULT_SHORTEN_TOOL_CALL_ID,
             )
         ] = BooleanSelector()
+
+        if (self._temp_data or {}).get(
+            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        ) == "compact":
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_TARGET,
+                    default=DEFAULT_CONTEXT_COMPACTION_TARGET,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=1, max=100, step=1, unit_of_measurement="%"
+                )
+            )
 
         return self.async_show_form(
             step_id="advanced",

@@ -30,6 +30,12 @@
                 "user": "사용자 입력",
                 "disabled": "사용 안 함"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "모든 메시지 지우기",
+                "compact": "메시지 요약 및 압축"
+            }
         }
     },
     "config_subentries": {
@@ -68,10 +74,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다."
                     }
                 }
             }
@@ -91,6 +99,8 @@
                         "mcp_servers": "MCP 서버",
                         "mcp_permanent_tools_placement": "영구 MCP 도구 배치",
                         "mcp_default_prompt_placement": "기본 MCP 프롬프트 배치",
+                        "context_threshold": "컨텍스트 임계값",
+                        "context_truncate_strategy": "컨텍스트 임계값 초과 시 전략",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -105,10 +115,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다."
                     }
                 }
             }

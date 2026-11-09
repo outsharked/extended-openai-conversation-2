@@ -30,6 +30,12 @@
                 "user": "Benutzereingabe",
                 "disabled": "Deaktiviert"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Alle Nachrichten löschen",
+                "compact": "Nachrichten zusammenfassen und komprimieren"
+            }
         }
     },
     "config_subentries": {
@@ -68,10 +74,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt."
                     }
                 }
             }
@@ -91,6 +99,8 @@
                         "mcp_servers": "MCP-Server",
                         "mcp_permanent_tools_placement": "Platzierung permanenter MCP-Werkzeuge",
                         "mcp_default_prompt_placement": "Platzierung des Standard-MCP-Prompts",
+                        "context_threshold": "Kontextschwellenwert",
+                        "context_truncate_strategy": "Strategie bei Überschreitung des Kontextschwellenwerts",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -105,10 +115,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt."
                     }
                 }
             }

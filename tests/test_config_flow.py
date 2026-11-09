@@ -34,6 +34,9 @@ from custom_components.extended_openai_conversation.const import (
     CONF_API_PROVIDER,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_THRESHOLD,
+    CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_FUNCTION_TOOLS,
     CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
@@ -47,6 +50,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_CONF_BASE_URL,
+    DEFAULT_CONTEXT_COMPACTION_TARGET,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
@@ -1682,6 +1686,17 @@ def test_openai_config_option_schema_includes_core_options():
     assert CONF_MCP_SERVERS in keys
     assert CONF_MCP_AUTO_ADD_DEFAULT_PROMPT in keys
     assert CONF_MCP_AUTO_ADD_PERMANENT_TOOLS in keys
+    assert CONF_CONTEXT_THRESHOLD in keys
+    assert CONF_CONTEXT_TRUNCATE_STRATEGY in keys
+
+    strategy_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_TRUNCATE_STRATEGY
+    )
+    strategy_selector = schema[strategy_key]
+    assert strategy_selector.config["options"] == ["clear", "compact"]
+    assert strategy_selector.config["translation_key"] == "context_truncate_strategy"
 
     auto_add_key = next(
         key
@@ -1816,3 +1831,51 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
             placement_selector.config["translation_key"]
             == "mcp_context_placement"
         )
+
+    assert CONF_CONTEXT_THRESHOLD in _schema_keys(schema)
+    strategy_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_TRUNCATE_STRATEGY
+    )
+    strategy_selector = schema[strategy_key]
+    assert strategy_selector.config["options"] == ["clear", "compact"]
+    assert strategy_selector.config["translation_key"] == "context_truncate_strategy"
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+@pytest.mark.parametrize("strategy", ["clear", "compact"])
+async def test_agent_advanced_schema_compaction_target(hass, handler_type, strategy):
+    """Both agent types expose the target only for summary compaction."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy,
+    }
+    entry = MagicMock()
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    if strategy == "clear":
+        assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
+        return
+
+    target_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_COMPACTION_TARGET
+    )
+    assert target_key.default() == DEFAULT_CONTEXT_COMPACTION_TARGET
+    assert schema[target_key].config["min"] == 1
+    assert schema[target_key].config["max"] == 100
+    assert schema[target_key].config["unit_of_measurement"] == "%"

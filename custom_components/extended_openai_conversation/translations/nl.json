@@ -30,6 +30,12 @@
                 "user": "Gebruikersinvoer",
                 "disabled": "Uitgeschakeld"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Alle berichten wissen",
+                "compact": "Berichten samenvatten en compact maken"
+            }
         }
     },
     "config_subentries": {
@@ -68,10 +74,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel."
                     }
                 }
             }
@@ -91,6 +99,8 @@
                         "mcp_servers": "MCP-servers",
                         "mcp_permanent_tools_placement": "Plaatsing van permanente MCP-hulpmiddelen",
                         "mcp_default_prompt_placement": "Plaatsing van de standaard MCP-prompt",
+                        "context_threshold": "Contextdrempel",
+                        "context_truncate_strategy": "Strategie wanneer de contextdrempel wordt overschreden",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -105,10 +115,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel."
                     }
                 }
             }

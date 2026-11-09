@@ -30,6 +30,12 @@
                 "user": "Entrée utilisateur",
                 "disabled": "Désactivé"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Effacer tous les messages",
+                "compact": "Résumer et compacter les messages"
+            }
         }
     },
     "config_subentries": {
@@ -68,10 +74,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré."
                     }
                 }
             }
@@ -91,6 +99,8 @@
                         "mcp_servers": "Serveurs MCP",
                         "mcp_permanent_tools_placement": "Emplacement des outils MCP permanents",
                         "mcp_default_prompt_placement": "Emplacement de l'invite MCP par défaut",
+                        "context_threshold": "Seuil de contexte",
+                        "context_truncate_strategy": "Stratégie lorsque le seuil de contexte est dépassé",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -105,10 +115,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré."
                     }
                 }
             }
