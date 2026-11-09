@@ -9,6 +9,12 @@
             "mcp_default_prompt": {
                 "description": "Az MCP-diszpécserben a list_servers művelettel keresd meg az elérhető kiszolgálókat, a list_tools művelettel fedezd fel az eszközöket, a get_tool_details művelettel kérd le egy eszköz összes elérhető adatát, az execute_tool művelettel pedig futtasd azt. A get_tool_details visszaadja a bemeneti sémát, valamint a kiszolgáló által megadott címet, leírást, kimeneti sémát, MCP-megjegyzéseket és feladattámogatási állapotot; a nem elérhető adatok kimaradnak. Használd az ebben a kontextusban megadott vagy a felderítés által visszaadott server_id értéket és eszköznevet. Az ebben a kontextusban már leírt eszközöket nem kell újra felderíteni, és nem jelennek meg a felderítési eredményekben."
             },
+            "context_compaction_summary_prefix": {
+                "description": "A korábbi beszélgetés összefoglalása:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Az összefoglalás legfeljebb {max_summary_tokens} token legyen."
+            },
             "user": {
                 "data": {
                     "name": "Név",

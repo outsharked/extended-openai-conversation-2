@@ -38,6 +38,8 @@ from homeassistant.util import slugify
 from .const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CONTEXT_COMPACTION_PROMPT,
+    CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -56,7 +58,10 @@ from .const import (
     CONF_TOP_P,
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
+    DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
+    DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_EXTRA_BODY,
@@ -82,6 +87,7 @@ from .functions import get_function
 from .functions.mcp import build_mcp_function_tool
 from .helpers import (
     async_create_chat_completion,
+    async_get_context_compaction_text,
     async_get_mcp_default_prompt,
     get_model_config,
 )
@@ -669,6 +675,39 @@ def _estimate_content_tokens(contents: list[conversation.Content]) -> int:
     return max(1, (len(transcript) + 3) // 4)
 
 
+def _estimate_serialized_tokens(value: Any) -> int:
+    """Conservatively estimate tokens in JSON-serializable request data."""
+    serialized = json.dumps(value, ensure_ascii=False, default=str)
+    return max(1, (len(serialized) + 3) // 4)
+
+
+def _without_embedded_media(value: Any) -> Any:
+    """Replace embedded media payloads with markers for text token estimates."""
+    if isinstance(value, list):
+        return [_without_embedded_media(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if value.get("type") == "image_url":
+        return {"type": "image_url", "image_url": "<embedded image>"}
+    if value.get("type") == "input_audio":
+        return {"type": "input_audio", "input_audio": "<embedded audio>"}
+    return {key: _without_embedded_media(item) for key, item in value.items()}
+
+
+def _group_compaction_contents(contents: list[conversation.Content]) -> list[list[conversation.Content]]:
+    """Group history into complete turns without splitting tool exchanges."""
+    groups: list[list[conversation.Content]] = []
+    current: list[conversation.Content] = []
+    for content in contents:
+        if isinstance(content, conversation.UserContent) and current:
+            groups.append(current)
+            current = []
+        current.append(content)
+    if current:
+        groups.append(current)
+    return groups
+
+
 class ExtendedOpenAIBaseLLMEntity(Entity):
     """Extended OpenAI base entity."""
 
@@ -785,14 +824,6 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         # Get model-specific configuration
         model_config = get_model_config(model, self.entry.data.get(CONF_BASE_URL))
 
-        # Encoding reads attachment files from disk - run in an executor, and
-        # do it once up front since chat_log.content only grows (attachments
-        # already present keep the same index across the tool-calling loop
-        # below).
-        attachment_parts = await self.hass.async_add_executor_job(
-            encode_attachments, chat_log.content
-        )
-
         language = (
             llm_context.language
             if llm_context is not None and llm_context.language is not None
@@ -801,31 +832,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if mcp_context is None:
             mcp_context = await self._async_get_mcp_agent_context(language)
 
-        converted_messages = _convert_content_to_param(
-            chat_log.content, shorten_tool_call_id, attachment_parts
-        )
         permanent_tools_placement = self.subentry.data.get(
             CONF_MCP_PERMANENT_TOOLS_PLACEMENT
         )
         default_prompt_placement = self.subentry.data.get(
             CONF_MCP_DEFAULT_PROMPT_PLACEMENT
         )
-        if permanent_tools_placement is None and default_prompt_placement is None:
-            mcp_context_messages = self._mcp_context_messages(mcp_context)
-            messages: list[ChatCompletionMessageParam] = [
-                *mcp_context_messages,
-                *converted_messages,
-            ]
-        else:
-            mcp_context_messages = []
-            _place_mcp_agent_context(
-                converted_messages,
-                mcp_context,
-                permanent_tools_placement
-                or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
-                default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
-            )
-            messages = converted_messages
         tool_media_parts: dict[
             str,
             list[
@@ -833,6 +845,39 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 | ChatCompletionContentPartInputAudioParam
             ],
         ] = {}
+
+        async def _build_request_messages() -> list[ChatCompletionMessageParam]:
+            """Build messages again after history has potentially changed."""
+            attachment_parts = await self.hass.async_add_executor_job(
+                encode_attachments, chat_log.content
+            )
+            converted_messages = _convert_content_to_param(
+                chat_log.content,
+                shorten_tool_call_id,
+                attachment_parts,
+                tool_media_parts,
+            )
+            if (
+                permanent_tools_placement is None
+                and default_prompt_placement is None
+            ):
+                context_messages = self._mcp_context_messages(mcp_context)
+                messages: list[ChatCompletionMessageParam] = [
+                    *context_messages,
+                    *converted_messages,
+                ]
+                return messages
+
+            _place_mcp_agent_context(
+                converted_messages,
+                mcp_context,
+                permanent_tools_placement
+                or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
+            )
+            return converted_messages
+
+        messages = await _build_request_messages()
 
         # Build functions list from custom functions
         tools: list[ChatCompletionToolParam] = [
@@ -915,6 +960,47 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             if tools and 0 <= max_function_calls <= n_requests:
                 tool_kwargs["tool_choice"] = "none"
 
+            threshold = int(
+                options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD)
+            )
+            recent_turns_override = max(
+                0,
+                int(
+                    options.get(
+                        CONF_CONTEXT_COMPACTION_RECENT_TURNS,
+                        DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
+                    )
+                ),
+            )
+            while True:
+                estimated_prompt_tokens = _estimate_serialized_tokens(
+                    _without_embedded_media(
+                        {"messages": messages, "tools": tool_kwargs.get("tools", [])}
+                    )
+                )
+                if estimated_prompt_tokens + int(max_tokens) <= threshold:
+                    break
+
+                history_changed = await self._truncate_message_history(
+                    chat_log,
+                    _RequestTokenUsage(
+                        prompt_tokens=estimated_prompt_tokens,
+                        total_tokens=estimated_prompt_tokens + int(max_tokens),
+                    ),
+                    preserve_current_turn=True,
+                    recent_turns_override=recent_turns_override,
+                    language=language,
+                )
+                if history_changed:
+                    messages = await _build_request_messages()
+                    recent_turns_override = max(0, recent_turns_override - 1)
+                    continue
+
+                raise HomeAssistantError(
+                    "The current conversation turn and request context exceed the "
+                    "configured context threshold"
+                )
+
             if _messages_contain_media(messages):
                 _LOGGER.info(
                     "Prompt for %s contains %s messages; media data omitted",
@@ -973,27 +1059,8 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 if media_parts:
                     tool_media_parts[tool_input.id] = media_parts
 
-            # Update messages for next iteration
-            converted_messages = _convert_content_to_param(
-                chat_log.content,
-                shorten_tool_call_id,
-                attachment_parts,
-                tool_media_parts,
-            )
-            if (
-                permanent_tools_placement is None
-                and default_prompt_placement is None
-            ):
-                messages = [*mcp_context_messages, *converted_messages]
-            else:
-                _place_mcp_agent_context(
-                    converted_messages,
-                    mcp_context,
-                    permanent_tools_placement
-                    or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
-                    default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
-                )
-                messages = converted_messages
+            # Update messages for the next tool-call iteration.
+            messages = await _build_request_messages()
 
             # Check if we need to continue (if there are pending tool results)
             if not chat_log.unresponded_tool_results:
@@ -1002,7 +1069,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if token_usage.total_tokens > options.get(
             CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD
         ):
-            await self._truncate_message_history(chat_log, token_usage)
+            await self._truncate_message_history(chat_log, token_usage, language=language)
 
     async def _transform_stream(
         self,
@@ -1208,8 +1275,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             ],
         }
 
-    def _clear_message_history(self, chat_log: conversation.ChatLog) -> None:
+    def _clear_message_history(self, chat_log: conversation.ChatLog) -> bool:
         """Keep only the system prompt and the latest conversation turn."""
+        original_length = len(chat_log.content)
         last_user_message_index = None
         messages = chat_log.content
         for index in reversed(range(len(messages))):
@@ -1219,12 +1287,47 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
         if last_user_message_index is not None:
             del messages[1:last_user_message_index]
+        return len(messages) != original_length
+
+    def _compaction_history_split_index(
+        self,
+        messages: list[conversation.Content],
+        preserve_current_turn: bool,
+        recent_turns_override: int | None = None,
+    ) -> int | None:
+        """Return where the verbatim tail begins for compaction."""
+        user_message_indexes = [
+            index
+            for index, content in enumerate(messages)
+            if isinstance(content, conversation.UserContent)
+        ]
+        recent_turns = (
+            max(0, recent_turns_override)
+            if recent_turns_override is not None
+            else max(
+                0,
+                int(
+                    self.subentry.data.get(
+                        CONF_CONTEXT_COMPACTION_RECENT_TURNS,
+                        DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
+                    )
+                ),
+            )
+        )
+        turns_to_keep = recent_turns + int(preserve_current_turn)
+        if not preserve_current_turn:
+            # Never replace the turn that produced the response currently being
+            # returned, even when the configured tail is zero.
+            turns_to_keep = max(1, turns_to_keep)
+        if len(user_message_indexes) <= turns_to_keep:
+            return None
+        return user_message_indexes[-turns_to_keep] if turns_to_keep else len(messages)
 
     def _compaction_max_tokens(
         self,
         chat_log: conversation.ChatLog,
         retained_contents: list[conversation.Content],
-        token_usage: _RequestTokenUsage,
+        prompt_tokens: int
     ) -> int:
         """Return the available summary budget for the configured target."""
         options = self.subentry.data
@@ -1240,9 +1343,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         target_tokens = max(1, threshold * percentage // 100)
 
         estimated_history_tokens = _estimate_content_tokens(chat_log.content)
-        non_history_tokens = max(
-            0, token_usage.prompt_tokens - estimated_history_tokens
-        )
+        non_history_tokens = max(0, prompt_tokens - estimated_history_tokens)
         retained_tokens = _estimate_content_tokens(retained_contents)
         available_tokens = max(1, target_tokens - non_history_tokens - retained_tokens)
 
@@ -1253,61 +1354,115 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         self,
         chat_log: conversation.ChatLog,
         token_usage: _RequestTokenUsage,
-    ) -> None:
+        preserve_current_turn: bool = False,
+        recent_turns_override: int | None = None,
+        language: str | None = None,
+    ) -> bool:
         """Replace older completed turns with a rolling conversation summary."""
         messages = chat_log.content
-        last_user_message_index = next(
-            (
-                index
-                for index in reversed(range(len(messages)))
-                if isinstance(messages[index], conversation.UserContent)
-            ),
-            None,
+        history_split_index = self._compaction_history_split_index(
+            messages, preserve_current_turn, recent_turns_override
         )
-        if last_user_message_index is None or last_user_message_index <= 1:
+        if history_split_index is None or history_split_index <= 1:
             _LOGGER.info(
                 "Context threshold exceeded, but there is no older history to compact"
             )
-            return
+            return False
 
-        history_to_summarize = messages[1:last_user_message_index]
-        retained_contents = [messages[0], *messages[last_user_message_index:]]
+        history_to_summarize = messages[1:history_split_index]
+        retained_contents = [messages[0], *messages[history_split_index:]]
         max_summary_tokens = self._compaction_max_tokens(
-            chat_log, retained_contents, token_usage
+            chat_log, retained_contents, token_usage.prompt_tokens
         )
+        threshold = int(
+            self.subentry.data.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD)
+        )
+        prompt = str(
+            self.subentry.data.get(
+                CONF_CONTEXT_COMPACTION_PROMPT,
+                DEFAULT_CONTEXT_COMPACTION_PROMPT,
+            )
+        ).strip()
+        if not prompt:
+            prompt = DEFAULT_CONTEXT_COMPACTION_PROMPT
+        summary_prefix = DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX
+        token_limit = DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT.format(
+            max_summary_tokens=max_summary_tokens
+        )
+        if language is not None:
+            summary_prefix, token_limit = await async_get_context_compaction_text(
+                self.hass, language, max_summary_tokens
+            )
+        system_prompt = f"{prompt}\n{token_limit}"
         model = self.subentry.data.get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
         model_config = get_model_config(model, self.entry.data.get(CONF_BASE_URL))
-        request: dict[str, Any] = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        f"{DEFAULT_CONTEXT_COMPACTION_PROMPT}\n"
-                        "Keep the summary within "
-                        f"{max_summary_tokens} tokens."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": _compaction_transcript(history_to_summarize),
-                },
-            ],
-            "stream": False,
-        }
-        if model_config["supports_max_completion_tokens"]:
-            request["max_completion_tokens"] = max_summary_tokens
-        elif model_config["supports_max_tokens"]:
-            request["max_tokens"] = max_summary_tokens
+        groups = _group_compaction_contents(history_to_summarize)
+        summary = ""
+        while groups:
+            selected_groups: list[list[conversation.Content]] = []
+            for group in groups:
+                candidate_groups = [*selected_groups, group]
+                candidate_payload = json.dumps(
+                    {
+                        "existing_summary": summary or None,
+                        "transcript": [
+                            _content_for_compaction(content)
+                            for candidate_group in candidate_groups
+                            for content in candidate_group
+                        ],
+                    },
+                    ensure_ascii=False,
+                    default=str,
+                )
+                candidate_messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": candidate_payload},
+                ]
+                if (
+                    _estimate_serialized_tokens(candidate_messages) + max_summary_tokens
+                    > threshold
+                ):
+                    break
+                selected_groups = candidate_groups
 
-        response = await async_create_chat_completion(
-            self._client,
-            self._unsupported_params.setdefault(model, set()),
-            **request,
-        )
-        summary = response.choices[0].message.content
-        if not isinstance(summary, str) or not summary.strip():
-            raise HomeAssistantError("The conversation compaction returned no summary")
+            if not selected_groups:
+                raise HomeAssistantError("A complete conversation turn is too large to compact safely")
+
+            payload = json.dumps(
+                {
+                    "existing_summary": summary or None,
+                    "transcript": [
+                        _content_for_compaction(content)
+                        for group in selected_groups
+                        for content in group
+                    ],
+                },
+                ensure_ascii=False,
+                default=str,
+            )
+            request: dict[str, Any] = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": payload},
+                ],
+                "stream": False,
+            }
+            if model_config["supports_max_completion_tokens"]:
+                request["max_completion_tokens"] = max_summary_tokens
+            elif model_config["supports_max_tokens"]:
+                request["max_tokens"] = max_summary_tokens
+
+            response = await async_create_chat_completion(
+                self._client,
+                self._unsupported_params.setdefault(model, set()),
+                **request,
+            )
+            result = response.choices[0].message.content
+            if not isinstance(result, str) or not result.strip():
+                raise HomeAssistantError("The conversation compaction returned no summary")
+            summary = result.strip()
+            del groups[: len(selected_groups)]
 
         agent_id = next(
             (
@@ -1317,21 +1472,25 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             ),
             self.entity_id or DOMAIN,
         )
-        messages[1:last_user_message_index] = [
+        messages[1:history_split_index] = [
             conversation.AssistantContent(
                 agent_id=agent_id,
-                content=f"Summary of earlier conversation:\n{summary.strip()}",
+                content=f"{summary_prefix}\n{summary}",
             )
         ]
         _LOGGER.info(
             "Context threshold exceeded, older conversation history compacted"
         )
+        return True
 
     async def _truncate_message_history(
         self,
         chat_log: conversation.ChatLog,
         token_usage: _RequestTokenUsage,
-    ) -> None:
+        preserve_current_turn: bool = False,
+        recent_turns_override: int | None = None,
+        language: str | None = None,
+    ) -> bool:
         """Truncate message history based on strategy."""
         options = self.subentry.data
         strategy = options.get(
@@ -1340,12 +1499,17 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
         if strategy == "clear":
             _LOGGER.info("Context threshold exceeded, conversation history cleared")
-            self._clear_message_history(chat_log)
+            return self._clear_message_history(chat_log)
         elif strategy == "compact":
             try:
-                await self._compact_message_history(chat_log, token_usage)
-            except Exception:
-                _LOGGER.exception(
-                    "Conversation compaction failed; falling back to clearing history"
+                return await self._compact_message_history(
+                    chat_log,
+                    token_usage,
+                    preserve_current_turn,
+                    recent_turns_override,
+                    language,
                 )
-                self._clear_message_history(chat_log)
+            except Exception:
+                _LOGGER.exception("Conversation compaction failed; falling back to clearing history")
+                return self._clear_message_history(chat_log)
+        return False

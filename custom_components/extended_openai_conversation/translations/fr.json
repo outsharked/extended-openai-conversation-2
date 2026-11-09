@@ -9,6 +9,12 @@
             "mcp_default_prompt": {
                 "description": "Utilisez le répartiteur MCP avec list_servers pour trouver les serveurs disponibles, list_tools pour découvrir les outils, get_tool_details pour récupérer tous les détails disponibles d’un outil et execute_tool pour l’exécuter. get_tool_details renvoie le schéma d’entrée ainsi que le titre, la description, le schéma de sortie, les annotations MCP et l’état de prise en charge des tâches fournis par le serveur ; les détails indisponibles sont omis. Utilisez le server_id et le nom de l’outil fournis dans ce contexte ou renvoyés par la découverte. Les outils déjà décrits dans ce contexte n’ont pas besoin d’être découverts à nouveau et n’apparaîtront pas dans les résultats de découverte."
             },
+            "context_compaction_summary_prefix": {
+                "description": "Résumé de la conversation précédente :"
+            },
+            "context_compaction_token_limit": {
+                "description": "Limitez le résumé à {max_summary_tokens} jetons."
+            },
             "user": {
                 "data": {
                     "name": "Nom",

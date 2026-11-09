@@ -4,6 +4,12 @@
       "mcp_default_prompt": {
         "description": "Use the MCP dispatcher with list_servers to find available servers, list_tools to discover tools, get_tool_details to retrieve all available details for a tool, and execute_tool to run it. get_tool_details returns the input schema and any title, description, output schema, MCP annotations, and task-support status supplied by the server; unavailable details are omitted. Use the server_id and tool name provided in this context or returned by discovery. Tools already described in this context do not need to be discovered again and will not appear in discovery results."
       },
+      "context_compaction_summary_prefix": {
+        "description": "Summary of earlier conversation:"
+      },
+      "context_compaction_token_limit": {
+        "description": "Keep the summary within {max_summary_tokens} tokens."
+      },
       "user": {
         "title": "Choose service type",
         "description": "Select the type of service to add.",

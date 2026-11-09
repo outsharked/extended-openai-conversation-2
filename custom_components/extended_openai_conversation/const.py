@@ -272,6 +272,10 @@ Write a faithful, standalone summary that preserves user preferences, establishe
 decisions, unresolved requests, identifiers, and material tool results. Preserve uncertainty
 and do not invent details. Omit greetings, repetition, and superseded information. Return only
 the summary, using the language or languages of the transcript."""
+DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX = "Summary of earlier conversation:"
+DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT = (
+    "Keep the summary within {max_summary_tokens} tokens."
+)
 
 # Service Tier options (for GPT-5 models)
 CONF_SERVICE_TIER = "service_tier"

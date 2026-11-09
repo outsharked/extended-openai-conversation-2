@@ -13,6 +13,8 @@ from openai.types.chat import (
 import probatio as vol
 
 from custom_components.extended_openai_conversation.const import (
+    CONF_CONTEXT_COMPACTION_PROMPT,
+    CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -914,6 +916,7 @@ def _entity_for_compaction(
         CONF_CONTEXT_THRESHOLD: 1000,
         CONF_CONTEXT_TRUNCATE_STRATEGY: strategy,
         CONF_CONTEXT_COMPACTION_TARGET: 60,
+        CONF_CONTEXT_COMPACTION_RECENT_TURNS: 1,
         CONF_MAX_TOKENS: 500,
     }
     entity._unsupported_params = {}
@@ -991,6 +994,153 @@ async def test_compaction_summarizes_old_history_and_keeps_latest_turn():
     transcript = request["messages"][1]["content"]
     assert "My preferred temperature is 20 C" in transcript
     assert "What temperature do I prefer?" not in transcript
+
+
+async def test_compaction_uses_configured_prompt_and_preserves_recent_turns():
+    """Compaction uses the agent prompt and keeps the configured complete tail."""
+    entity = _entity_for_compaction()
+    entity.subentry.data.update(
+        {
+            CONF_CONTEXT_COMPACTION_PROMPT: "Preserve every confirmed identifier.",
+            CONF_CONTEXT_COMPACTION_RECENT_TURNS: 2,
+        }
+    )
+    chat_log = _compaction_chat_log()
+    chat_log.content[1:1] = [
+        conversation.UserContent(content="My device identifier is alpha-1"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="I will retain alpha-1.",
+        ),
+    ]
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="Earlier summary"))]
+    )
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(return_value=response),
+        ) as create_completion,
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_get_context_compaction_text",
+            new=AsyncMock(
+                return_value=(
+                    "Résumé de la conversation précédente :",
+                    "Limitez le résumé à 500 jetons.",
+                )
+            ),
+        ),
+    ):
+        changed = await entity._compact_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=200, total_tokens=1200),
+            language="fr",
+        )
+
+    assert changed is True
+    assert create_completion.await_args.kwargs["messages"][0]["content"].startswith(
+        "Preserve every confirmed identifier."
+    )
+    assert create_completion.await_args.kwargs["messages"][0]["content"].endswith(
+        "Limitez le résumé à 500 jetons."
+    )
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "Résumé de la conversation précédente :\nEarlier summary",
+        "My preferred temperature is 20 C",
+        "I will remember that preference.",
+        "What temperature do I prefer?",
+        "You prefer 20 C.",
+    ]
+
+
+async def test_compaction_chunks_oversized_history_by_complete_turn():
+    """Large histories are summarized through bounded complete-turn chunks."""
+    entity = _entity_for_compaction()
+    entity.subentry.data.update(
+        {
+            CONF_CONTEXT_THRESHOLD: 500,
+            CONF_CONTEXT_COMPACTION_TARGET: 20,
+            CONF_MAX_TOKENS: 100,
+        }
+    )
+    chat_log = MagicMock()
+    chat_log.content = [conversation.SystemContent(content="System prompt")]
+    for index in range(4):
+        chat_log.content.extend(
+            [
+                conversation.UserContent(
+                    content=f"Old request {index}: " + "x" * 400
+                ),
+                conversation.AssistantContent(
+                    agent_id="conversation.test",
+                    content=f"Old response {index}: " + "y" * 400,
+                ),
+            ]
+        )
+    chat_log.content.extend(
+        [
+            conversation.UserContent(content="Current request"),
+            conversation.AssistantContent(
+                agent_id="conversation.test", content="Current response"
+            ),
+        ]
+    )
+    create_completion = AsyncMock(
+        side_effect=[
+            SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="Chunk one"))]
+            ),
+            SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="Chunk two"))]
+            ),
+            SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="Chunk three"))]
+            ),
+            SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="Final summary"))]
+            ),
+        ]
+    )
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=create_completion,
+        ),
+    ):
+        changed = await entity._compact_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=1800, total_tokens=1900),
+        )
+
+    assert changed is True
+    assert create_completion.await_count > 1
+    for call in create_completion.await_args_list:
+        request = call.kwargs
+        request_tokens = len(json.dumps(request["messages"])) // 4
+        output_tokens = request.get(
+            "max_tokens", request.get("max_completion_tokens")
+        )
+        assert request_tokens + output_tokens <= 500
+    assert chat_log.content[-2].content == "Current request"
+    assert chat_log.content[-1].content == "Current response"
 
 
 async def test_compaction_failure_falls_back_to_clear_strategy():

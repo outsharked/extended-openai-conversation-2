@@ -9,8 +9,11 @@ from openai import AsyncOpenAI, BadRequestError
 import pytest
 
 from custom_components.extended_openai_conversation.helpers import (
+    CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY,
+    CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY,
     MCP_DEFAULT_PROMPT_TRANSLATION_KEY,
     async_create_chat_completion,
+    async_get_context_compaction_text,
     async_get_mcp_default_prompt,
     get_authenticated_client,
     get_model_config,
@@ -68,6 +71,28 @@ async def test_get_mcp_default_prompt_uses_translation_with_english_fallback(
         "fr",
         "config",
         integrations={"extended_openai_conversation"},
+    )
+
+
+async def test_get_context_compaction_text_localizes_and_formats_runtime_text():
+    """Compaction runtime text uses the request language and token budget."""
+    hass = MagicMock()
+    translations = {
+        CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY: "Résumé précédent :",
+        CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY: (
+            "Limitez le résumé à {max_summary_tokens} jetons."
+        ),
+    }
+    with patch(
+        "custom_components.extended_openai_conversation.helpers."
+        "async_get_translations",
+        new=AsyncMock(return_value=translations),
+    ):
+        result = await async_get_context_compaction_text(hass, "fr", 250)
+
+    assert result == (
+        "Résumé précédent :",
+        "Limitez le résumé à 250 jetons.",
     )
 
 COMPLETION = {

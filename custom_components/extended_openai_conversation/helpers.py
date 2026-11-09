@@ -22,6 +22,8 @@ from homeassistant.helpers.translation import async_get_translations
 from .const import (
     ALTERNATE_REQUEST_PARAMS,
     CONF_SERVICE_TYPE,
+    DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
+    DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
     DEFAULT_MODEL_CONFIG,
     DEFAULT_SERVICE_TYPE,
     DOMAIN,
@@ -42,6 +44,12 @@ AZURE_DOMAIN_PATTERN = r"\.(openai\.azure\.com|azure-api\.net|services\.ai\.azur
 MCP_DEFAULT_PROMPT_TRANSLATION_KEY = (
     f"component.{DOMAIN}.config.step.mcp_default_prompt.description"
 )
+CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.context_compaction_summary_prefix.description"
+)
+CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.context_compaction_token_limit.description"
+)
 
 
 async def async_get_mcp_default_prompt(
@@ -55,6 +63,27 @@ async def async_get_mcp_default_prompt(
         integrations={DOMAIN},
     )
     return translations.get(MCP_DEFAULT_PROMPT_TRANSLATION_KEY, DEFAULT_MCP_PROMPT)
+
+
+async def async_get_context_compaction_text(
+    hass: HomeAssistant, language: str, max_summary_tokens: int
+) -> tuple[str, str]:
+    """Return localized runtime text used for conversation compaction."""
+    translations = await async_get_translations(
+        hass,
+        language,
+        "config",
+        integrations={DOMAIN},
+    )
+    summary_prefix = translations.get(
+        CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY,
+        DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
+    )
+    token_limit = translations.get(
+        CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY,
+        DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    ).format(max_summary_tokens=max_summary_tokens)
+    return summary_prefix, token_limit
 
 
 def get_service_type(entry: ConfigEntry) -> str:

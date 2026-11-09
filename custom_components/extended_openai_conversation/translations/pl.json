@@ -9,6 +9,12 @@
             "mcp_default_prompt": {
                 "description": "Użyj dyspozytora MCP: list_servers służy do znajdowania dostępnych serwerów, list_tools do odkrywania narzędzi, get_tool_details do pobierania wszystkich dostępnych szczegółów narzędzia, a execute_tool do jego uruchamiania. get_tool_details zwraca schemat wejściowy oraz tytuł, opis, schemat wyjściowy, adnotacje MCP i stan obsługi zadań, jeśli serwer je udostępnia; niedostępne szczegóły są pomijane. Użyj wartości server_id i nazwy narzędzia podanych w tym kontekście lub zwróconych przez wyszukiwanie. Narzędzi już opisanych w tym kontekście nie trzeba ponownie odkrywać i nie pojawią się one w wynikach wykrywania."
             },
+            "context_compaction_summary_prefix": {
+                "description": "Podsumowanie wcześniejszej rozmowy:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Ogranicz podsumowanie do {max_summary_tokens} tokenów."
+            },
             "user": {
                 "data": {
                     "name": "Imię",

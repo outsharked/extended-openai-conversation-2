@@ -9,6 +9,12 @@
             "mcp_default_prompt": {
                 "description": "Usa il dispatcher MCP con list_servers per trovare i server disponibili, list_tools per scoprire gli strumenti, get_tool_details per recuperare tutti i dettagli disponibili di uno strumento ed execute_tool per eseguirlo. get_tool_details restituisce lo schema di input e gli eventuali titolo, descrizione, schema di output, annotazioni MCP e stato del supporto alle attività forniti dal server; i dettagli non disponibili vengono omessi. Usa il server_id e il nome dello strumento forniti in questo contesto o restituiti dalla ricerca. Gli strumenti già descritti in questo contesto non devono essere cercati di nuovo e non compariranno nei risultati della ricerca."
             },
+            "context_compaction_summary_prefix": {
+                "description": "Riepilogo della conversazione precedente:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Mantieni il riepilogo entro {max_summary_tokens} token."
+            },
             "user": {
                 "data": {
                     "name": "Nome",
