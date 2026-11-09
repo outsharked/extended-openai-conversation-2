@@ -71,6 +71,8 @@ from .const import (
     CONF_API_VERSION,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CONTEXT_COMPACTION_PROMPT,
+    CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -103,6 +105,8 @@ from .const import (
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONF_BASE_URL,
     DEFAULT_CONF_FUNCTION_TOOLS,
+    DEFAULT_CONTEXT_COMPACTION_PROMPT,
+    DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -318,6 +322,8 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_TOP_P: DEFAULT_TOP_P,
         CONF_TEMPERATURE: DEFAULT_TEMPERATURE,
         CONF_FUNCTION_TOOLS: DEFAULT_CONF_FUNCTION_TOOLS_STR,
+        CONF_CONTEXT_COMPACTION_PROMPT: DEFAULT_CONTEXT_COMPACTION_PROMPT,
+        CONF_CONTEXT_COMPACTION_RECENT_TURNS: DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -1781,6 +1787,18 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                     min=1, max=100, step=1, unit_of_measurement="%"
                 )
             )
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_RECENT_TURNS,
+                    default=DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
+                )
+            ] = NumberSelector(NumberSelectorConfig(min=0, step=1))
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_PROMPT,
+                    default=DEFAULT_CONTEXT_COMPACTION_PROMPT,
+                )
+            ] = TextSelector(TextSelectorConfig(multiline=True))
 
         return self.async_show_form(
             step_id="advanced",
@@ -2154,6 +2172,18 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     min=1, max=100, step=1, unit_of_measurement="%"
                 )
             )
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_RECENT_TURNS,
+                    default=DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
+                )
+            ] = NumberSelector(NumberSelectorConfig(min=0, step=1))
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_PROMPT,
+                    default=DEFAULT_CONTEXT_COMPACTION_PROMPT,
+                )
+            ] = TextSelector(TextSelectorConfig(multiline=True))
 
         return self.async_show_form(
             step_id="advanced",

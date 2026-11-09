@@ -75,11 +75,15 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)"
+                        "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)",
+                        "context_compaction_recent_turns": "Turnos recentes a preservar",
+                        "context_compaction_prompt": "Instrução de compactação"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto."
+                        "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto.",
+                        "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
+                        "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente."
                     }
                 }
             }
@@ -116,11 +120,15 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)"
+                        "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)",
+                        "context_compaction_recent_turns": "Turnos recentes a preservar",
+                        "context_compaction_prompt": "Instrução de compactação"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto."
+                        "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto.",
+                        "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
+                        "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente."
                     }
                 }
             }

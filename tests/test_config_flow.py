@@ -34,6 +34,8 @@ from custom_components.extended_openai_conversation.const import (
     CONF_API_PROVIDER,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CONTEXT_COMPACTION_PROMPT,
+    CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -50,6 +52,8 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_CONF_BASE_URL,
+    DEFAULT_CONTEXT_COMPACTION_PROMPT,
+    DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
@@ -1848,8 +1852,8 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
 @pytest.mark.parametrize("strategy", ["clear", "compact"])
-async def test_agent_advanced_schema_compaction_target(hass, handler_type, strategy):
-    """Both agent types expose the target only for summary compaction."""
+async def test_agent_advanced_schema_compaction_options(hass, handler_type, strategy):
+    """Both agent types expose compaction options only for compaction."""
     handler = handler_type()
     handler.hass = hass
     handler.context = {"source": "reconfigure"}
@@ -1868,6 +1872,8 @@ async def test_agent_advanced_schema_compaction_target(hass, handler_type, strat
     schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
     if strategy == "clear":
         assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
+        assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
+        assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
         return
 
     target_key = next(
@@ -1879,3 +1885,20 @@ async def test_agent_advanced_schema_compaction_target(hass, handler_type, strat
     assert schema[target_key].config["min"] == 1
     assert schema[target_key].config["max"] == 100
     assert schema[target_key].config["unit_of_measurement"] == "%"
+
+    recent_turns_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_COMPACTION_RECENT_TURNS
+    )
+    assert recent_turns_key.default() == DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS
+    assert schema[recent_turns_key].config["min"] == 0
+    assert schema[recent_turns_key].config["step"] == 1
+
+    prompt_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_COMPACTION_PROMPT
+    )
+    assert prompt_key.default() == DEFAULT_CONTEXT_COMPACTION_PROMPT
+    assert schema[prompt_key].config["multiline"] is True

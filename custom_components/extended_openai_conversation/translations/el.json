@@ -75,11 +75,15 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)"
+                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
+                        "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
+                        "context_compaction_prompt": "Προτροπή συμπύκνωσης"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου."
+                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
+                        "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
+                        "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά."
                     }
                 }
             }
@@ -116,11 +120,15 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)"
+                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
+                        "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
+                        "context_compaction_prompt": "Προτροπή συμπύκνωσης"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου."
+                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
+                        "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
+                        "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά."
                     }
                 }
             }
