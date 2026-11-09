@@ -4,7 +4,7 @@ import base64
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 from openai.types.chat import (
     ChatCompletionContentPartImageParam,
@@ -12,6 +12,12 @@ from openai.types.chat import (
 )
 import probatio as vol
 
+from custom_components.extended_openai_conversation.const import (
+    CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_THRESHOLD,
+    CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_MAX_TOKENS,
+)
 from custom_components.extended_openai_conversation.entity import (
     ExtendedOpenAIBaseLLMEntity,
     MCPAgentContext,
@@ -24,6 +30,7 @@ from custom_components.extended_openai_conversation.entity import (
     _place_mcp_agent_context,
     _place_mcp_context,
     _render_extra_body,
+    _RequestTokenUsage,
     encode_attachments,
 )
 from custom_components.extended_openai_conversation.mcp_client import (
@@ -893,3 +900,224 @@ def test_format_structured_output_converts_probatio_schema():
     # _adjust_schema makes every property required, optional ones nullable
     assert result["properties"]["count"]["type"] == ["integer", "null"]
     assert sorted(result["required"]) == ["count", "name"]
+
+
+def _entity_for_compaction(
+    strategy: str = "compact",
+) -> ExtendedOpenAIBaseLLMEntity:
+    """Return an entity configured for history compaction tests."""
+    entity = ExtendedOpenAIBaseLLMEntity.__new__(ExtendedOpenAIBaseLLMEntity)
+    entity.entry = MagicMock()
+    entity.entry.data = {}
+    entity.subentry = MagicMock()
+    entity.subentry.data = {
+        CONF_CONTEXT_THRESHOLD: 1000,
+        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy,
+        CONF_CONTEXT_COMPACTION_TARGET: 60,
+        CONF_MAX_TOKENS: 500,
+    }
+    entity._unsupported_params = {}
+    return entity
+
+
+def _compaction_chat_log() -> MagicMock:
+    """Return a chat log containing one old and one current turn."""
+    chat_log = MagicMock()
+    chat_log.content = [
+        conversation.SystemContent(content="System prompt"),
+        conversation.UserContent(content="My preferred temperature is 20 C"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="I will remember that preference.",
+        ),
+        conversation.UserContent(content="What temperature do I prefer?"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="You prefer 20 C.",
+        ),
+    ]
+    return chat_log
+
+
+async def test_compaction_summarizes_old_history_and_keeps_latest_turn():
+    """Compaction stores a rolling summary without replacing the current reply."""
+    entity = _entity_for_compaction()
+    chat_log = _compaction_chat_log()
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="The user prefers 20 C.")
+            )
+        ]
+    )
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(return_value=response),
+        ) as create_completion,
+    ):
+        await entity._truncate_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=100, total_tokens=1100),
+        )
+
+    assert [content.role for content in chat_log.content] == [
+        "system",
+        "assistant",
+        "user",
+        "assistant",
+    ]
+    assert chat_log.content[1].content == (
+        "Summary of earlier conversation:\nThe user prefers 20 C."
+    )
+    assert chat_log.content[-1].content == "You prefer 20 C."
+
+    request = create_completion.await_args.kwargs
+    assert request["stream"] is False
+    assert request.get("max_tokens", request.get("max_completion_tokens")) == 500
+    assert "tools" not in request
+    assert [message["role"] for message in request["messages"]] == [
+        "system",
+        "user",
+    ]
+    transcript = request["messages"][1]["content"]
+    assert "My preferred temperature is 20 C" in transcript
+    assert "What temperature do I prefer?" not in transcript
+
+
+async def test_compaction_failure_falls_back_to_clear_strategy():
+    """A failed summary call still leaves a usable latest conversation turn."""
+    entity = _entity_for_compaction()
+    chat_log = _compaction_chat_log()
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(side_effect=RuntimeError("summary failed")),
+        ),
+    ):
+        await entity._truncate_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=100, total_tokens=1100),
+        )
+
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "What temperature do I prefer?",
+        "You prefer 20 C.",
+    ]
+
+
+async def test_compaction_rolls_previous_summary_into_next_summary():
+    """Later compaction summarizes the prior summary plus subsequent old turns."""
+    entity = _entity_for_compaction()
+    chat_log = _compaction_chat_log()
+    responses = [
+        SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="Summary one"))]
+        ),
+        SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="Summary two"))]
+        ),
+    ]
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(side_effect=responses),
+        ) as create_completion,
+    ):
+        usage = _RequestTokenUsage(prompt_tokens=100, total_tokens=1100)
+        await entity._truncate_message_history(chat_log, usage)
+        chat_log.content.extend(
+            [
+                conversation.UserContent(content="Remember anything else?"),
+                conversation.AssistantContent(
+                    agent_id="conversation.test",
+                    content="Nothing else yet.",
+                ),
+            ]
+        )
+        await entity._truncate_message_history(chat_log, usage)
+
+    second_transcript = create_completion.await_args_list[1].kwargs["messages"][1][
+        "content"
+    ]
+    assert "Summary of earlier conversation:\\nSummary one" in second_transcript
+    assert "What temperature do I prefer?" in second_transcript
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "Summary of earlier conversation:\nSummary two",
+        "Remember anything else?",
+        "Nothing else yet.",
+    ]
+
+
+async def test_clear_strategy_does_not_call_summarizer():
+    """The existing clear strategy remains local and keeps the latest turn."""
+    entity = _entity_for_compaction("clear")
+    chat_log = _compaction_chat_log()
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity."
+        "async_create_chat_completion",
+        new=AsyncMock(),
+    ) as create_completion:
+        await entity._truncate_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=100, total_tokens=1100),
+        )
+
+    create_completion.assert_not_awaited()
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "What temperature do I prefer?",
+        "You prefer 20 C.",
+    ]
+
+
+async def test_transform_stream_records_usage_without_compacting_mid_stream():
+    """Threshold handling is deferred until the completed agent turn."""
+    entity = _entity_for_stream()
+    entity._truncate_message_history = AsyncMock()
+    chat_log = MagicMock()
+    usage = _RequestTokenUsage()
+
+    async def _stream():
+        yield SimpleNamespace(
+            choices=[],
+            usage=SimpleNamespace(
+                prompt_tokens=900,
+                completion_tokens=200,
+                total_tokens=1100,
+            ),
+        )
+
+    assert [
+        delta
+        async for delta in entity._transform_stream(chat_log, _stream(), usage)
+    ] == [{"role": "assistant"}]
+    assert usage == _RequestTokenUsage(prompt_tokens=900, total_tokens=1100)
+    entity._truncate_message_history.assert_not_awaited()
