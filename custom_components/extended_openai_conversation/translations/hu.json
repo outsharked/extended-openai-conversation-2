@@ -49,6 +49,12 @@
                 "image": "Képek",
                 "audio": "Hang"
             }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Összes üzenet törlése",
+                "compact": "Üzenetek összegzése és tömörítése"
+            }
         }
     },
     "config_subentries": {
@@ -87,10 +93,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg."
                     }
                 }
             }
@@ -110,6 +118,8 @@
                         "mcp_servers": "MCP-kiszolgálók",
                         "mcp_permanent_tools_placement": "Állandó MCP-eszközök elhelyezése",
                         "mcp_default_prompt_placement": "Alapértelmezett MCP-prompt elhelyezése",
+                        "context_threshold": "Kontextusküszöb",
+                        "context_truncate_strategy": "Stratégia a kontextusküszöb túllépésekor",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -124,10 +134,12 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg."
                     }
                 }
             }
