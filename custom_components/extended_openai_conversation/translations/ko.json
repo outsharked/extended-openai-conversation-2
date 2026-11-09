@@ -14,6 +14,12 @@
                     "disabled_tools": "비활성화 도구 필터에 사용할 도구입니다. '선택됨' 모드에서는 선택한 도구가 비활성화됩니다. '선택되지 않음' 모드에서는 선택한 도구를 제외한 모든 도구가 비활성화됩니다."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "이전 대화 요약:"
+            },
+            "context_compaction_token_limit": {
+                "description": "요약을 {max_summary_tokens}토큰 이내로 유지하세요."
+            },
             "user": {
                 "data": {
                     "name": "Name",

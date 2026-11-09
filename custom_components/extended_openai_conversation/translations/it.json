@@ -14,6 +14,12 @@
                     "disabled_tools": "Strumenti selezionati per il filtro degli strumenti disabilitati. In modalità «Selezionati», gli strumenti selezionati vengono disabilitati. In modalità «Non selezionati», vengono disabilitati tutti gli strumenti tranne quelli selezionati."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "Riepilogo della conversazione precedente:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Mantieni il riepilogo entro {max_summary_tokens} token."
+            },
             "user": {
                 "data": {
                     "name": "Nome",

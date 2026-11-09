@@ -14,6 +14,12 @@
                     "disabled_tools": "Narzędzia wybrane dla filtra wyłączonych narzędzi. W trybie „Wybrane” wyłączane są wybrane narzędzia. W trybie „Niewybrane” wyłączane są wszystkie narzędzia poza wybranymi."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "Podsumowanie wcześniejszej rozmowy:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Ogranicz podsumowanie do {max_summary_tokens} tokenów."
+            },
             "user": {
                 "data": {
                     "name": "Imię",

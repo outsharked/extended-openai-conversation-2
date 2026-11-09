@@ -14,6 +14,12 @@
                     "disabled_tools": "A letiltott eszközök szűrőjéhez kiválasztott eszközök. „Kiválasztott” módban a kiválasztott eszközök lesznek letiltva. „Nem kiválasztott” módban a kiválasztottak kivételével minden eszköz le lesz tiltva."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "A korábbi beszélgetés összefoglalása:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Az összefoglalás legfeljebb {max_summary_tokens} token legyen."
+            },
             "user": {
                 "data": {
                     "name": "Név",

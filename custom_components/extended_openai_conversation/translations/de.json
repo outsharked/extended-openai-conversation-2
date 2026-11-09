@@ -14,6 +14,12 @@
                     "disabled_tools": "Für den Filter für deaktivierte Werkzeuge ausgewählte Werkzeuge. Im Modus ‚Ausgewählt‘ werden ausgewählte Werkzeuge deaktiviert. Im Modus ‚Nicht ausgewählt‘ werden alle Werkzeuge außer den ausgewählten deaktiviert."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "Zusammenfassung des bisherigen Gesprächs:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Begrenze die Zusammenfassung auf {max_summary_tokens} Token."
+            },
             "user": {
                 "data": {
                     "name": "Name",

@@ -14,6 +14,12 @@
                     "disabled_tools": "Outils choisis pour le filtre des outils désactivés. En mode « Sélectionnés », les outils sélectionnés sont désactivés. En mode « Non sélectionnés », tous les outils sauf ceux sélectionnés sont désactivés."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "Résumé de la conversation précédente :"
+            },
+            "context_compaction_token_limit": {
+                "description": "Limitez le résumé à {max_summary_tokens} jetons."
+            },
             "user": {
                 "data": {
                     "name": "Nom",

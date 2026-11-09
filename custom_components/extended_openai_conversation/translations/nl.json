@@ -14,6 +14,12 @@
                     "disabled_tools": "Hulpmiddelen die zijn geselecteerd voor het filter voor uitgeschakelde hulpmiddelen. In de modus 'Geselecteerd' worden de geselecteerde hulpmiddelen uitgeschakeld. In de modus 'Niet geselecteerd' worden alle hulpmiddelen behalve de geselecteerde uitgeschakeld."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "Samenvatting van het eerdere gesprek:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Beperk de samenvatting tot {max_summary_tokens} tokens."
+            },
             "user": {
                 "data": {
                     "name": "Naam",

@@ -14,6 +14,12 @@
                     "disabled_tools": "Ferramentas selecionadas para o filtro de ferramentas desativadas. No modo 'Selecionadas', as ferramentas selecionadas são desativadas. No modo 'Não selecionadas', todas as ferramentas exceto as selecionadas são desativadas."
                 }
             },
+            "context_compaction_summary_prefix": {
+                "description": "Resumo da conversa anterior:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Mantenha o resumo dentro de {max_summary_tokens} tokens."
+            },
             "user": {
                 "data": {
                     "name": "Nome",
