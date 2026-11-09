@@ -1,20 +1,35 @@
 """Tests for entity.py message serialization helpers."""
 
+import base64
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+from openai.types.chat import (
+    ChatCompletionContentPartImageParam,
+    ChatCompletionContentPartInputAudioParam,
+)
 import probatio as vol
 
 from custom_components.extended_openai_conversation.entity import (
     ExtendedOpenAIBaseLLMEntity,
+    MCPAgentContext,
     _convert_content_to_param,
     _extract_extra_content,
+    _extract_mcp_media_content,
     _format_structured_output,
     _make_tool_result_content,
+    _messages_contain_media,
+    _place_mcp_agent_context,
+    _place_mcp_context,
     _render_extra_body,
     encode_attachments,
+)
+from custom_components.extended_openai_conversation.mcp_client import (
+    MCPServerConfig,
+    MCPServiceConfig,
+    MCPTool,
 )
 from homeassistant.components import conversation
 from homeassistant.helpers import llm
@@ -66,6 +81,224 @@ def _entity_for_stream() -> ExtendedOpenAIBaseLLMEntity:
     entity.subentry = MagicMock()
     entity.subentry.data = {}
     return entity
+
+
+async def test_mcp_context_messages_localize_one_prompt_and_use_saved_catalogue():
+    """One localized prompt precedes complete permanent tool context."""
+    entity = ExtendedOpenAIBaseLLMEntity.__new__(ExtendedOpenAIBaseLLMEntity)
+    entity.hass = MagicMock()
+    entity.subentry = MagicMock()
+    entity.subentry.data = {"mcp_servers": ["vault", "weather"]}
+    tool = MCPTool(
+        name="read_secret",
+        title="Read secret",
+        description="Read a stored secret.",
+        input_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+    on_demand_disabled_tool = MCPTool(
+        name="delete_secret",
+        title="Delete secret",
+        description="Delete a stored secret.",
+        input_schema={"type": "object"},
+        output_schema=None,
+    )
+    service = MagicMock()
+    service.config = MCPServiceConfig(
+        server=MCPServerConfig(
+            server_id="vault",
+            name="Vault MCP",
+            url="https://vault.example.com/mcp",
+        ),
+        permanent_tools=(tool, on_demand_disabled_tool),
+        include_permanent_schemas=True,
+        disabled_tools=("delete_secret",),
+    )
+    second_service = MagicMock()
+    second_service.config = MCPServiceConfig(
+        server=MCPServerConfig(
+            server_id="weather",
+            name="Weather MCP",
+            url="https://weather.example.com/mcp",
+        ),
+    )
+    scope = MagicMock()
+    scope.list_loaded.return_value = (service, second_service)
+    manager = MagicMock()
+    manager.scope.return_value = scope
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.entity.MCPServiceManager",
+            return_value=manager,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity.async_get_mcp_default_prompt",
+            new=AsyncMock(return_value="Instructions MCP traduites"),
+        ) as get_prompt,
+    ):
+        context = await entity._async_get_mcp_agent_context("fr")
+        messages = entity._mcp_context_messages(context)
+
+    manager.scope.assert_called_once_with(["vault", "weather"])
+    scope.list_loaded.assert_called_once_with()
+    get_prompt.assert_awaited_once_with(entity.hass, "fr")
+    assert len(messages) == 2
+    assert messages[0]["role"] == "system"
+    assert messages[0]["content"] == "Instructions MCP traduites"
+    assert context.default_prompt == "Instructions MCP traduites"
+    assert context.permanent_tools == messages[1]["content"]
+    context = json.loads(messages[1]["content"])
+    assert context["server_id"] == "vault"
+    assert context["tools"] == [
+        {
+            "description": "Delete a stored secret.",
+            "input_schema": {"type": "object"},
+            "name": "delete_secret",
+        },
+        {
+            "description": "Read a stored secret.",
+            "input_schema": {"type": "object"},
+            "name": "read_secret",
+            "output_schema": {"type": "object"},
+        },
+    ]
+    assert "instructions" not in context
+
+
+async def test_mcp_context_automatic_messages_can_be_disabled():
+    """Conversation templates retain MCP values when automatic messages are off."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
+        CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
+    )
+
+    entity = ExtendedOpenAIBaseLLMEntity.__new__(ExtendedOpenAIBaseLLMEntity)
+    entity.hass = MagicMock()
+    entity.subentry = MagicMock()
+    entity.subentry.data = {
+        "mcp_servers": ["vault"],
+        CONF_MCP_AUTO_ADD_DEFAULT_PROMPT: False,
+        CONF_MCP_AUTO_ADD_PERMANENT_TOOLS: False,
+    }
+    tool = MCPTool(
+        name="read_secret",
+        title=None,
+        description="Read a stored secret.",
+        input_schema={"type": "object"},
+        output_schema=None,
+    )
+    service = MagicMock()
+    service.config = MCPServiceConfig(
+        server=MCPServerConfig(
+            server_id="vault",
+            name="Vault MCP",
+            url="https://vault.example.com/mcp",
+        ),
+        permanent_tools=(tool,),
+    )
+    manager = MagicMock()
+    manager.scope.return_value.list_loaded.return_value = (service,)
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.entity.MCPServiceManager",
+            return_value=manager,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity.async_get_mcp_default_prompt",
+            new=AsyncMock(return_value="MCP instructions"),
+        ),
+    ):
+        context = await entity._async_get_mcp_agent_context("en")
+
+    assert context.default_prompt == "MCP instructions"
+    assert "read_secret" in context.permanent_tools
+    assert entity._mcp_context_messages(context) == []
+
+
+def test_place_mcp_agent_context_uses_independent_placements():
+    """AI Task prompt and permanent tools use independent placements."""
+    messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    context = MCPAgentContext(
+        default_prompt="MCP instructions",
+        permanent_tools="Permanent tools",
+    )
+
+    _place_mcp_agent_context(
+        messages,
+        context,
+        permanent_tools_placement="dedicated_system",
+        default_prompt_placement="combined_system",
+    )
+
+    assert messages == [
+        {"role": "system", "content": "Permanent tools"},
+        {"role": "system", "content": "MCP instructions\n\nExisting system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+
+
+def test_place_mcp_context_uses_dedicated_system_message():
+    """AI Task MCP context can use an additional system message."""
+    messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    _place_mcp_context(messages, "MCP context", "dedicated_system")
+    assert messages == [
+        {"role": "system", "content": "MCP context"},
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+
+
+def test_place_mcp_context_merges_into_selected_role():
+    """AI Task MCP context can be merged into an existing message."""
+    system_messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    _place_mcp_context(system_messages, "MCP context", "combined_system")
+    assert system_messages == [
+        {"role": "system", "content": "MCP context\n\nExisting system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+
+    user_messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    _place_mcp_context(user_messages, "MCP context", "user")
+    assert user_messages[1] == {
+        "role": "user",
+        "content": "MCP context\n\nDo the task",
+    }
+
+    disabled_messages = [{"role": "user", "content": "Do the task"}]
+    _place_mcp_context(disabled_messages, "MCP context", "disabled")
+    assert disabled_messages == [{"role": "user", "content": "Do the task"}]
+
+
+async def test_mcp_context_messages_skip_manager_without_assigned_servers():
+    """An agent without assigned MCP servers receives no MCP context."""
+    entity = ExtendedOpenAIBaseLLMEntity.__new__(ExtendedOpenAIBaseLLMEntity)
+    entity.hass = MagicMock()
+    entity.subentry = MagicMock()
+    entity.subentry.data = {}
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.MCPServiceManager"
+    ) as manager:
+        context = await entity._async_get_mcp_agent_context("en")
+
+    assert context.permanent_tools == ""
+    assert context.default_prompt == ""
+
+    manager.assert_not_called()
 
 
 async def _collect_stream_deltas(chunks: list[SimpleNamespace]) -> list[dict]:
@@ -166,6 +399,205 @@ def test_convert_content_to_param_without_attachments_unchanged():
     messages = _convert_content_to_param([content])
 
     assert messages == [{"role": "user", "content": "Hello there"}]
+
+
+def test_extract_mcp_media_content_builds_native_image_part():
+    """Standard MCP ImageContent becomes a native model image input."""
+    encoded = base64.b64encode(b"fake-png-bytes").decode()
+    result = {
+        "server_id": "images",
+        "tool_name": "capture",
+        "content": [
+            {"type": "text", "text": "Captured"},
+            {"type": "image", "mimeType": "image/png", "data": encoded},
+        ],
+        "structured_content": None,
+        "is_error": False,
+    }
+
+    serialized, media_parts = _extract_mcp_media_content(result)
+
+    assert serialized["content"] == [
+        {"type": "text", "text": "Captured"},
+        {
+            "type": "image",
+            "mimeType": "image/png",
+            "attached_to_model": True,
+        },
+    ]
+    assert media_parts == [
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{encoded}"},
+        }
+    ]
+    assert result["content"][1]["data"] == encoded
+
+
+def test_extract_mcp_media_content_preserves_invalid_image_payload():
+    """Invalid MCP image data remains available with a model-facing error."""
+    result = {
+        "content": [
+            {"type": "image", "mimeType": "image/png", "data": "not base64!"}
+        ]
+    }
+
+    serialized, media_parts = _extract_mcp_media_content(result)
+
+    assert serialized == {
+        "content": [
+            {
+                "type": "image",
+                "mimeType": "image/png",
+                "data": "not base64!",
+                "media_error": {
+                    "code": "invalid_base64_data",
+                    "message": (
+                        "The media could not be attached because its data is not "
+                        "valid base64. The original data is included in this tool "
+                        "result."
+                    ),
+                },
+            }
+        ]
+    }
+    assert media_parts == []
+
+
+def test_extract_mcp_media_content_builds_native_audio_part():
+    """Standard MCP AudioContent becomes a native model audio input."""
+    encoded = base64.b64encode(b"fake-audio-bytes").decode()
+    result = {
+        "content": [
+            {"type": "audio", "mimeType": "audio/mpeg", "data": encoded}
+        ]
+    }
+
+    serialized, media_parts = _extract_mcp_media_content(result)
+
+    assert serialized == {
+        "content": [
+            {
+                "type": "audio",
+                "mimeType": "audio/mpeg",
+                "attached_to_model": True,
+            }
+        ]
+    }
+    assert media_parts == [
+        {
+            "type": "input_audio",
+            "input_audio": {"data": encoded, "format": "mp3"},
+        }
+    ]
+
+
+def test_extract_mcp_media_content_preserves_unsupported_audio_payload():
+    """Unsupported MCP audio remains available with a model-facing error."""
+    result = {
+        "content": [
+            {"type": "audio", "mimeType": "audio/ogg", "data": "ZmFrZQ=="}
+        ]
+    }
+
+    serialized, media_parts = _extract_mcp_media_content(result)
+
+    assert serialized == {
+        "content": [
+            {
+                "type": "audio",
+                "mimeType": "audio/ogg",
+                "data": "ZmFrZQ==",
+                "media_error": {
+                    "code": "unsupported_mime_type",
+                    "message": (
+                        "This media type cannot be attached natively. The original "
+                        "base64 media data is included in this tool result."
+                    ),
+                },
+            }
+        ]
+    }
+    assert media_parts == []
+
+
+def test_convert_content_to_param_places_media_after_all_tool_results():
+    """Parallel tool results precede their combined native media message."""
+    first = _make_tool_result_content(
+        agent_id="conversation.test",
+        tool_call_id="call_1",
+        tool_name="capture_one",
+        data={"result": "image attached"},
+    )
+    second = _make_tool_result_content(
+        agent_id="conversation.test",
+        tool_call_id="call_2",
+        tool_name="capture_two",
+        data={"result": "image attached"},
+    )
+    media_parts: dict[
+        str,
+        list[
+            ChatCompletionContentPartImageParam
+            | ChatCompletionContentPartInputAudioParam
+        ],
+    ] = {
+        "call_1": [
+            {
+                "type": "image_url",
+                "image_url": {"url": "data:image/png;base64,Zmlyc3Q="},
+            }
+        ],
+        "call_2": [
+            {
+                "type": "input_audio",
+                "input_audio": {"data": "c2Vjb25k", "format": "wav"},
+            }
+        ],
+    }
+
+    messages = _convert_content_to_param(
+        [first, second], tool_media_parts=media_parts
+    )
+
+    assert [message["role"] for message in messages] == ["tool", "tool", "user"]
+    assert messages[2]["content"] == [
+        {"type": "text", "text": "Media returned by tool capture_one:"},
+        media_parts["call_1"][0],
+        {"type": "text", "text": "Media returned by tool capture_two:"},
+        media_parts["call_2"][0],
+    ]
+
+
+def test_messages_contain_media_detects_native_media_parts():
+    """Media-bearing prompts can be omitted from verbose logging."""
+    assert not _messages_contain_media([{"role": "user", "content": "hello"}])
+    assert _messages_contain_media(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,ZmFrZQ=="},
+                    }
+                ],
+            }
+        ]
+    )
+    assert _messages_contain_media(
+        [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_audio",
+                        "input_audio": {"data": "ZmFrZQ==", "format": "wav"},
+                    }
+                ],
+            }
+        ]
+    )
 
 
 def test_assistant_tool_call_without_text_has_content_key():

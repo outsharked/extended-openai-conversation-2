@@ -7,6 +7,7 @@ from .base import Function
 from .bash import BashFunction
 from .composite import CompositeFunction
 from .file import EditFileFunction, ReadFileFunction, WriteFileFunction
+from .mcp import MCPFunction
 from .native import NativeFunction
 from .script import ScriptFunction
 from .sqlite import SqliteFunction
@@ -18,6 +19,7 @@ __all__ = [
     "CompositeFunction",
     "EditFileFunction",
     "Function",
+    "MCPFunction",
     "NativeFunction",
     "ReadFileFunction",
     "RestFunction",
@@ -41,6 +43,7 @@ FUNCTIONS: dict[str, Function] = {
     "read_file": ReadFileFunction(),
     "write_file": WriteFileFunction(),
     "edit_file": EditFileFunction(),
+    "mcp": MCPFunction(),
 }
 
 

@@ -6,6 +6,9 @@
             "unknown": "Onverwachte fout"
         },
         "step": {
+            "mcp_default_prompt": {
+                "description": "Gebruik de MCP-dispatcher met list_servers om beschikbare servers te vinden, list_tools om hulpmiddelen te ontdekken, get_tool_details om alle beschikbare details van een hulpmiddel op te halen en execute_tool om het uit te voeren. get_tool_details retourneert het invoerschema en alle door de server verstrekte titels, beschrijvingen, uitvoerschema's, MCP-annotaties en taakondersteuningsstatus; niet-beschikbare details worden weggelaten. Gebruik de server_id en hulpmiddelnaam uit deze context of uit de zoekresultaten. Hulpmiddelen die al in deze context zijn beschreven, hoeven niet opnieuw te worden ontdekt en verschijnen niet in de zoekresultaten."
+            },
             "user": {
                 "data": {
                     "name": "Naam",
@@ -16,6 +19,16 @@
                     "skip_authentication": "Authenticatie overslaan",
                     "api_provider": "Api Provider"
                 }
+            }
+        }
+    },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Afzonderlijke systeemprompt",
+                "combined_system": "Gecombineerde systeemprompt",
+                "user": "Gebruikersinvoer",
+                "disabled": "Uitgeschakeld"
             }
         }
     },
@@ -34,13 +47,19 @@
                         "prompt": "Prompt Sjabloon",
                         "max_function_calls_per_conversation": "Maximale keren functies mogen worden aangeroepen per conversatie",
                         "skills": "Skills",
+                        "mcp_servers": "MCP-servers",
+                        "mcp_auto_add_permanent_tools": "Permanente MCP-hulpmiddelen automatisch toevoegen",
+                        "mcp_auto_add_default_prompt": "Standaard MCP-prompt automatisch toevoegen",
                         "functions": "Functies",
                         "attach_username": "Gebruikersnaam aan bericht toevoegen",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Voegt catalogi met permanente MCP-hulpmiddelen automatisch toe als afzonderlijke systeemberichten. Als dit is ingeschakeld en ook `permanent_mcp_tools` wordt ingevoegd, wordt de catalogus gedupliceerd.",
+                        "mcp_auto_add_default_prompt": "Voegt de MCP-gebruiksinstructies automatisch toe als een afzonderlijk systeembericht. Als dit is ingeschakeld en ook `default_mcp_prompt` wordt ingevoegd, worden de instructies gedupliceerd."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -69,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP-servers",
+                        "mcp_permanent_tools_placement": "Plaatsing van permanente MCP-hulpmiddelen",
+                        "mcp_default_prompt_placement": "Plaatsing van de standaard MCP-prompt",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Kies waar catalogi met permanente MCP-hulpmiddelen automatisch worden ingevoegd, of schakel automatisch invoegen uit.",
+                        "mcp_default_prompt_placement": "Kies waar de standaard MCP-gebruiksinstructies automatisch worden ingevoegd, of schakel automatisch invoegen uit."
                     }
                 },
                 "advanced": {

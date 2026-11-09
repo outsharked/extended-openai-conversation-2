@@ -2,15 +2,20 @@
 
 import json
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx2
 from openai import AsyncOpenAI, BadRequestError
 import pytest
 
 from custom_components.extended_openai_conversation.helpers import (
+    MCP_DEFAULT_PROMPT_TRANSLATION_KEY,
     async_create_chat_completion,
+    async_get_mcp_default_prompt,
+    get_authenticated_client,
     get_model_config,
 )
+from custom_components.extended_openai_conversation.mcp_client import DEFAULT_MCP_PROMPT
 
 OPENAI_URL = "https://api.openai.com/v1"
 OLLAMA_URL = "http://localhost:11434/v1"
@@ -37,6 +42,33 @@ REASONING_EFFORT_WITH_TOOLS_REJECTED = {
 }
 
 TOOLS = [{"type": "function", "function": {"name": "f"}}]
+
+
+@pytest.mark.parametrize(
+    ("translations", "expected"),
+    [
+        ({MCP_DEFAULT_PROMPT_TRANSLATION_KEY: "Localized MCP prompt"}, "Localized MCP prompt"),
+        ({}, DEFAULT_MCP_PROMPT),
+    ],
+)
+async def test_get_mcp_default_prompt_uses_translation_with_english_fallback(
+    translations: dict[str, str], expected: str
+):
+    """Model guidance uses the requested language with a safe fallback."""
+    hass = MagicMock()
+    with patch(
+        "custom_components.extended_openai_conversation.helpers.async_get_translations",
+        new=AsyncMock(return_value=translations),
+    ) as get_translations:
+        result = await async_get_mcp_default_prompt(hass, "fr")
+
+    assert result == expected
+    get_translations.assert_awaited_once_with(
+        hass,
+        "fr",
+        "config",
+        integrations={"extended_openai_conversation"},
+    )
 
 COMPLETION = {
     "id": "chatcmpl-1",
@@ -101,6 +133,28 @@ def _kwargs(**params) -> dict:
         "messages": [{"role": "user", "content": "hi"}],
         **params,
     }
+
+
+async def test_skip_authentication_returns_client_without_validation(hass):
+    """The client helper preserves its original skip-authentication contract."""
+    client = MagicMock()
+
+    with patch(
+        "custom_components.extended_openai_conversation.helpers.AsyncOpenAI",
+        return_value=client,
+    ):
+        result = await get_authenticated_client(
+            hass=hass,
+            api_key="unused",
+            base_url="https://missing.example.com/v1",
+            api_version=None,
+            organization=None,
+            api_provider="openai",
+            skip_authentication=True,
+        )
+
+    assert result is client
+    client.models.list.assert_not_called()
 
 
 @pytest.mark.parametrize(

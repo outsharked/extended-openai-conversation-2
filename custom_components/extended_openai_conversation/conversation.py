@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 from typing import Any, Literal
@@ -126,9 +127,18 @@ class ExtendedOpenAIAgentEntity(
         # Get function tools
         function_tools = self._get_function_tools()
 
+        language = user_input.language or self.hass.config.language
+        mcp_context = await self._async_get_mcp_agent_context(language)
+
         # Build custom prompt with exposed entities
         system_prompt = self._build_system_prompt(
-            exposed_entities, llm_context, user_input
+            exposed_entities,
+            llm_context,
+            user_input,
+            {
+                "permanent_mcp_tools": mcp_context.permanent_tools,
+                "default_mcp_prompt": mcp_context.default_prompt,
+            },
         )
 
         # Set system prompt in chat log
@@ -142,6 +152,7 @@ class ExtendedOpenAIAgentEntity(
                 function_tools=function_tools,
                 exposed_entities=exposed_entities,
                 llm_context=llm_context,
+                mcp_context=mcp_context,
             )
         except OpenAIError as err:
             _LOGGER.error(err)
@@ -195,6 +206,7 @@ class ExtendedOpenAIAgentEntity(
         exposed_entities: list[dict],
         llm_context: llm.LLMContext,
         user_input: ConversationInput,
+        mcp_template_values: Mapping[str, str] | None = None,
     ) -> str:
         """Build system prompt with exposed entities and skills."""
         raw_prompt: str = self.subentry.data.get(CONF_PROMPT, DEFAULT_PROMPT)
@@ -206,6 +218,9 @@ class ExtendedOpenAIAgentEntity(
                 "current_device_id": llm_context.device_id,
                 "user_input": user_input,
                 "skills": self._get_enabled_skills(),
+                "permanent_mcp_tools": "",
+                "default_mcp_prompt": "",
+                **(mcp_template_values or {}),
             },
             parse_result=False,
         )
@@ -244,7 +259,7 @@ class ExtendedOpenAIAgentEntity(
                                 function_config
                             )
 
-            return function_tools or []
+            return (function_tools or []) + self._get_mcp_function_tools()
         except (InvalidFunction, FunctionNotFound) as e:
             raise e
         except Exception as e:

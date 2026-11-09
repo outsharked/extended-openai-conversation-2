@@ -6,6 +6,9 @@
             "unknown": "Erreur inconnue"
         },
         "step": {
+            "mcp_default_prompt": {
+                "description": "Utilisez le répartiteur MCP avec list_servers pour trouver les serveurs disponibles, list_tools pour découvrir les outils, get_tool_details pour récupérer tous les détails disponibles d’un outil et execute_tool pour l’exécuter. get_tool_details renvoie le schéma d’entrée ainsi que le titre, la description, le schéma de sortie, les annotations MCP et l’état de prise en charge des tâches fournis par le serveur ; les détails indisponibles sont omis. Utilisez le server_id et le nom de l’outil fournis dans ce contexte ou renvoyés par la découverte. Les outils déjà décrits dans ce contexte n’ont pas besoin d’être découverts à nouveau et n’apparaîtront pas dans les résultats de découverte."
+            },
             "user": {
                 "data": {
                     "name": "Nom",
@@ -16,6 +19,16 @@
                     "skip_authentication": "Ignorer l'authentification",
                     "api_provider": "Api Provider"
                 }
+            }
+        }
+    },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Invite système dédiée",
+                "combined_system": "Invite système combinée",
+                "user": "Entrée utilisateur",
+                "disabled": "Désactivé"
             }
         }
     },
@@ -34,13 +47,19 @@
                         "prompt": "Prompt",
                         "max_function_calls_per_conversation": "Nombre maximal d'appels de fonction par conversation",
                         "skills": "Skills",
+                        "mcp_servers": "Serveurs MCP",
+                        "mcp_auto_add_permanent_tools": "Ajouter automatiquement les outils MCP permanents",
+                        "mcp_auto_add_default_prompt": "Ajouter automatiquement l'invite MCP par défaut",
                         "functions": "Fonctions",
                         "attach_username": "Joindre le nom d'utilisateur au message",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Ajoute automatiquement les catalogues d'outils MCP permanents sous forme de messages système distincts. L'activation de cette option avec l'insertion de `permanent_mcp_tools` dupliquera le catalogue.",
+                        "mcp_auto_add_default_prompt": "Ajoute automatiquement les instructions d'utilisation de MCP sous forme de message système distinct. L'activation de cette option avec l'insertion de `default_mcp_prompt` dupliquera les instructions."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -69,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "Serveurs MCP",
+                        "mcp_permanent_tools_placement": "Emplacement des outils MCP permanents",
+                        "mcp_default_prompt_placement": "Emplacement de l'invite MCP par défaut",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Choisissez où insérer automatiquement les catalogues d'outils MCP permanents, ou désactivez leur insertion automatique.",
+                        "mcp_default_prompt_placement": "Choisissez où insérer automatiquement les instructions MCP par défaut, ou désactivez leur insertion automatique."
                     }
                 },
                 "advanced": {

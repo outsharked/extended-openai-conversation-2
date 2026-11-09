@@ -262,16 +262,21 @@ class NativeFunction(Function):
         start_time = dt_util.as_utc(start_time_parsed)
         end_time = dt_util.as_utc(end_time_parsed)
 
-        return await recorder.get_instance(hass).async_add_executor_job(
-            recorder.statistics.statistics_during_period,
-            hass,
-            start_time,
-            end_time,
-            statistic_ids,
-            arguments.get("period", "day"),
-            arguments.get("units"),
-            arguments.get("types", {"change"}),
+        statistics: dict[str, Any] = (
+            await recorder.get_instance(hass).async_add_executor_job(
+                recorder.statistics.statistics_during_period,
+                hass,
+                start_time,
+                end_time,
+                statistic_ids,
+                arguments.get("period", "day"),
+                arguments.get("units"),
+                arguments.get("types", {"change"}),
+            )
         )
+        if not isinstance(statistics, dict):
+            raise HomeAssistantError("Unexpected statistics result")
+        return statistics
 
     def as_utc(
         self, value: str | None, default_value: Any, parse_error_message: str
@@ -287,5 +292,6 @@ class NativeFunction(Function):
 
     def as_dict(self, state: State | dict[str, Any]) -> dict[str, Any]:
         if isinstance(state, State):
-            return state.as_dict()
+            state_dict: dict[str, Any] = state.as_dict()
+            return state_dict
         return state

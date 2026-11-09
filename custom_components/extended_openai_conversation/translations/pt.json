@@ -6,6 +6,9 @@
             "unknown": "Erro desconhecido"
         },
         "step": {
+            "mcp_default_prompt": {
+                "description": "Utilize o dispatcher MCP com list_servers para encontrar servidores disponíveis, list_tools para descobrir ferramentas, get_tool_details para obter todos os detalhes disponíveis de uma ferramenta e execute_tool para a executar. get_tool_details devolve o esquema de entrada e qualquer título, descrição, esquema de saída, anotações MCP e estado de suporte a tarefas fornecidos pelo servidor; os detalhes indisponíveis são omitidos. Utilize o server_id e o nome da ferramenta fornecidos neste contexto ou devolvidos pela descoberta. As ferramentas já descritas neste contexto não precisam de ser descobertas novamente e não aparecerão nos resultados da descoberta."
+            },
             "user": {
                 "data": {
                     "name": "Nome",
@@ -16,6 +19,16 @@
                     "skip_authentication": "Saltar autenticação",
                     "api_provider": "Api Provider"
                 }
+            }
+        }
+    },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Prompt de sistema dedicado",
+                "combined_system": "Prompt de sistema combinado",
+                "user": "Entrada do utilizador",
+                "disabled": "Desativado"
             }
         }
     },
@@ -34,13 +47,19 @@
                         "prompt": "Template do Prompt",
                         "max_function_calls_per_conversation": "Quantidade máxima de chamadas por conversação",
                         "skills": "Skills",
+                        "mcp_servers": "Servidores MCP",
+                        "mcp_auto_add_permanent_tools": "Adicionar automaticamente ferramentas MCP permanentes",
+                        "mcp_auto_add_default_prompt": "Adicionar automaticamente o prompt MCP predefinido",
                         "functions": "Funções",
                         "attach_username": "Anexar nome do usuário na mensagem",
                         "context_threshold": "Limite do contexto",
                         "context_truncate_strategy": "Estratégia de limite de contexto quando o limite é excedido",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Adiciona automaticamente os catálogos de ferramentas MCP permanentes como mensagens de sistema separadas. Ativar esta opção e também inserir `permanent_mcp_tools` duplicará o catálogo.",
+                        "mcp_auto_add_default_prompt": "Adiciona automaticamente as instruções de utilização do MCP como uma mensagem de sistema separada. Ativar esta opção e também inserir `default_mcp_prompt` duplicará as instruções."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -69,7 +88,14 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "Servidores MCP",
+                        "mcp_permanent_tools_placement": "Posicionamento das ferramentas MCP permanentes",
+                        "mcp_default_prompt_placement": "Posicionamento do prompt MCP predefinido",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Escolha onde inserir automaticamente os catálogos de ferramentas MCP permanentes ou desative a inserção automática.",
+                        "mcp_default_prompt_placement": "Escolha onde inserir automaticamente as instruções de utilização predefinidas do MCP ou desative a inserção automática."
                     }
                 },
                 "advanced": {

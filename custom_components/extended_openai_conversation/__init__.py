@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from openai import AsyncClient
 from openai._exceptions import AuthenticationError, OpenAIError
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.const import CONF_API_KEY, Platform
+from homeassistant.const import CONF_API_KEY, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
@@ -23,8 +24,11 @@ from .const import (
     DEFAULT_API_PROVIDER,
     DEFAULT_SKIP_AUTHENTICATION,
     DOMAIN,
+    SERVICE_TYPE_MCP,
 )
-from .helpers import get_authenticated_client
+from .helpers import get_authenticated_client, get_service_type
+from .mcp_client import MCPClient, MCPServerConfig
+from .mcp_oauth import async_get_mcp_oauth_auth
 from .services import async_setup_services
 from .template import async_setup_templates, async_unload_templates
 
@@ -33,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.AI_TASK, Platform.CONVERSATION]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-type ExtendedOpenAIConfigEntry = ConfigEntry[AsyncClient]
+type ExtendedOpenAIConfigEntry = ConfigEntry[AsyncClient | MCPClient]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -47,6 +51,17 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ExtendedOpenAIConfigEntry
 ) -> bool:
     """Set up OpenAI Conversation from a config entry."""
+
+    if get_service_type(entry) == SERVICE_TYPE_MCP:
+        config = MCPServerConfig.from_dict({**entry.data, "name": entry.title})
+        auth = (
+            await async_get_mcp_oauth_auth(hass, entry)
+            if config.use_oauth and CONF_TOKEN in entry.data
+            else None
+        )
+        entry.runtime_data = MCPClient(config, auth=auth)
+        entry.async_on_unload(entry.add_update_listener(update_listener))
+        return True
 
     try:
         client = await get_authenticated_client(
@@ -75,10 +90,15 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: ExtendedOpenAIConfigEntry
+) -> bool:
     """Unload OpenAI."""
+    if get_service_type(entry) == SERVICE_TYPE_MCP:
+        await cast(MCPClient, entry.runtime_data).aclose()
+        return True
     await async_unload_templates(hass)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return bool(await hass.config_entries.async_unload_platforms(entry, PLATFORMS))
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -91,7 +111,11 @@ async def async_migrate_integration(hass: HomeAssistant) -> None:
 
     # Make sure we get enabled config entries first
     entries = sorted(
-        hass.config_entries.async_entries(DOMAIN),
+        (
+            entry
+            for entry in hass.config_entries.async_entries(DOMAIN)
+            if get_service_type(entry) != SERVICE_TYPE_MCP
+        ),
         key=lambda e: e.disabled_by is not None,
     )
     if not any(entry.version == 1 for entry in entries):
