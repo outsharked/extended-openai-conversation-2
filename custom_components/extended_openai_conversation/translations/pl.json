@@ -1,11 +1,31 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "Punkt końcowy osadzania nie zwrócił prawidłowego osadzenia.",
             "cannot_connect": "Nie udało się połączyć",
             "invalid_auth": "Błąd authentykacji",
             "unknown": "Nieznany błąd"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Skonfiguruj punkt końcowy osadzania",
+                "description": "Skonfiguruj opcjonalny punkt końcowy osadzania zgodny z OpenAI. Rzeczywiste żądanie sprawdza dane uwierzytelniające, adres URL i model.",
+                "data": {
+                    "api_key": "Klucz API",
+                    "base_url": "Bazowy adres URL",
+                    "embedding_model": "Model osadzania",
+                    "clear_embedding_history": "Wyczyść zapisaną historię osadzania podczas zapisu"
+                },
+                "data_description": {
+                    "clear_embedding_history": "Ta czynność nie jest zapisywana jako ustawienie. Po jej wybraniu cała historia rozmów oparta na osadzeniach dla tego punktu końcowego zostanie usunięta podczas zapisu."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "Połączenie osadzania powiodło się: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Błąd osadzania: {error}**"
+            },
             "mcp_default_prompt": {
                 "description": "Użyj dyspozytora MCP: list_servers służy do znajdowania dostępnych serwerów, list_tools do odkrywania narzędzi, get_tool_details do pobierania wszystkich dostępnych szczegółów narzędzia, a execute_tool do jego uruchamiania. get_tool_details zwraca schemat wejściowy oraz tytuł, opis, schemat wyjściowy, adnotacje MCP i stan obsługi zadań, jeśli serwer je udostępnia; niedostępne szczegóły są pomijane. Użyj wartości server_id i nazwy narzędzia podanych w tym kontekście lub zwróconych przez wyszukiwanie. Narzędzi już opisanych w tym kontekście nie trzeba ponownie odkrywać i nie pojawią się one w wynikach wykrywania."
             },

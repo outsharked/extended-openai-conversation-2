@@ -29,6 +29,7 @@
             "invalid_tool_name_pattern": "Enter a valid regular expression.",
             "mcp_discovery_required": "Discover the MCP server before selecting permanent tools.",
             "invalid_url": "Enter a valid HTTP or HTTPS URL.",
+            "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
             "unknown": "Unexpected error"
         },
         "abort": {
@@ -58,6 +59,7 @@
                 "description": "Complete the available steps. Options appear when their prerequisites are valid.\n\n{status_lines}",
                 "menu_options": {
                     "ai_endpoint": "Configure AI Endpoint",
+                    "embeddings_endpoint": "Configure Embeddings Endpoint",
                     "mcp": "Configure MCP Server",
                     "mcp_authenticate": "OAuth Settings",
                     "mcp_filter_tools": "Filter Tools",
@@ -74,8 +76,14 @@
             "service_menu_filters": {
                 "description": "Filters configured: {status}"
             },
+            "service_menu_embeddings": {
+                "description": "Embeddings connection succeeded: {status}"
+            },
             "service_menu_error": {
                 "description": "**Last error: {error}**"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Embeddings error: {error}**"
             },
             "ai_endpoint": {
                 "title": "Add AI endpoint",
@@ -87,6 +95,19 @@
                     "organization": "Organization",
                     "skip_authentication": "Skip Authentication",
                     "api_provider": "Api Provider"
+                }
+            },
+            "embeddings_endpoint": {
+                "title": "Configure embeddings endpoint",
+                "description": "Configure an optional OpenAI-compatible embeddings endpoint. A real embedding request is made to validate the credentials, URL, and model.",
+                "data": {
+                    "api_key": "API Key",
+                    "base_url": "Base Url",
+                    "embedding_model": "Embedding model",
+                    "clear_embedding_history": "Clear stored embedding history when saving"
+                },
+                "data_description": {
+                    "clear_embedding_history": "This action is never saved as a setting. When selected, all embedding-backed conversation history for this endpoint will be removed when the service configuration is saved."
                 }
             },
             "mcp": {

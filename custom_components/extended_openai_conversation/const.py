@@ -18,6 +18,11 @@ API_PROVIDERS = [
 ]
 DEFAULT_API_PROVIDER = API_PROVIDERS[0]["key"]
 
+CONF_EMBEDDINGS = "embeddings"
+CONF_EMBEDDINGS_MODEL = "embedding_model"
+CONF_CLEAR_EMBEDDING_HISTORY = "clear_embedding_history"
+DEFAULT_EMBEDDINGS_MODEL = "text-embedding-3-small"
+
 CONF_SERVICE_TYPE = "type"
 SERVICE_TYPE_AI_ENDPOINT = "ai_endpoint"
 SERVICE_TYPE_MCP = "mcp"

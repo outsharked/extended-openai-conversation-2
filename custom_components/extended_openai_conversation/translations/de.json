@@ -1,11 +1,31 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "Der Embeddings-Endpunkt hat kein gültiges Embedding zurückgegeben.",
             "cannot_connect": "Fehler beim Verbindungsaufbau",
             "invalid_auth": "Authentifizierung fehlgeschlagen",
             "unknown": "Unbekannter Fehler"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Embeddings-Endpunkt konfigurieren",
+                "description": "Konfiguriere einen optionalen OpenAI-kompatiblen Embeddings-Endpunkt. Zugangsdaten, URL und Modell werden mit einer echten Embedding-Anfrage geprüft.",
+                "data": {
+                    "api_key": "API-Schlüssel",
+                    "base_url": "Basis-URL",
+                    "embedding_model": "Embedding-Modell",
+                    "clear_embedding_history": "Gespeicherten Embedding-Verlauf beim Speichern löschen"
+                },
+                "data_description": {
+                    "clear_embedding_history": "Diese Aktion wird nicht als Einstellung gespeichert. Bei Auswahl wird beim Speichern der gesamte Embedding-basierte Gesprächsverlauf dieses Endpunkts entfernt."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "Embeddings-Verbindung erfolgreich: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Embeddings-Fehler: {error}**"
+            },
             "mcp_default_prompt": {
                 "description": "Verwende den MCP-Dispatcher: Mit list_servers findest du verfügbare Server, mit list_tools Werkzeuge, mit get_tool_details alle verfügbaren Details eines Werkzeugs und mit execute_tool führst du es aus. get_tool_details gibt das Eingabeschema sowie alle vom Server bereitgestellten Titel, Beschreibungen, Ausgabeschemas, MCP-Anmerkungen und Angaben zur Aufgabenunterstützung zurück; nicht verfügbare Details werden ausgelassen. Verwende die server_id und den Werkzeugnamen aus diesem Kontext oder aus der Ermittlung. Werkzeuge, die bereits in diesem Kontext beschrieben sind, müssen nicht erneut ermittelt werden und erscheinen nicht in den Ermittlungsergebnissen."
             },

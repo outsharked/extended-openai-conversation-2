@@ -71,11 +71,14 @@ from .const import (
     CONF_API_VERSION,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CLEAR_EMBEDDING_HISTORY,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDINGS,
+    CONF_EMBEDDINGS_MODEL,
     CONF_EXTRA_BODY,
     CONF_FUNCTION_TOOLS,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
@@ -111,6 +114,7 @@ from .const import (
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
+    DEFAULT_EMBEDDINGS_MODEL,
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
@@ -307,6 +311,19 @@ STEP_AI_ENDPOINT_DATA_SCHEMA = vol.Schema(
     }
 )
 
+STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_API_KEY): str,
+        vol.Optional(CONF_BASE_URL, default=DEFAULT_CONF_BASE_URL): str,
+        vol.Required(
+            CONF_EMBEDDINGS_MODEL, default=DEFAULT_EMBEDDINGS_MODEL
+        ): str,
+        vol.Optional(
+            CONF_CLEAR_EMBEDDING_HISTORY, default=False
+        ): BooleanSelector(),
+    }
+)
+
 DEFAULT_CONF_FUNCTION_TOOLS_STR = yaml.dump(
     DEFAULT_CONF_FUNCTION_TOOLS, sort_keys=False
 )
@@ -379,6 +396,37 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
         await async_check_openai_connection(hass, client)
 
 
+async def validate_embeddings_input(
+    hass: HomeAssistant, data: dict[str, Any]
+) -> None:
+    """Validate an embeddings endpoint with a real embedding request."""
+    model = data[CONF_EMBEDDINGS_MODEL].strip()
+    if not model:
+        raise HomeAssistantError("An embedding model is required.")
+    data[CONF_EMBEDDINGS_MODEL] = model
+
+    base_url = data.get(CONF_BASE_URL)
+    if base_url == DEFAULT_CONF_BASE_URL:
+        base_url = None
+        data.pop(CONF_BASE_URL)
+
+    client = await get_authenticated_client(
+        hass=hass,
+        api_key=data[CONF_API_KEY],
+        base_url=base_url,
+        api_version=None,
+        organization=None,
+        api_provider=None,
+        skip_authentication=True,
+    )
+    response = await client.embeddings.create(
+        model=model,
+        input="EOAIC2 embedding connection test",
+    )
+    if not response.data or not response.data[0].embedding:
+        raise HomeAssistantError("The embeddings endpoint returned no vector.")
+
+
 class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
     """Handle a config flow for OpenAI Conversation."""
 
@@ -408,6 +456,11 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         self._ai_endpoint_data: dict[str, Any] | None = None
         self._ai_connection_status: bool | None = None
         self._ai_error_reason: str | None = None
+        self._embeddings_endpoint_data: dict[str, Any] | None = None
+        self._embeddings_endpoint_draft: dict[str, Any] | None = None
+        self._embeddings_connection_status: bool | None = None
+        self._embeddings_error_reason: str | None = None
+        self._clear_embedding_history_requested = False
         self._reconfigure_entry: ConfigEntry | None = None
 
     async def async_step_user(
@@ -444,6 +497,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                     options.append("mcp_filter_tools")
         else:
             options.append("ai_endpoint")
+            if self._ai_endpoint_data is not None:
+                options.append("embeddings_endpoint")
 
         service_configuration = self._service_configuration()
 
@@ -466,6 +521,9 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             connection_status=connection_status,
             oauth_status=oauth_status,
             filters_status=filters_status,
+            embeddings_status=(
+                self._embeddings_connection_status if not is_mcp else None
+            ),
         )
 
         return self.async_show_menu(
@@ -481,6 +539,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         connection_status: bool | None,
         oauth_status: bool | None,
         filters_status: bool | None,
+        embeddings_status: bool | None = None,
     ) -> str:
         """Build only the localized status rows relevant to this service."""
         translations = await async_get_translations(
@@ -503,6 +562,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             lines.append(status_line("oauth", oauth_status))
         if filters_status is not None:
             lines.append(status_line("filters", filters_status))
+        if embeddings_status is not None:
+            lines.append(status_line("embeddings", embeddings_status))
         error_reason = self._mcp_error_reason if is_mcp else self._ai_error_reason
         if error_reason is not None:
             error_key = f"component.{DOMAIN}.config.error.{error_reason}"
@@ -511,6 +572,20 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 f"component.{DOMAIN}.config.step.service_menu_error.description"
             )
             error_template = translations.get(translation_key, "**{error}**")
+            lines.append(error_template.format(error=error))
+        if not is_mcp and self._embeddings_error_reason is not None:
+            error_key = (
+                f"component.{DOMAIN}.config.error."
+                f"{self._embeddings_error_reason}"
+            )
+            error = translations.get(error_key, self._embeddings_error_reason)
+            translation_key = (
+                f"component.{DOMAIN}.config.step."
+                "service_menu_embeddings_error.description"
+            )
+            error_template = translations.get(
+                translation_key, "**Embeddings error: {error}**"
+            )
             lines.append(error_template.format(error=error))
 
         return "\n\n".join(lines)
@@ -553,6 +628,51 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             step_id="ai_endpoint",
             data_schema=schema,
             errors=errors,
+        )
+
+    async def async_step_embeddings_endpoint(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Configure and validate the optional embeddings endpoint."""
+        if user_input is not None:
+            submitted_data = dict(user_input)
+            clear_history = bool(
+                submitted_data.pop(CONF_CLEAR_EMBEDDING_HISTORY, False)
+            )
+            self._embeddings_endpoint_draft = dict(submitted_data)
+            error_reason: str | None = None
+            try:
+                await validate_embeddings_input(self.hass, submitted_data)
+            except AuthenticationError:
+                error_reason = "invalid_auth"
+            except (APIConnectionError, APIStatusError):
+                error_reason = "cannot_connect"
+            except HomeAssistantError:
+                error_reason = "invalid_embeddings"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception validating embeddings")
+                error_reason = "unknown"
+
+            self._embeddings_connection_status = error_reason is None
+            self._embeddings_error_reason = error_reason
+            if error_reason is None:
+                self._embeddings_endpoint_data = dict(submitted_data)
+                self._embeddings_endpoint_draft = None
+                self._clear_embedding_history_requested = clear_history
+            return await self.async_step_service_menu()
+
+        suggested_values = dict(
+            self._embeddings_endpoint_draft
+            or self._embeddings_endpoint_data
+            or {}
+        )
+        suggested_values[CONF_CLEAR_EMBEDDING_HISTORY] = False
+        schema = self.add_suggested_values_to_schema(
+            STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA, suggested_values
+        )
+        return self.async_show_form(
+            step_id="embeddings_endpoint",
+            data_schema=schema,
         )
 
     async def async_step_mcp(
@@ -1462,7 +1582,11 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 self._mcp_oauth_status = True if self._mcp_oauth_authenticated else None
                 self._mcp_oauth_from_entry = self._mcp_oauth_authenticated
         else:
-            self._ai_endpoint_data = dict(entry.data)
+            ai_endpoint_data = dict(entry.data)
+            embeddings_data = ai_endpoint_data.pop(CONF_EMBEDDINGS, None)
+            self._ai_endpoint_data = ai_endpoint_data
+            if isinstance(embeddings_data, Mapping):
+                self._embeddings_endpoint_data = dict(embeddings_data)
             try:
                 await validate_input(self.hass, dict(self._ai_endpoint_data))
             except AuthenticationError:
@@ -1477,6 +1601,26 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             else:
                 self._ai_connection_status = True
                 self._ai_error_reason = None
+            if self._embeddings_endpoint_data is not None:
+                try:
+                    await validate_embeddings_input(
+                        self.hass, dict(self._embeddings_endpoint_data)
+                    )
+                except AuthenticationError:
+                    self._embeddings_connection_status = False
+                    self._embeddings_error_reason = "invalid_auth"
+                except (APIConnectionError, APIStatusError):
+                    self._embeddings_connection_status = False
+                    self._embeddings_error_reason = "cannot_connect"
+                except HomeAssistantError:
+                    self._embeddings_connection_status = False
+                    self._embeddings_error_reason = "invalid_embeddings"
+                except Exception:  # pylint: disable=broad-except
+                    self._embeddings_connection_status = False
+                    self._embeddings_error_reason = "unknown"
+                else:
+                    self._embeddings_connection_status = True
+                    self._embeddings_error_reason = None
         if (
             self._selected_service_type == SERVICE_TYPE_MCP
             and self._mcp_config is not None
@@ -1495,7 +1639,12 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
     def _service_configuration(self) -> dict[str, Any] | None:
         """Return the current valid service mapping without remote calls."""
         if self._selected_service_type == SERVICE_TYPE_AI_ENDPOINT:
-            return self._ai_endpoint_data
+            if self._ai_endpoint_data is None:
+                return None
+            data = dict(self._ai_endpoint_data)
+            if self._embeddings_endpoint_data is not None:
+                data[CONF_EMBEDDINGS] = dict(self._embeddings_endpoint_data)
+            return data
         service_config = self._mcp_service_config
         if service_config is None:
             return None

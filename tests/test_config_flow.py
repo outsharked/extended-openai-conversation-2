@@ -10,6 +10,7 @@ follow-up (see issue #7) rather than attempted here with a mocked hass that
 doesn't behave like the real flow manager.
 """
 
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -28,17 +29,21 @@ from custom_components.extended_openai_conversation.config_flow import (
     ExtendedOpenAISubentryFlowHandler,
     _mcp_failure_reason,
     _mcp_server_options,
+    validate_embeddings_input,
     validate_input,
 )
 from custom_components.extended_openai_conversation.const import (
     CONF_API_PROVIDER,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CLEAR_EMBEDDING_HISTORY,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDINGS,
+    CONF_EMBEDDINGS_MODEL,
     CONF_FUNCTION_TOOLS,
     CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
@@ -55,6 +60,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_EMBEDDINGS_MODEL,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
@@ -351,8 +357,8 @@ async def test_service_menu_exposes_filtering_without_connecting(hass):
     }
 
 
-async def test_ai_endpoint_menu_only_offers_edit_and_save(hass):
-    """A configured AI endpoint can be edited or saved without review."""
+async def test_ai_endpoint_menu_offers_optional_embeddings_and_save(hass):
+    """A configured AI endpoint exposes embeddings without requiring it."""
     flow = _config_flow(hass)
     flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
     flow._ai_endpoint_data = {
@@ -367,8 +373,154 @@ async def test_ai_endpoint_menu_only_offers_edit_and_save(hass):
 
     assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
         "ai_endpoint",
+        "embeddings_endpoint",
         "service_save",
     ]
+
+
+async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
+    """A validated embeddings endpoint is nested in the AI service config."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
+    flow._ai_endpoint_data = {
+        "name": "Local AI",
+        CONF_API_KEY: "chat-key",
+        CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+    }
+    flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
+    embeddings_input = {
+        CONF_API_KEY: "embedding-key",
+        CONF_BASE_URL: "https://embeddings.example.com/v1",
+        CONF_EMBEDDINGS_MODEL: "embed-model",
+        CONF_CLEAR_EMBEDDING_HISTORY: True,
+    }
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "validate_embeddings_input",
+        new=AsyncMock(),
+    ):
+        result = await flow.async_step_embeddings_endpoint(embeddings_input)
+
+    assert result == {"type": "menu"}
+    assert flow._embeddings_connection_status is True
+    assert flow._clear_embedding_history_requested is True
+    assert flow._service_configuration() == {
+        **flow._ai_endpoint_data,
+        CONF_EMBEDDINGS: {
+            CONF_API_KEY: "embedding-key",
+            CONF_BASE_URL: "https://embeddings.example.com/v1",
+            CONF_EMBEDDINGS_MODEL: "embed-model",
+        },
+    }
+    assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
+        CONF_EMBEDDINGS
+    ]
+
+
+async def test_embeddings_failure_preserves_last_known_good_config(hass):
+    """A failed recheck reports the error without discarding saved settings."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
+    flow._ai_endpoint_data = {
+        CONF_API_KEY: "chat-key",
+        CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+    }
+    known_good = {
+        CONF_API_KEY: "old-key",
+        CONF_EMBEDDINGS_MODEL: "old-model",
+    }
+    flow._embeddings_endpoint_data = dict(known_good)
+    flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "validate_embeddings_input",
+        new=AsyncMock(
+            side_effect=APIConnectionError(
+                request=httpx.Request(
+                    "POST", "https://missing.example.com/v1/embeddings"
+                )
+            )
+        ),
+    ):
+        await flow.async_step_embeddings_endpoint(
+            {
+                CONF_API_KEY: "new-key",
+                CONF_BASE_URL: "https://missing.example.com/v1",
+                CONF_EMBEDDINGS_MODEL: "new-model",
+            }
+        )
+
+    assert flow._embeddings_endpoint_data == known_good
+    assert flow._embeddings_connection_status is False
+    assert flow._embeddings_error_reason == "cannot_connect"
+    assert flow._embeddings_endpoint_draft == {
+        CONF_API_KEY: "new-key",
+        CONF_BASE_URL: "https://missing.example.com/v1",
+        CONF_EMBEDDINGS_MODEL: "new-model",
+    }
+
+
+async def test_embeddings_form_never_rechecks_clear_history(hass):
+    """The destructive clear-history choice is always transient and opt-in."""
+    flow = _config_flow(hass)
+    flow._embeddings_endpoint_data = {
+        CONF_API_KEY: "embedding-key",
+        CONF_EMBEDDINGS_MODEL: "embed-model",
+    }
+    flow._clear_embedding_history_requested = True
+    flow.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await flow.async_step_embeddings_endpoint()
+
+    schema = flow.async_show_form.call_args.kwargs["data_schema"]
+    clear_key = next(
+        key
+        for key in schema.schema
+        if getattr(key, "schema", key) == CONF_CLEAR_EMBEDDING_HISTORY
+    )
+    assert clear_key.default() is False
+
+
+async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
+    """Reconfiguration keeps embeddings separate from the chat endpoint."""
+    flow = _config_flow(hass)
+    entry = MagicMock()
+    entry.data = {
+        "name": "Local AI",
+        CONF_API_KEY: "chat-key",
+        CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+        CONF_EMBEDDINGS: {
+            CONF_API_KEY: "embedding-key",
+            CONF_EMBEDDINGS_MODEL: "embed-model",
+        },
+    }
+    flow._get_reconfigure_entry = MagicMock(return_value=entry)
+    flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.config_flow."
+            "validate_input",
+            new=AsyncMock(),
+        ) as validate_chat,
+        patch(
+            "custom_components.extended_openai_conversation.config_flow."
+            "validate_embeddings_input",
+            new=AsyncMock(),
+        ) as validate_embeddings,
+    ):
+        result = await flow.async_step_reconfigure()
+
+    assert result == {"type": "menu"}
+    assert CONF_EMBEDDINGS not in flow._ai_endpoint_data
+    assert flow._embeddings_endpoint_data == entry.data[CONF_EMBEDDINGS]
+    validate_chat.assert_awaited_once_with(hass, flow._ai_endpoint_data)
+    validate_embeddings.assert_awaited_once_with(
+        hass, entry.data[CONF_EMBEDDINGS]
+    )
+    assert flow._embeddings_connection_status is True
 
 
 async def test_service_menu_status_lines_only_include_relevant_rows(hass):
@@ -385,8 +537,15 @@ async def test_service_menu_status_lines_only_include_relevant_rows(hass):
         f"component.{DOMAIN}.config.step.service_menu_filters.description": (
             "Filters configured: {status}"
         ),
+        f"component.{DOMAIN}.config.step.service_menu_embeddings.description": (
+            "Embeddings connection succeeded: {status}"
+        ),
         f"component.{DOMAIN}.config.step.service_menu_error.description": (
             "**Last error: {error}**"
+        ),
+        f"component.{DOMAIN}.config.step."
+        "service_menu_embeddings_error.description": (
+            "**Embeddings error: {error}**"
         ),
         f"component.{DOMAIN}.config.error.cannot_connect": "Failed to connect",
     }
@@ -408,6 +567,15 @@ async def test_service_menu_status_lines_only_include_relevant_rows(hass):
             connection_status=False,
             oauth_status=None,
             filters_status=None,
+            embeddings_status=False,
+        )
+        flow._embeddings_error_reason = "cannot_connect"
+        failed_embeddings_lines = await flow._async_service_menu_status_lines(
+            is_mcp=False,
+            connection_status=True,
+            oauth_status=None,
+            filters_status=None,
+            embeddings_status=False,
         )
         flow._mcp_error_reason = MCP_ERROR_CANNOT_CONNECT
         mcp_lines = await flow._async_service_menu_status_lines(
@@ -419,7 +587,9 @@ async def test_service_menu_status_lines_only_include_relevant_rows(hass):
 
     assert ai_lines == "Connection succeeded: ✅"
     assert "Connection succeeded: ❌" in failed_ai_lines
+    assert "Embeddings connection succeeded: ❌" in failed_ai_lines
     assert "**Last error: Failed to connect**" in failed_ai_lines
+    assert "**Embeddings error: Failed to connect**" in failed_embeddings_lines
     assert "OAuth completed" not in mcp_lines
     assert "Filters configured: ✅" in mcp_lines
     assert "**Last error: Failed to connect**" in mcp_lines
@@ -1488,6 +1658,67 @@ async def test_validate_input_calls_get_authenticated_client(hass):
     )
 
 
+async def test_validate_embeddings_input_makes_real_embedding_request(hass):
+    """Embeddings validation checks the configured model, not the models list."""
+    client = MagicMock()
+    client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(embedding=[0.25, -0.5])]
+        )
+    )
+    data = {
+        CONF_API_KEY: "embedding-key",
+        CONF_BASE_URL: "https://embeddings.example.com/v1",
+        CONF_EMBEDDINGS_MODEL: "  embed-model  ",
+    }
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "get_authenticated_client",
+        new=AsyncMock(return_value=client),
+    ) as get_client:
+        await validate_embeddings_input(hass, data)
+
+    get_client.assert_awaited_once_with(
+        hass=hass,
+        api_key="embedding-key",
+        base_url="https://embeddings.example.com/v1",
+        api_version=None,
+        organization=None,
+        api_provider=None,
+        skip_authentication=True,
+    )
+    client.embeddings.create.assert_awaited_once_with(
+        model="embed-model",
+        input="EOAIC2 embedding connection test",
+    )
+    assert data[CONF_EMBEDDINGS_MODEL] == "embed-model"
+
+
+async def test_validate_embeddings_input_rejects_empty_vector(hass):
+    """A nominal response without vector data is not accepted."""
+    client = MagicMock()
+    client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(data=[SimpleNamespace(embedding=[])])
+    )
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.config_flow."
+            "get_authenticated_client",
+            new=AsyncMock(return_value=client),
+        ),
+        pytest.raises(HomeAssistantError, match="returned no vector"),
+    ):
+        await validate_embeddings_input(
+            hass,
+            {
+                CONF_API_KEY: "embedding-key",
+                CONF_EMBEDDINGS_MODEL: DEFAULT_EMBEDDINGS_MODEL,
+            },
+        )
+
+
 async def test_validate_input_probes_connection_when_authentication_is_skipped(hass):
     """The config flow still probes an endpoint when client auth checking is skipped."""
     client = MagicMock()
@@ -1598,6 +1829,7 @@ async def test_ai_endpoint_authentication_error_is_reported(hass):
     assert flow._ai_error_reason == "invalid_auth"
     assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
         "ai_endpoint",
+        "embeddings_endpoint",
         "service_save",
     ]
 
