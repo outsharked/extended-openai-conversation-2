@@ -297,7 +297,18 @@ Below is a default configuration of functions.
   function:
     type: native
     name: execute_service
+    entity_filter:
+      mode: exclude
+      entities: []
+      deny_pattern: ""
+      regex_timeout: 0.1
 ```
+
+`entity_filter` is optional internal configuration for `execute_service` and
+the default `get_attributes` template. The exact entity list follows `mode`:
+`exclude` denies listed entities, while `include` allows only listed entities.
+`deny_pattern` is always an independent hard deny matched against the complete
+entity ID. It does not follow or invert with `mode`. Use a regular expression to specify what entities to match. Entities can still be manually specified in the main prompt
 
 #### Specification (Spec)
 

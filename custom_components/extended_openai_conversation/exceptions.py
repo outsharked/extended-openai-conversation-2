@@ -29,6 +29,19 @@ class EntityNotExposed(HomeAssistantError):
         return f"entity {self.entity_id} is not exposed"
 
 
+class EntityAccessDenied(HomeAssistantError):
+    """When access to a referenced entity is denied by function policy."""
+
+    def __init__(self, entity_ids: list[str]) -> None:
+        """Initialize error."""
+        self.entity_ids = entity_ids
+        super().__init__(f"entity access denied: {', '.join(entity_ids)}")
+
+    def __str__(self) -> str:
+        """Return string representation."""
+        return f"access to entity {', '.join(self.entity_ids)} is denied"
+
+
 class CallServiceError(HomeAssistantError):
     """Error during service calling"""
 

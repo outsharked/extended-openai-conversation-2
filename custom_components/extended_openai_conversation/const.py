@@ -1,5 +1,7 @@
 """Constants for the Extended OpenAI Conversation integration."""
 
+from typing import Any
+
 DOMAIN = "extended_openai_conversation"
 DEFAULT_NAME = "Extended OpenAI Conversation"
 DEFAULT_CONVERSATION_NAME = "Extended OpenAI Conversation"
@@ -134,7 +136,21 @@ DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION = 10
 CONF_SHORTEN_TOOL_CALL_ID = "shorten_tool_call_id"
 DEFAULT_SHORTEN_TOOL_CALL_ID = False
 CONF_FUNCTION_TOOLS = "functions"
-DEFAULT_CONF_FUNCTION_TOOLS = [
+CONF_ENTITY_FILTER = "entity_filter"
+CONF_ENTITY_FILTER_MODE = "mode"
+CONF_ENTITY_FILTER_ENTITIES = "entities"
+CONF_ENTITY_FILTER_DENY_PATTERN = "deny_pattern"
+CONF_ENTITY_FILTER_REGEX_TIMEOUT = "regex_timeout"
+ENTITY_FILTER_MODE_EXCLUDE = "exclude"
+ENTITY_FILTER_MODE_INCLUDE = "include"
+DEFAULT_ENTITY_FILTER_REGEX_TIMEOUT = 0.1
+DEFAULT_ENTITY_FILTER_CONFIG = {
+    CONF_ENTITY_FILTER_MODE: ENTITY_FILTER_MODE_EXCLUDE,
+    CONF_ENTITY_FILTER_ENTITIES: [],
+    CONF_ENTITY_FILTER_DENY_PATTERN: "",
+    CONF_ENTITY_FILTER_REGEX_TIMEOUT: DEFAULT_ENTITY_FILTER_REGEX_TIMEOUT,
+}
+DEFAULT_CONF_FUNCTION_TOOLS: list[dict[str, Any]] = [
     {
         "spec": {
             "name": "execute_services",
@@ -200,7 +216,11 @@ DEFAULT_CONF_FUNCTION_TOOLS = [
                 },
             },
         },
-        "function": {"type": "native", "name": "execute_service"},
+        "function": {
+            "type": "native",
+            "name": "execute_service",
+            CONF_ENTITY_FILTER: dict(DEFAULT_ENTITY_FILTER_CONFIG),
+        },
     },
     {
         "spec": {
@@ -221,6 +241,7 @@ DEFAULT_CONF_FUNCTION_TOOLS = [
         "function": {
             "type": "template",
             "value_template": "```csv\nentity,attributes\n{%for entity in entity_id%}\n{{entity}},{{states[entity].attributes}}\n{%endfor%}\n```",
+            CONF_ENTITY_FILTER: dict(DEFAULT_ENTITY_FILTER_CONFIG),
         },
     },
     {
