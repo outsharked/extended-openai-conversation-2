@@ -107,3 +107,32 @@ async def test_generate_data_provides_assigned_mcp_servers():
         "server_ids": ["weather"],
     }
     assert result.data == "done"
+
+
+async def test_generate_data_provides_context_recall_for_retrieval():
+    """AI tasks expose conversation recall when retrieval is configured."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_CONTEXT_TRUNCATE_STRATEGY,
+        CONF_EMBEDDINGS,
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    )
+
+    subentry = _mock_subentry("ai_task_data", "sub_1")
+    subentry.data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock(entry_id="endpoint-1")
+    entry.data = {CONF_EMBEDDINGS: {}}
+    entity = ExtendedOpenAITaskEntity(entry, subentry)
+    entity._async_handle_chat_log = AsyncMock()
+    task = MagicMock(structure=None, name="test")
+    chat_log = MagicMock(
+        conversation_id="conversation-id",
+        content=[conversation.AssistantContent(agent_id="agent", content="done")],
+    )
+
+    await entity._async_generate_data(task, chat_log)
+
+    function_tools = entity._async_handle_chat_log.await_args.kwargs["function_tools"]
+    assert len(function_tools) == 1
+    assert function_tools[0]["spec"]["name"] == "context_recall"
