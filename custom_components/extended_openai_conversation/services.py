@@ -45,6 +45,7 @@ from .helpers import (
     get_model_config,
     get_service_type,
 )
+from .runtime import OpenAIServiceRuntime
 
 QUERY_IMAGE_SCHEMA = vol.Schema(
     {
@@ -120,6 +121,8 @@ async def async_setup_services(hass: HomeAssistant, config: ConfigType) -> None:
             entry = _get_ai_endpoint_entry(hass, call.data["config_entry"])
 
             client = entry.runtime_data
+            if isinstance(client, OpenAIServiceRuntime):
+                client = client.client
 
             model_config = get_model_config(model, entry.data.get(CONF_BASE_URL))
             token_param = (
