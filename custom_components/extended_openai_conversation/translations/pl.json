@@ -65,7 +65,8 @@
             "options": {
                 "clear": "Wyczyść wszystkie wiadomości",
                 "compact": "Podsumuj i skompaktuj wiadomości",
-                "retrieve": "Pamięć wyszukiwania osadzeń"
+                "retrieve": "Pamięć wyszukiwania osadzeń",
+                "retrieve_compact": "Wyszukiwanie osadzeń z podsumowaniem kroczącym"
             }
         }
     },

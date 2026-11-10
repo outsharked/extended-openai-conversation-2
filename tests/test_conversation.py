@@ -133,19 +133,19 @@ def test_get_function_tools_adds_mcp_for_assigned_servers():
     }
 
 
-def test_get_function_tools_adds_recall_only_for_retrieval_agents():
+@pytest.mark.parametrize("strategy", ["retrieve", "retrieve_compact"])
+def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
     """Embedding retrieval exposes scoped context recall to the model."""
     from custom_components.extended_openai_conversation.const import (
         CONF_CONTEXT_TRUNCATE_STRATEGY,
         CONF_EMBEDDINGS,
         CONF_FUNCTION_TOOLS,
-        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     )
 
     subentry = _mock_subentry("conversation", "sub_1")
     subentry.data = {
         CONF_FUNCTION_TOOLS: "[]",
-        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy,
     }
     entry = MagicMock(entry_id="endpoint-1")
     entry.data = {CONF_EMBEDDINGS: {}}

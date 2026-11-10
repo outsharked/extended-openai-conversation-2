@@ -65,7 +65,8 @@
             "options": {
                 "clear": "Εκκαθάριση όλων των μηνυμάτων",
                 "compact": "Σύνοψη και συμπύκνωση μηνυμάτων",
-                "retrieve": "Μνήμη ανάκτησης embeddings"
+                "retrieve": "Μνήμη ανάκτησης embeddings",
+                "retrieve_compact": "Ανάκτηση embeddings με κυλιόμενη σύνοψη"
             }
         }
     },

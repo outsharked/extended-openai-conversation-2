@@ -22,6 +22,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS_MODEL,
     CONF_MAX_TOKENS,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
 )
 from custom_components.extended_openai_conversation.embedding_memory import (
     EmbeddingMemoryMatch,
@@ -1444,6 +1445,126 @@ async def test_clear_strategy_does_not_call_summarizer():
         "What temperature do I prefer?",
         "You prefer 20 C.",
     ]
+
+
+async def test_retrieve_compact_archives_and_summarizes_the_same_history():
+    """Combined retrieval preserves verbatim turns before summarizing them."""
+    entity = _entity_for_compaction(
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
+    )
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+    summary_response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="The user prefers 20 C.")
+            )
+        ]
+    )
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_embedding_runtime",
+            new_callable=PropertyMock,
+            return_value=(embedding_client, memory_store),
+        ),
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(return_value=summary_response),
+        ) as create_completion,
+    ):
+        changed = await entity._truncate_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=100, total_tokens=1100),
+        )
+
+    assert changed is True
+    embedding_input = embedding_client.embeddings.create.await_args.kwargs["input"]
+    assert len(embedding_input) == 1
+    assert "My preferred temperature is 20 C" in embedding_input[0]
+    summary_input = create_completion.await_args.kwargs["messages"][1]["content"]
+    assert "My preferred temperature is 20 C" in summary_input
+    records = memory_store.async_append.await_args.args[1]
+    assert [message["role"] for message in records[0].messages] == [
+        "user",
+        "assistant",
+    ]
+    assert records[0].messages[0]["content"] == "My preferred temperature is 20 C"
+    assert (
+        records[0].messages[1]["content"]
+        == "I will remember that preference."
+    )
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "Summary of earlier conversation:\nThe user prefers 20 C.",
+        "What temperature do I prefer?",
+        "You prefer 20 C.",
+    ]
+
+
+async def test_retrieve_compact_uses_archive_when_summarization_fails():
+    """A safely archived segment can be removed when summarization fails."""
+    entity = _entity_for_compaction(
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
+    )
+    entity._archive_message_history = AsyncMock(return_value=True)
+    entity._compact_message_history = AsyncMock(
+        side_effect=RuntimeError("summary failed")
+    )
+    chat_log = _compaction_chat_log()
+
+    changed = await entity._truncate_message_history(
+        chat_log,
+        _RequestTokenUsage(prompt_tokens=100, total_tokens=1100),
+    )
+
+    assert changed is True
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "What temperature do I prefer?",
+        "You prefer 20 C.",
+    ]
+
+
+async def test_retrieve_compact_compacts_when_archival_fails():
+    """A retrieval outage does not prevent the configured rolling summary."""
+    entity = _entity_for_compaction(
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
+    )
+    entity._archive_message_history = AsyncMock(
+        side_effect=RuntimeError("embedding failed")
+    )
+    entity._compact_message_history = AsyncMock(return_value=True)
+    chat_log = _compaction_chat_log()
+
+    changed = await entity._truncate_message_history(
+        chat_log,
+        _RequestTokenUsage(prompt_tokens=100, total_tokens=1100),
+    )
+
+    assert changed is True
+    entity._compact_message_history.assert_awaited_once()
 
 
 async def test_transform_stream_records_usage_without_compacting_mid_stream():

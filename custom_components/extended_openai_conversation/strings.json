@@ -221,7 +221,8 @@
       "options": {
         "clear": "Clear all messages",
         "compact": "Summarize and compact messages",
-        "retrieve": "Embedding retrieval memory"
+        "retrieve": "Embedding retrieval memory",
+        "retrieve_compact": "Embedding retrieval with rolling summary"
       }
     }
   },

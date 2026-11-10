@@ -65,7 +65,8 @@
             "options": {
                 "clear": "Összes üzenet törlése",
                 "compact": "Üzenetek összegzése és tömörítése",
-                "retrieve": "Beágyazásalapú visszakeresési memória"
+                "retrieve": "Beágyazásalapú visszakeresési memória",
+                "retrieve_compact": "Beágyazásalapú visszakeresés gördülő összegzéssel"
             }
         }
     },

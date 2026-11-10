@@ -58,6 +58,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
     DEFAULT_CONF_BASE_URL,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -2163,6 +2164,7 @@ async def test_agent_schema_only_offers_retrieval_with_embeddings(
         "clear",
         "compact",
         CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
     ]
 
 
@@ -2170,7 +2172,9 @@ async def test_agent_schema_only_offers_retrieval_with_embeddings(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-@pytest.mark.parametrize("strategy", ["clear", "compact"])
+@pytest.mark.parametrize(
+    "strategy", ["clear", "compact", CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT]
+)
 async def test_agent_advanced_schema_compaction_options(hass, handler_type, strategy):
     """Both agent types expose compaction options only for compaction."""
     handler = handler_type()
@@ -2256,6 +2260,38 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_schema_combined_retrieval_and_compaction(
+    hass, handler_type
+):
+    """The combined strategy exposes both retrieval and summary settings."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: (
+            CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
+        ),
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    keys = _schema_keys(handler.async_show_form.call_args.kwargs["data_schema"].schema)
+    assert CONF_EMBEDDING_HISTORY_RETENTION in keys
+    assert CONF_CONTEXT_COMPACTION_TARGET in keys
+    assert CONF_CONTEXT_COMPACTION_RECENT_TURNS in keys
+    assert CONF_CONTEXT_COMPACTION_PROMPT in keys
 
 
 @pytest.mark.parametrize(

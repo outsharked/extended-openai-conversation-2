@@ -59,7 +59,9 @@ from .const import (
     CONF_SHORTEN_TOOL_CALL_ID,
     CONF_TEMPERATURE,
     CONF_TOP_P,
+    CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -784,7 +786,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
             )
-            != CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+            not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES
             or not isinstance(self.entry.data.get(CONF_EMBEDDINGS), Mapping)
         ):
             return []
@@ -804,7 +806,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if self.subentry.data.get(
             CONF_CONTEXT_TRUNCATE_STRATEGY,
             DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
-        ) != CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+        ) not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
             return []
 
         conversation_id = chat_log.conversation_id
@@ -1000,7 +1002,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
             )
-            == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+            in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES
         )
         recall_prefix = (
             await async_get_embedding_recall_prefix(self.hass, language)
@@ -1679,6 +1681,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         chat_log: conversation.ChatLog,
         preserve_current_turn: bool = False,
         recent_turns_override: int | None = None,
+        remove_archived_history: bool = True,
     ) -> bool:
         """Embed and archive older complete turns before removing them."""
         messages = chat_log.content
@@ -1747,11 +1750,71 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             records,
         )
 
-        del messages[1:history_split_index]
+        if remove_archived_history:
+            del messages[1:history_split_index]
         _LOGGER.info(
             "Context threshold exceeded, older conversation history archived"
         )
         return True
+
+    def _remove_compactable_history(
+        self,
+        chat_log: conversation.ChatLog,
+        preserve_current_turn: bool,
+        recent_turns_override: int | None,
+    ) -> bool:
+        """Remove the older history segment used by compaction strategies."""
+        history_split_index = self._compaction_history_split_index(
+            chat_log.content, preserve_current_turn, recent_turns_override
+        )
+        if history_split_index is None or history_split_index <= 1:
+            return False
+        del chat_log.content[1:history_split_index]
+        return True
+
+    async def _retrieve_and_compact_message_history(
+        self,
+        chat_log: conversation.ChatLog,
+        token_usage: _RequestTokenUsage,
+        preserve_current_turn: bool,
+        recent_turns_override: int | None,
+        language: str | None,
+    ) -> bool:
+        """Archive verbatim history, then replace that history with a summary."""
+        archived = False
+        try:
+            archived = await self._archive_message_history(
+                chat_log,
+                preserve_current_turn,
+                recent_turns_override,
+                remove_archived_history=False,
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Embedding archival failed; continuing with conversation compaction"
+            )
+
+        try:
+            return await self._compact_message_history(
+                chat_log,
+                token_usage,
+                preserve_current_turn,
+                recent_turns_override,
+                language,
+            )
+        except Exception:
+            if archived:
+                _LOGGER.exception(
+                    "Conversation compaction failed; using the archived history for retrieval"
+                )
+                return self._remove_compactable_history(
+                    chat_log, preserve_current_turn, recent_turns_override
+                )
+            _LOGGER.exception(
+                "Embedding archival and conversation compaction failed, "
+                "falling back to clearing history"
+            )
+            return self._clear_message_history(chat_log)
 
     async def _truncate_message_history(
         self,
@@ -1806,4 +1869,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         "Conversation compaction failed; falling back to clearing history"
                     )
                     return self._clear_message_history(chat_log)
+        if strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT:
+            return await self._retrieve_and_compact_message_history(
+                chat_log,
+                token_usage,
+                preserve_current_turn,
+                recent_turns_override,
+                language,
+            )
         return False

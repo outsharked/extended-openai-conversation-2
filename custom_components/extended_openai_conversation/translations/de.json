@@ -65,7 +65,8 @@
             "options": {
                 "clear": "Alle Nachrichten löschen",
                 "compact": "Nachrichten zusammenfassen und komprimieren",
-                "retrieve": "Embedding-Abrufspeicher"
+                "retrieve": "Embedding-Abrufspeicher",
+                "retrieve_compact": "Embedding-Abruf mit fortlaufender Zusammenfassung"
             }
         }
     },

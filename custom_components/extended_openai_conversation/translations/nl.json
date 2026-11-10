@@ -65,7 +65,8 @@
             "options": {
                 "clear": "Alle berichten wissen",
                 "compact": "Berichten samenvatten en compact maken",
-                "retrieve": "Ophaalgeheugen met embeddings"
+                "retrieve": "Ophaalgeheugen met embeddings",
+                "retrieve_compact": "Ophalen met embeddings en doorlopende samenvatting"
             }
         }
     },

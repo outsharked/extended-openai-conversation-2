@@ -65,7 +65,8 @@
             "options": {
                 "clear": "Cancella tutti i messaggi",
                 "compact": "Riassumi e compatta i messaggi",
-                "retrieve": "Memoria di recupero tramite embedding"
+                "retrieve": "Memoria di recupero tramite embedding",
+                "retrieve_compact": "Recupero tramite embedding con riepilogo progressivo"
             }
         }
     },

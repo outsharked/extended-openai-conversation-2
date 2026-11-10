@@ -65,7 +65,8 @@
             "options": {
                 "clear": "모든 메시지 지우기",
                 "compact": "메시지 요약 및 압축",
-                "retrieve": "임베딩 검색 메모리"
+                "retrieve": "임베딩 검색 메모리",
+                "retrieve_compact": "임베딩 검색 및 누적 요약"
             }
         }
     },
