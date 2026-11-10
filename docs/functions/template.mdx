@@ -73,6 +73,12 @@ Access state and attributes of one or multiple entities.
       - entity_id
   function:
     type: template
+    entity_filter:
+      mode: exclude
+      entities:
+        - sensor.private_room
+      deny_pattern: "^sensor\\.secret_.*$"
+      regex_timeout: 0.1
     value_template: >-
       ```csv
       entity,attributes
@@ -87,6 +93,12 @@ Access state and attributes of one or multiple entities.
 </Frame>
 
 This function returns attributes in CSV format, making it easy for the AI to parse and understand multiple entities at once.
+
+The optional `entity_filter` is internal configuration and is not exposed in
+the model's function schema. The exact `entities` list follows `mode`:
+`exclude` denies listed entities, while `include` allows only listed entities.
+The `deny_pattern` regular expression is always a hard deny and is matched
+against the complete entity ID. Omit the block to keep the existing behavior.
 
 ## Template Features
 
