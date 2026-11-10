@@ -2,7 +2,7 @@
 
 import pytest
 
-# Import Tools and test helpers
+from custom_components.extended_openai_conversation.exceptions import EntityAccessDenied
 from custom_components.extended_openai_conversation.functions import TemplateFunction
 from homeassistant.core import State
 from tests.helpers import prepare_function_tool_from_yaml
@@ -71,3 +71,52 @@ class TestTemplateFunctionYaml:
         # Should not include cost when show_cost is False
         assert "800" in result or "800.0" in result
         assert "5.0" in result or "5" in result
+
+    async def test_entity_filter_denies_get_attributes_target(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """A filtered get_attributes entity is not rendered."""
+        function_config = function.validate_schema(
+            {
+                "type": "template",
+                "value_template": "{{ entity_id | join(',') }}",
+                "entity_filter": {
+                    "mode": "exclude",
+                    "entities": ["sensor.temperature"],
+                },
+            }
+        )
+
+        with pytest.raises(EntityAccessDenied):
+            await function.execute(
+                hass,
+                function_config,
+                {"entity_id": ["sensor.temperature"]},
+                llm_context,
+                exposed_entities,
+            )
+
+    async def test_entity_filter_allows_get_attributes_target(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """An entity selected in include mode can be rendered."""
+        function_config = function.validate_schema(
+            {
+                "type": "template",
+                "value_template": "{{ entity_id | join(',') }}",
+                "entity_filter": {
+                    "mode": "include",
+                    "entities": ["sensor.temperature"],
+                },
+            }
+        )
+
+        result = await function.execute(
+            hass,
+            function_config,
+            {"entity_id": ["sensor.temperature"]},
+            llm_context,
+            exposed_entities,
+        )
+
+        assert result == "sensor.temperature"

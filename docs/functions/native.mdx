@@ -63,8 +63,25 @@ Call any Home Assistant service with specified parameters.
     function:
       type: native
       name: execute_service
+      entity_filter:
+        mode: exclude
+        entities:
+          - lock.front_door
+        deny_pattern: "^switch\\.protected_.*$"
+        regex_timeout: 0.1
   ```
 </Accordion>
+
+The optional `entity_filter` is evaluated inside the integration and is not
+sent to the model. In `exclude` mode, entities in `entities` are denied. In
+`include` mode, only entities in `entities` are allowed. `deny_pattern` is an
+independent hard-deny regular expression matched against the complete entity
+ID. it always denies matches regardless of `mode`. Targets supplied through an
+area or device are resolved to entities before this policy is applied.
+
+Omit `entity_filter` to preserve the existing unrestricted behavior. An empty
+`exclude` list allows all entities, while an empty `include` list denies all
+entities.
 
 ### add_automation
 
