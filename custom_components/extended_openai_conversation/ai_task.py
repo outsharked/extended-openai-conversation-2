@@ -63,7 +63,7 @@ class ExtendedOpenAITaskEntity(
         """Handle a generate data task."""
         await self._async_handle_chat_log(
             chat_log,
-            function_tools=self._get_mcp_function_tools(),
+            function_tools=self._get_internal_function_tools(),
             exposed_entities=[],
             llm_context=None,
             structure_name=task.name,

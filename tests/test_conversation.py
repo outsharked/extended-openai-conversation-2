@@ -133,6 +133,35 @@ def test_get_function_tools_adds_mcp_for_assigned_servers():
     }
 
 
+def test_get_function_tools_adds_recall_only_for_retrieval_agents():
+    """Embedding retrieval exposes scoped context recall to the model."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_CONTEXT_TRUNCATE_STRATEGY,
+        CONF_EMBEDDINGS,
+        CONF_FUNCTION_TOOLS,
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    )
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_FUNCTION_TOOLS: "[]",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    entry = MagicMock(entry_id="endpoint-1")
+    entry.data = {CONF_EMBEDDINGS: {}}
+    entity = ExtendedOpenAIAgentEntity(entry, subentry)
+
+    tools = entity._get_function_tools()
+
+    assert len(tools) == 1
+    assert tools[0]["spec"]["name"] == "context_recall"
+    assert tools[0]["function"] == {
+        "type": "context_recall",
+        "entry_id": "endpoint-1",
+        "agent_id": "sub_1",
+    }
+
+
 def test_get_function_tools_parses_custom_yaml():
     """A custom function_tools YAML string is parsed and validated."""
     from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS

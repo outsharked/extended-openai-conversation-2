@@ -41,6 +41,7 @@ from custom_components.extended_openai_conversation.entity import (
     _place_mcp_context,
     _render_extra_body,
     _RequestTokenUsage,
+    _tool_result_data,
     encode_attachments,
 )
 from custom_components.extended_openai_conversation.mcp_client import (
@@ -1083,6 +1084,60 @@ async def test_embedding_recall_failure_is_non_destructive():
 
     assert matches == []
     assert chat_log.content == original_contents
+
+
+async def test_context_recall_execution_injects_current_conversation_id():
+    """The model cannot choose the conversation archive searched by recall."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    function = MagicMock()
+    function.execute = AsyncMock(
+        return_value={"memories": [], "matches_returned": 0}
+    )
+    function_tool = {
+        "spec": {"name": "context_recall"},
+        "function": {
+            "type": "context_recall",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+        },
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="context_recall",
+        tool_args={"query": "earlier preference"},
+    )
+    chat_log = MagicMock(conversation_id="conversation-1")
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, media_parts = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            chat_log,
+            None,
+            [],
+        )
+
+    function.execute.assert_awaited_once_with(
+        entity.hass,
+        {
+            "type": "context_recall",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+            "conversation_id": "conversation-1",
+        },
+        {"query": "earlier preference"},
+        None,
+        [],
+    )
+    assert media_parts == []
+    assert _tool_result_data(tool_result) == {
+        "result": {"memories": [], "matches_returned": 0}
+    }
 
 
 async def test_compaction_summarizes_old_history_and_keeps_latest_turn():

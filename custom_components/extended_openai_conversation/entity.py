@@ -97,6 +97,7 @@ from .embedding_memory import (
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
+from .functions.context_recall import build_context_recall_function_tool
 from .functions.mcp import build_mcp_function_tool
 from .helpers import (
     async_create_chat_completion,
@@ -776,6 +777,28 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             return []
         return [build_mcp_function_tool(server_ids)]
 
+    def _get_context_recall_function_tools(self) -> list[dict[str, Any]]:
+        """Return recall when this agent uses embedding retrieval."""
+        if (
+            self.subentry.data.get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
+            != CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+            or not isinstance(self.entry.data.get(CONF_EMBEDDINGS), Mapping)
+        ):
+            return []
+        return [
+            build_context_recall_function_tool(
+                self.entry.entry_id,
+                self.subentry.subentry_id,
+            )
+        ]
+
+    def _get_internal_function_tools(self) -> list[dict[str, Any]]:
+        """Return integration-managed tools enabled for this agent."""
+        return (self._get_mcp_function_tools() + self._get_context_recall_function_tools())
+
     async def _async_recall_embedding_memories(self, chat_log: conversation.ChatLog) -> list[EmbeddingMemoryMatch]:
         """Return relevant archived turns for the latest user input."""
         if self.subentry.data.get(
@@ -1203,6 +1226,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 tool_result_content, media_parts = await self._execute_function_tool(
                     function_tool,
                     tool_input,
+                    chat_log,
                     llm_context,
                     exposed_entities,
                 )
@@ -1354,6 +1378,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         self,
         function_tool: dict[str, Any],
         tool_input: llm.ToolInput,
+        chat_log: conversation.ChatLog,
         llm_context: llm.LLMContext | None,
         exposed_entities: list[dict[str, Any]],
     ) -> tuple[
@@ -1366,9 +1391,17 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         """Execute a custom function."""
         arguments: dict[str, Any] = tool_input.tool_args
         function_config = function_tool["function"]
+        if function_config["type"] == "context_recall":
+            function_config = {
+                **function_config,
+                "conversation_id": chat_log.conversation_id,
+            }
         function = get_function(function_config["type"])
 
-        if self.should_run_in_background(arguments):
+        if (
+            function_config["type"] != "context_recall"
+            and self.should_run_in_background(arguments)
+        ):
             # create a delayed function and execute in background
             function_config = self.get_delayed_function_config(
                 function_config, arguments
@@ -1402,7 +1435,13 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 agent_id=self.entity_id,
                 tool_call_id=tool_input.id,
                 tool_name=tool_input.tool_name,
-                data={"result": str(result)},
+                data={
+                    "result": (
+                        result
+                        if function_config["type"] == "context_recall"
+                        else str(result)
+                    )
+                },
             ),
             media_parts,
         )
