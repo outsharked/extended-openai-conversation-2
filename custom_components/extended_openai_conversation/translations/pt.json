@@ -1,11 +1,31 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "O endpoint de embeddings não devolveu um embedding válido.",
             "cannot_connect": "Não é possível ligar",
             "invalid_auth": "Autenticação inválida",
             "unknown": "Erro desconhecido"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Configurar endpoint de embeddings",
+                "description": "Configure um endpoint de embeddings opcional compatível com OpenAI. Um pedido real valida as credenciais, o URL e o modelo.",
+                "data": {
+                    "api_key": "Chave da API",
+                    "base_url": "URL base",
+                    "embedding_model": "Modelo de embeddings",
+                    "clear_embedding_history": "Limpar o histórico de embeddings ao guardar"
+                },
+                "data_description": {
+                    "clear_embedding_history": "Esta ação nunca é guardada como definição. Quando selecionada, todo o histórico de conversas baseado em embeddings deste endpoint será removido ao guardar."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "Ligação aos embeddings bem-sucedida: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Erro de embeddings: {error}**"
+            },
             "mcp_default_prompt": {
                 "description": "Utilize o dispatcher MCP com list_servers para encontrar servidores disponíveis, list_tools para descobrir ferramentas, get_tool_details para obter todos os detalhes disponíveis de uma ferramenta e execute_tool para a executar. get_tool_details devolve o esquema de entrada e qualquer título, descrição, esquema de saída, anotações MCP e estado de suporte a tarefas fornecidos pelo servidor; os detalhes indisponíveis são omitidos. Utilize o server_id e o nome da ferramenta fornecidos neste contexto ou devolvidos pela descoberta. As ferramentas já descritas neste contexto não precisam de ser descobertas novamente e não aparecerão nos resultados da descoberta."
             },

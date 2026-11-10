@@ -1,11 +1,31 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "A beágyazási végpont nem adott vissza érvényes beágyazást.",
             "cannot_connect": "Nem sikerült csatlakozni",
             "invalid_auth": "Azonosítás sikertelen",
             "unknown": "Váratlan hiba"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Beágyazási végpont beállítása",
+                "description": "Állítson be egy opcionális, OpenAI-kompatibilis beágyazási végpontot. Egy valódi kérés ellenőrzi a hitelesítő adatokat, az URL-t és a modellt.",
+                "data": {
+                    "api_key": "API-kulcs",
+                    "base_url": "Alap URL",
+                    "embedding_model": "Beágyazási modell",
+                    "clear_embedding_history": "Tárolt beágyazási előzmények törlése mentéskor"
+                },
+                "data_description": {
+                    "clear_embedding_history": "Ez a művelet nem kerül beállításként mentésre. Kiválasztásakor a mentés eltávolítja a végponthoz tartozó összes beágyazásalapú beszélgetési előzményt."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "A beágyazási kapcsolat sikeres: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Beágyazási hiba: {error}**"
+            },
             "mcp_default_prompt": {
                 "description": "Az MCP-diszpécserben a list_servers művelettel keresd meg az elérhető kiszolgálókat, a list_tools művelettel fedezd fel az eszközöket, a get_tool_details művelettel kérd le egy eszköz összes elérhető adatát, az execute_tool művelettel pedig futtasd azt. A get_tool_details visszaadja a bemeneti sémát, valamint a kiszolgáló által megadott címet, leírást, kimeneti sémát, MCP-megjegyzéseket és feladattámogatási állapotot; a nem elérhető adatok kimaradnak. Használd az ebben a kontextusban megadott vagy a felderítés által visszaadott server_id értéket és eszköznevet. Az ebben a kontextusban már leírt eszközöket nem kell újra felderíteni, és nem jelennek meg a felderítési eredményekben."
             },

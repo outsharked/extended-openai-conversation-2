@@ -1,11 +1,31 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "Het embeddings-eindpunt heeft geen geldige embedding teruggegeven.",
             "cannot_connect": "Verbinden mislukt",
             "invalid_auth": "Ongeldige authenticatie",
             "unknown": "Onverwachte fout"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Embeddings-eindpunt configureren",
+                "description": "Configureer een optioneel OpenAI-compatibel embeddings-eindpunt. Een echte embeddingaanvraag controleert de referenties, URL en het model.",
+                "data": {
+                    "api_key": "API-sleutel",
+                    "base_url": "Basis-URL",
+                    "embedding_model": "Embeddingmodel",
+                    "clear_embedding_history": "Opgeslagen embeddinggeschiedenis wissen bij opslaan"
+                },
+                "data_description": {
+                    "clear_embedding_history": "Deze actie wordt nooit als instelling opgeslagen. Wanneer geselecteerd, wordt alle embeddinggebaseerde gespreksgeschiedenis voor dit eindpunt bij het opslaan verwijderd."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "Verbinding met embeddings geslaagd: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Embeddingsfout: {error}**"
+            },
             "mcp_default_prompt": {
                 "description": "Gebruik de MCP-dispatcher met list_servers om beschikbare servers te vinden, list_tools om hulpmiddelen te ontdekken, get_tool_details om alle beschikbare details van een hulpmiddel op te halen en execute_tool om het uit te voeren. get_tool_details retourneert het invoerschema en alle door de server verstrekte titels, beschrijvingen, uitvoerschema's, MCP-annotaties en taakondersteuningsstatus; niet-beschikbare details worden weggelaten. Gebruik de server_id en hulpmiddelnaam uit deze context of uit de zoekresultaten. Hulpmiddelen die al in deze context zijn beschreven, hoeven niet opnieuw te worden ontdekt en verschijnen niet in de zoekresultaten."
             },

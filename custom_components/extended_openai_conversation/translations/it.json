@@ -1,11 +1,31 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "L'endpoint degli embedding non ha restituito un embedding valido.",
             "cannot_connect": "Connessione non riuscita",
             "invalid_auth": "Autenticazione non valida",
             "unknown": "Errore imprevisto"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Configura endpoint embedding",
+                "description": "Configura un endpoint embedding compatibile con OpenAI facoltativo. Una richiesta reale verifica credenziali, URL e modello.",
+                "data": {
+                    "api_key": "Chiave API",
+                    "base_url": "URL di base",
+                    "embedding_model": "Modello embedding",
+                    "clear_embedding_history": "Cancella la cronologia degli embedding al salvataggio"
+                },
+                "data_description": {
+                    "clear_embedding_history": "Questa azione non viene salvata come impostazione. Se selezionata, al salvataggio verrà rimossa tutta la cronologia delle conversazioni basata sugli embedding per questo endpoint."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "Connessione embedding riuscita: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Errore embedding: {error}**"
+            },
             "mcp_default_prompt": {
                 "description": "Usa il dispatcher MCP con list_servers per trovare i server disponibili, list_tools per scoprire gli strumenti, get_tool_details per recuperare tutti i dettagli disponibili di uno strumento ed execute_tool per eseguirlo. get_tool_details restituisce lo schema di input e gli eventuali titolo, descrizione, schema di output, annotazioni MCP e stato del supporto alle attività forniti dal server; i dettagli non disponibili vengono omessi. Usa il server_id e il nome dello strumento forniti in questo contesto o restituiti dalla ricerca. Gli strumenti già descritti in questo contesto non devono essere cercati di nuovo e non compariranno nei risultati della ricerca."
             },
