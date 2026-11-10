@@ -18,7 +18,15 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDINGS,
+    CONF_EMBEDDINGS_MODEL,
     CONF_MAX_TOKENS,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+)
+from custom_components.extended_openai_conversation.embedding_memory import (
+    EmbeddingMemoryMatch,
+    EmbeddingMemoryRecord,
+    EmbeddingMemoryScope,
 )
 from custom_components.extended_openai_conversation.entity import (
     ExtendedOpenAIBaseLLMEntity,
@@ -940,6 +948,141 @@ def _compaction_chat_log() -> MagicMock:
         ),
     ]
     return chat_log
+
+
+async def test_embedding_recall_searches_the_current_agent_conversation():
+    """Automatic recall embeds the latest user input in the saved scope."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    record = EmbeddingMemoryRecord(
+        record_id="record-1",
+        created_at="2026-01-01T00:00:00+00:00",
+        expires_at="2027-01-01T00:00:00+00:00",
+        model="embedding-model",
+        embedding=[1.0, 0.0],
+        searchable_text="Earlier preference",
+        messages=[{"role": "user", "content": "I prefer 20 C"}],
+    )
+    match = EmbeddingMemoryMatch(record=record, score=1.0)
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(return_value=[match])
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        matches = await entity._async_recall_embedding_memories(chat_log)
+
+    assert matches == [match]
+    scope = EmbeddingMemoryScope(
+        entry_id="endpoint-1",
+        agent_id="agent-1",
+        conversation_id="conversation-1",
+    )
+    memory_store.async_has_memories.assert_awaited_once_with(
+        scope, "embedding-model"
+    )
+    request = embedding_client.embeddings.create.await_args.kwargs
+    assert request["model"] == "embedding-model"
+    assert "What temperature do I prefer?" in request["input"]
+    memory_store.async_search.assert_awaited_once_with(
+        scope, [1.0, 0.0], 3, "embedding-model"
+    )
+
+    recall_message = entity._embedding_recall_message(
+        matches, "Relevant earlier context:"
+    )
+    assert recall_message["role"] == "user"
+    assert recall_message["content"].startswith("Relevant earlier context:\n")
+    assert "I prefer 20 C" in recall_message["content"]
+
+    request_messages = [
+        {"role": "system", "content": "System prompt"},
+        {"role": "user", "content": "Current question"},
+    ]
+    entity._place_embedding_recall(
+        request_messages, matches, "Relevant earlier context:"
+    )
+    assert [message["role"] for message in request_messages] == [
+        "system",
+        "user",
+        "user",
+    ]
+    assert "I prefer 20 C" in request_messages[1]["content"]
+    assert request_messages[2]["content"] == "Current question"
+
+
+async def test_embedding_recall_avoids_api_call_without_archived_history():
+    """A new conversation performs no unnecessary embeddings request."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock()
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=False)
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        matches = await entity._async_recall_embedding_memories(chat_log)
+
+    assert matches == []
+    embedding_client.embeddings.create.assert_not_awaited()
+    memory_store.async_search.assert_not_called()
+
+
+async def test_embedding_recall_failure_is_non_destructive():
+    """A runtime recall failure omits optional context without truncating history."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    original_contents = list(chat_log.content)
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        side_effect=RuntimeError("endpoint unavailable")
+    )
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        matches = await entity._async_recall_embedding_memories(chat_log)
+
+    assert matches == []
+    assert chat_log.content == original_contents
 
 
 async def test_compaction_summarizes_old_history_and_keeps_latest_turn():

@@ -24,6 +24,7 @@ from .const import (
     CONF_SERVICE_TYPE,
     DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    DEFAULT_EMBEDDING_RECALL_PREFIX,
     DEFAULT_MODEL_CONFIG,
     DEFAULT_SERVICE_TYPE,
     DOMAIN,
@@ -49,6 +50,9 @@ CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY = (
 )
 CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY = (
     f"component.{DOMAIN}.config.step.context_compaction_token_limit.description"
+)
+EMBEDDING_RECALL_PREFIX_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.embedding_recall_prefix.description"
 )
 
 
@@ -84,6 +88,20 @@ async def async_get_context_compaction_text(
         DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
     ).format(max_summary_tokens=max_summary_tokens)
     return summary_prefix, token_limit
+
+
+async def async_get_embedding_recall_prefix(hass: HomeAssistant, language: str) -> str:
+    """Return localized model guidance for injected embedding memories."""
+    translations = await async_get_translations(
+        hass,
+        language,
+        "config",
+        integrations={DOMAIN}
+    )
+    return translations.get(
+        EMBEDDING_RECALL_PREFIX_TRANSLATION_KEY,
+        DEFAULT_EMBEDDING_RECALL_PREFIX
+    )
 
 
 def get_service_type(entry: ConfigEntry) -> str:

@@ -107,6 +107,45 @@ async def test_cleanup_removes_expired_memory_files(hass, tmp_path: Path):
     assert not list(directory.glob("*.json"))
 
 
+async def test_search_returns_nearest_compatible_memories(hass, tmp_path: Path):
+    """Search ranks matching vectors and skips records from another model size."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    scope = EmbeddingMemoryScope(
+        entry_id="endpoint-1",
+        agent_id="agent-1",
+        conversation_id="conversation-1",
+    )
+    records = [
+        EmbeddingMemoryRecord.create(
+            model="embedding-model",
+            embedding=embedding,
+            searchable_text=text,
+            messages=[{"role": "user", "content": text}],
+            retention=timedelta(days=1),
+        )
+        for embedding, text in (
+            ([1.0, 0.0], "closest"),
+            ([0.5, 0.5], "second"),
+            ([-1.0, 0.0], "opposite"),
+            ([1.0, 0.0, 0.0], "incompatible"),
+        )
+    ]
+    await store.async_append(scope, records)
+
+    assert await store.async_has_memories(scope, "embedding-model") is True
+    assert await store.async_has_memories(scope, "other-model") is False
+    matches = await store.async_search(
+        scope, [1.0, 0.0], limit=2, model="embedding-model"
+    )
+
+    assert [match.record.searchable_text for match in matches] == [
+        "closest",
+        "second",
+    ]
+    assert matches[0].score == 1.0
+
+
 async def test_clear_endpoint_only_removes_the_requested_endpoint(hass, tmp_path: Path):
     """The explicit wipe action cannot affect another endpoint's memories."""
     _configure_path(hass, tmp_path)

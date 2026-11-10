@@ -69,6 +69,7 @@ from .const import (
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
+    DEFAULT_EMBEDDING_RECALL_RESULTS,
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
@@ -88,6 +89,7 @@ from .const import (
     MCP_CONTEXT_PLACEMENT_USER,
 )
 from .embedding_memory import (
+    EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
     EmbeddingMemoryStore,
@@ -99,6 +101,7 @@ from .functions.mcp import build_mcp_function_tool
 from .helpers import (
     async_create_chat_completion,
     async_get_context_compaction_text,
+    async_get_embedding_recall_prefix,
     async_get_mcp_default_prompt,
     get_model_config,
 )
@@ -773,6 +776,104 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             return []
         return [build_mcp_function_tool(server_ids)]
 
+    async def _async_recall_embedding_memories(self, chat_log: conversation.ChatLog) -> list[EmbeddingMemoryMatch]:
+        """Return relevant archived turns for the latest user input."""
+        if self.subentry.data.get(
+            CONF_CONTEXT_TRUNCATE_STRATEGY,
+            DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+        ) != CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+            return []
+
+        conversation_id = chat_log.conversation_id
+        if not isinstance(conversation_id, str) or not conversation_id:
+            return []
+        latest_user_content = next(
+            (
+                content
+                for content in reversed(chat_log.content)
+                if isinstance(content, conversation.UserContent)
+            ),
+            None,
+        )
+        if latest_user_content is None:
+            return []
+
+        embeddings = self.entry.data.get(CONF_EMBEDDINGS)
+        if not isinstance(embeddings, Mapping):
+            return []
+        model = embeddings.get(CONF_EMBEDDINGS_MODEL)
+        if not isinstance(model, str) or not model:
+            return []
+
+        try:
+            embedding_client, memory_store = self._embedding_runtime
+            scope = EmbeddingMemoryScope(
+                entry_id=self.entry.entry_id,
+                agent_id=self.subentry.subentry_id,
+                conversation_id=conversation_id,
+            )
+            if not await memory_store.async_has_memories(scope, model):
+                return []
+            response = await embedding_client.embeddings.create(
+                model=model,
+                input=_compaction_transcript([latest_user_content]),
+            )
+            if not response.data or not response.data[0].embedding:
+                raise HomeAssistantError(
+                    "The embeddings endpoint returned no recall vector"
+                )
+            return await memory_store.async_search(
+                scope,
+                list(response.data[0].embedding),
+                DEFAULT_EMBEDDING_RECALL_RESULTS,
+                model,
+            )
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception(
+                "Embedding memory retrieval failed; continuing without recalled context"
+            )
+            return []
+
+    @staticmethod
+    def _embedding_recall_message(matches: list[EmbeddingMemoryMatch], prefix: str) -> ChatCompletionUserMessageParam:
+        """Render recalled turns as inert historical request context."""
+        payload = [
+            {
+                "created_at": match.record.created_at,
+                "messages": match.record.messages,
+            }
+            for match in sorted(
+                matches, key=lambda item: item.record.created_at
+            )
+        ]
+        return ChatCompletionUserMessageParam(
+            role="user",
+            content=f"{prefix}\n{json.dumps(payload, ensure_ascii=False, default=str)}",
+        )
+
+    @classmethod
+    def _place_embedding_recall(
+        cls,
+        messages: list[ChatCompletionMessageParam],
+        matches: list[EmbeddingMemoryMatch],
+        prefix: str,
+    ) -> None:
+        """Insert temporary recalled context immediately before the latest user."""
+        if not matches:
+            return
+        latest_user_index = next(
+            (
+                index
+                for index in reversed(range(len(messages)))
+                if messages[index]["role"] == "user"
+            ),
+            len(messages),
+        )
+        messages.insert(
+            latest_user_index,
+            cls._embedding_recall_message(matches, prefix),
+        )
+
     async def _async_get_mcp_agent_context(
         self, language: str
     ) -> MCPAgentContext:
@@ -871,6 +972,19 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 | ChatCompletionContentPartInputAudioParam
             ],
         ] = {}
+        retrieval_enabled = (
+            options.get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
+            == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+        )
+        recall_prefix = (
+            await async_get_embedding_recall_prefix(self.hass, language)
+            if retrieval_enabled
+            else ""
+        )
+        recalled_memories = await self._async_recall_embedding_memories(chat_log)
 
         async def _build_request_messages() -> list[ChatCompletionMessageParam]:
             """Build messages again after history has potentially changed."""
@@ -882,6 +996,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 shorten_tool_call_id,
                 attachment_parts,
                 tool_media_parts,
+            )
+            self._place_embedding_recall(
+                converted_messages, recalled_memories, recall_prefix
             )
             if (
                 permanent_tools_placement is None
@@ -1007,6 +1124,11 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 if estimated_prompt_tokens + int(max_tokens) <= threshold:
                     break
 
+                if recalled_memories:
+                    recalled_memories.pop()
+                    messages = await _build_request_messages()
+                    continue
+
                 history_changed = await self._truncate_message_history(
                     chat_log,
                     _RequestTokenUsage(
@@ -1018,6 +1140,10 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     language=language,
                 )
                 if history_changed:
+                    if retrieval_enabled:
+                        recalled_memories = (
+                            await self._async_recall_embedding_memories(chat_log)
+                        )
                     messages = await _build_request_messages()
                     recent_turns_override = max(0, recent_turns_override - 1)
                     continue
