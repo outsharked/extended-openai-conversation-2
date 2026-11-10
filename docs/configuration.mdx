@@ -154,16 +154,22 @@ Configure Extended OpenAI Conversation through the Options menu in your Voice As
 
     **Default**: `clear`
 
-    **Options**: `clear`, `compact`
+    **Options**: `clear`, `compact`, `retrieve`, `retrieve_compact`
+
+    The retrieval options are available only when the parent AI endpoint has a configured embeddings endpoint.
 
     Strategy for handling context when the threshold is exceeded.
 
     - `clear`: Remove all previous messages and start fresh
-    - `compact`: Ask the configured model to replace older completed turns with a rolling summary while keeping recent messages verbatim.
+    - `compact`: Ask the configured model to replace older completed messages with a rolling summary while keeping recent messages verbatim.
+    - `retrieve`: Archive older completed messages with embeddings, then remove them from the active history. Relevant original messages can be injected automatically or retrieved by the agent with the `context_recall` function.
+    - `retrieve_compact`: Archive the original messages with embeddings and replace those same messages with a rolling summary. This keeps broad continuity in every request while preserving the original history for agents to perform semantic recall.
 
     Compaction is checked before each model request, including requests made after tool calls. Tool calls and their corresponding results are treated as part of the same conversation turn and are not split.
 
     If the older history cannot fit into one summarization request, it is summarized in bounded chunks. Each chunk updates the rolling summary. If compaction fails, the integration falls back to the `clear` behaviour so the conversation can continue.
+
+    With `retrieve_compact`, embedding archival and summarization operate independently on the same verbatim history. If archival fails, summarization can still proceed. If summarization fails after archival succeeds, the safely archived messages are removed from active history and remain available through retrieval. Automatically recalled memories are temporary request context and are not summarized or archived again.
 
     <Note>
     The compaction request uses the same endpoint, model and authentication as the agent, but does not include agent tools, MCP catalogues or embedded media.
@@ -185,7 +191,7 @@ Enable **Advanced Options** in the configuration to access these model-specific 
 
     **Default**: `60%`
 
-    **Available when**: Context Truncate Strategy is `compact`
+    **Available when**: Context Truncate Strategy is `compact` or `retrieve_compact`
 
     Sets the desired context size after compaction as a percentage of the configured Context Threshold. A lower value leaves more room for subsequent conversation turns but requires a more concise summary.
   </Accordion>
@@ -195,7 +201,7 @@ Enable **Advanced Options** in the configuration to access these model-specific 
 
     **Default**: `2`
 
-    **Available when**: Context Truncate Strategy is `compact`
+    **Available when**: Context Truncate Strategy is `compact` or `retrieve_compact`
 
     Number of complete recent conversation turns to retain verbatim. Tool calls and their results remain attached to their originating turn.
 
@@ -216,11 +222,21 @@ Enable **Advanced Options** in the configuration to access these model-specific 
     the summary, using the language or languages of the transcript.
     ```
 
-    **Available when**: Context Truncate Strategy is `compact`
+    **Available when**: Context Truncate Strategy is `compact` or `retrieve_compact`
 
     Instructions sent to the model when summarizing older conversation history. The field is prepopulated with a prompt that preserves user preferences, established facts, decisions, unresolved requests, identifiers, material tool results and uncertainty.
 
     The integration supplies the transcript and localized summary token limit separately. The generated summary is stored as an assistant message with a localized heading and is sent with subsequent requests in place of the removed history.
+  </Accordion>
+
+  <Accordion title="Embedding History Retention">
+    **Type**: Duration text using `m`, `h` or `d`
+
+    **Default**: `30d`
+
+    **Available when**: Context Truncate Strategy is `retrieve` or `retrieve_compact`
+
+    Controls how long archived original conversation messages remain available for automatic recall and `context_recall`. Examples include `10m`, `5h` and `30d`. A number without a suffix is interpreted as days.
   </Accordion>
 
   <Accordion title="Top P">

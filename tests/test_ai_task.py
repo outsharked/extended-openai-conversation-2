@@ -2,6 +2,8 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from custom_components.extended_openai_conversation.ai_task import (
     ExtendedOpenAITaskEntity,
     async_setup_entry,
@@ -109,17 +111,17 @@ async def test_generate_data_provides_assigned_mcp_servers():
     assert result.data == "done"
 
 
-async def test_generate_data_provides_context_recall_for_retrieval():
+@pytest.mark.parametrize("strategy", ["retrieve", "retrieve_compact"])
+async def test_generate_data_provides_context_recall_for_retrieval(strategy):
     """AI tasks expose conversation recall when retrieval is configured."""
     from custom_components.extended_openai_conversation.const import (
         CONF_CONTEXT_TRUNCATE_STRATEGY,
         CONF_EMBEDDINGS,
-        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     )
 
     subentry = _mock_subentry("ai_task_data", "sub_1")
     subentry.data = {
-        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy
     }
     entry = MagicMock(entry_id="endpoint-1")
     entry.data = {CONF_EMBEDDINGS: {}}

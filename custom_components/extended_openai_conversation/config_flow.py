@@ -102,8 +102,11 @@ from .const import (
     CONF_SKIP_AUTHENTICATION,
     CONF_TEMPERATURE,
     CONF_TOP_P,
+    CONTEXT_TRUNCATE_COMPACTION_STRATEGIES,
+    CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES,
     CONTEXT_TRUNCATE_STRATEGIES,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
     DEFAULT_ADVANCED_OPTIONS,
     DEFAULT_AI_TASK_NAME,
     DEFAULT_AI_TASK_OPTIONS,
@@ -388,7 +391,12 @@ def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
     """Return context strategies supported by an AI endpoint entry."""
     strategies = list(CONTEXT_TRUNCATE_STRATEGIES)
     if isinstance(entry.data.get(CONF_EMBEDDINGS), Mapping):
-        strategies.append(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+        strategies.extend(
+            (
+                CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+                CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
+            )
+        )
     return strategies
 
 
@@ -396,7 +404,7 @@ def _validate_embedding_history_retention_input(
     strategy: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Normalize retrieval retention or return its field error."""
-    if strategy != CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
         return {}
     try:
         user_input[CONF_EMBEDDING_HISTORY_RETENTION] = (
@@ -1987,9 +1995,10 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             )
         ] = BooleanSelector()
 
-        if (self._temp_data or {}).get(
+        strategy = (self._temp_data or {}).get(
             CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
-        ) == "compact":
+        )
+        if strategy in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_COMPACTION_TARGET,
@@ -2013,9 +2022,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = TextSelector(TextSelectorConfig(multiline=True))
 
-        if (self._temp_data or {}).get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
-        ) == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+        if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
             schema[
                 vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,
@@ -2395,9 +2402,10 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             )
         ] = BooleanSelector()
 
-        if (self._temp_data or {}).get(
+        strategy = (self._temp_data or {}).get(
             CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
-        ) == "compact":
+        )
+        if strategy in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_COMPACTION_TARGET,
@@ -2421,9 +2429,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = TextSelector(TextSelectorConfig(multiline=True))
 
-        if (self._temp_data or {}).get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
-        ) == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+        if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
             schema[
                 vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,
