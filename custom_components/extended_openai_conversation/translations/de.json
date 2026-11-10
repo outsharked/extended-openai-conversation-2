@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "Der Embeddings-Endpunkt hat kein gültiges Embedding zurückgegeben.",
+            "invalid_embedding_history_retention": "Gib eine positive ganze Zahl gefolgt von m, h oder d ein. Ohne Einheit werden Tage verwendet.",
             "cannot_connect": "Fehler beim Verbindungsaufbau",
             "invalid_auth": "Authentifizierung fehlgeschlagen",
             "unknown": "Unbekannter Fehler"
@@ -105,14 +106,14 @@
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
-                        "embedding_history_retention_days": "Aufbewahrung des Embedding-Verlaufs (Tage)"
+                        "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
-                        "embedding_history_retention_days": "Anzahl der Tage, nach denen archivierter Gesprächtext und Embeddings ablaufen."
+                        "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet."
                     }
                 }
             }
@@ -152,14 +153,14 @@
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
-                        "embedding_history_retention_days": "Aufbewahrung des Embedding-Verlaufs (Tage)"
+                        "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
-                        "embedding_history_retention_days": "Anzahl der Tage, nach denen archivierter Gesprächtext und Embeddings ablaufen."
+                        "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet."
                     }
                 }
             }

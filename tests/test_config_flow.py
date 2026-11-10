@@ -29,6 +29,7 @@ from custom_components.extended_openai_conversation.config_flow import (
     ExtendedOpenAISubentryFlowHandler,
     _mcp_failure_reason,
     _mcp_server_options,
+    _normalize_embedding_history_retention,
     validate_embeddings_input,
     validate_input,
 )
@@ -42,7 +43,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
-    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
+    CONF_EMBEDDING_HISTORY_RETENTION,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_FUNCTION_TOOLS,
@@ -62,7 +63,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
-    DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+    DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
@@ -103,7 +104,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_API_KEY, CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import SelectOptionDict
+from homeassistant.helpers.selector import SelectOptionDict, TextSelector
 
 
 def _schema_keys(schema: dict) -> set[str]:
@@ -2214,12 +2215,89 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
         key
         for key in schema
         if getattr(key, "schema", key)
-        == CONF_EMBEDDING_HISTORY_RETENTION_DAYS
+        == CONF_EMBEDDING_HISTORY_RETENTION
     )
-    assert retention_key.default() == DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS
-    assert schema[retention_key].config["min"] == 1
-    assert schema[retention_key].config["max"] == 3650
-    assert schema[retention_key].config["step"] == 1
+    assert retention_key.default() == DEFAULT_EMBEDDING_HISTORY_RETENTION
+    assert isinstance(schema[retention_key], TextSelector)
     assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("10m", "10m"), ("5h", "5h"), ("50d", "50d"), ("10", "10d")],
+)
+def test_embedding_history_retention_normalization(value, expected):
+    """Supported duration suffixes are retained and no suffix means days."""
+    assert _normalize_embedding_history_retention(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value", ["", "0", "1s", "1w", "1.5h", "-1d", "10M", None]
+)
+def test_embedding_history_retention_rejects_invalid_values(value):
+    """Unsupported or non-positive retention durations are rejected."""
+    with pytest.raises(ValueError):
+        _normalize_embedding_history_retention(value)
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_normalizes_retrieval_retention(hass, handler_type):
+    """Both agent flows persist an omitted retention suffix as days."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock()
+    handler._get_entry = MagicMock(return_value=entry)
+    handler._get_reconfigure_subentry = MagicMock()
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {CONF_EMBEDDING_HISTORY_RETENTION: "10"}
+    )
+
+    assert result == {"type": "abort"}
+    assert handler.async_update_and_abort.call_args.kwargs["data"][
+        CONF_EMBEDDING_HISTORY_RETENTION
+    ] == "10d"
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_rejects_invalid_retrieval_retention(
+    hass, handler_type
+):
+    """Both agent flows keep the form open for an invalid duration."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {CONF_EMBEDDING_HISTORY_RETENTION: "10w"}
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_EMBEDDING_HISTORY_RETENTION: (
+            "invalid_embedding_history_retention"
+        )
+    }

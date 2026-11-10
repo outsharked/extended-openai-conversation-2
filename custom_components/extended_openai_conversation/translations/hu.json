@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "A beágyazási végpont nem adott vissza érvényes beágyazást.",
+            "invalid_embedding_history_retention": "Adjon meg pozitív egész számot m, h vagy d utótaggal. Utótag nélkül napokat használunk.",
             "cannot_connect": "Nem sikerült csatlakozni",
             "invalid_auth": "Azonosítás sikertelen",
             "unknown": "Váratlan hiba"
@@ -105,14 +106,14 @@
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
-                        "embedding_history_retention_days": "Beágyazási előzmények megőrzése (nap)"
+                        "embedding_history_retention": "Beágyazási előzmények megőrzése"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
-                        "embedding_history_retention_days": "Az archivált beszélgetésszöveg és beágyazások megőrzési ideje napokban."
+                        "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk."
                     }
                 }
             }
@@ -152,14 +153,14 @@
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
-                        "embedding_history_retention_days": "Beágyazási előzmények megőrzése (nap)"
+                        "embedding_history_retention": "Beágyazási előzmények megőrzése"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
-                        "embedding_history_retention_days": "Az archivált beszélgetésszöveg és beágyazások megőrzési ideje napokban."
+                        "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk."
                     }
                 }
             }

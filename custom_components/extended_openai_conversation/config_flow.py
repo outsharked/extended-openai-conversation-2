@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from dataclasses import replace
 import logging
+import re
 import types
 from typing import Any, override
 
@@ -77,7 +78,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
-    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
+    CONF_EMBEDDING_HISTORY_RETENTION,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_EXTRA_BODY,
@@ -116,7 +117,7 @@ from .const import (
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
-    DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+    DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
@@ -347,7 +348,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
-        CONF_EMBEDDING_HISTORY_RETENTION_DAYS: DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+        CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
         CONF_SHORTEN_TOOL_CALL_ID: DEFAULT_SHORTEN_TOOL_CALL_ID,
         CONF_ADVANCED_OPTIONS: DEFAULT_ADVANCED_OPTIONS,
     }
@@ -373,6 +374,40 @@ def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
     if isinstance(entry.data.get(CONF_EMBEDDINGS), Mapping):
         strategies.append(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     return strategies
+
+
+_EMBEDDING_RETENTION_PATTERN = re.compile(r"(?P<value>[1-9]\d*)(?P<unit>[mhd]?)")
+
+
+def _normalize_embedding_history_retention(value: Any) -> str:
+    """Validate an embedding retention duration and add the default unit."""
+    if not isinstance(value, str):
+        raise ValueError
+    match = _EMBEDDING_RETENTION_PATTERN.fullmatch(value.strip())
+    if match is None:
+        raise ValueError
+    return f"{match.group('value')}{match.group('unit') or 'd'}"
+
+
+def _validate_embedding_history_retention_input(
+    strategy: Any, user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Normalize retrieval retention or return its field error."""
+    if strategy != CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+        return {}
+    try:
+        user_input[CONF_EMBEDDING_HISTORY_RETENTION] = (
+            _normalize_embedding_history_retention(
+                user_input.get(CONF_EMBEDDING_HISTORY_RETENTION)
+            )
+        )
+    except ValueError:
+        return {
+            CONF_EMBEDDING_HISTORY_RETENTION: (
+                "invalid_embedding_history_retention"
+            )
+        }
+    return {}
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
@@ -1841,22 +1876,32 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Handle advanced options step."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            # Merge advanced options with temp data
-            final_data = {**(self._temp_data or {}), **user_input}
+            errors = _validate_embedding_history_retention_input(
+                (self._temp_data or {}).get(
+                    CONF_CONTEXT_TRUNCATE_STRATEGY,
+                    DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                ),
+                user_input,
+            )
 
-            if self._is_new:
-                title = final_data.get(CONF_NAME, DEFAULT_NAME)
-                final_data.pop(CONF_NAME, None)
-                return self.async_create_entry(
-                    title=title,
+            if not errors:
+                # Merge advanced options with temp data
+                final_data = {**(self._temp_data or {}), **user_input}
+
+                if self._is_new:
+                    title = final_data.get(CONF_NAME, DEFAULT_NAME)
+                    final_data.pop(CONF_NAME, None)
+                    return self.async_create_entry(
+                        title=title,
+                        data=final_data,
+                    )
+                return self.async_update_and_abort(
+                    self._get_entry(),
+                    self._get_reconfigure_subentry(),
                     data=final_data,
                 )
-            return self.async_update_and_abort(
-                self._get_entry(),
-                self._get_reconfigure_subentry(),
-                data=final_data,
-            )
 
         # Build schema for advanced options based on selected model
         chat_model = (self._temp_data or {}).get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
@@ -1967,16 +2012,17 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         ) == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
             schema[
                 vol.Optional(
-                    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
-                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+                    CONF_EMBEDDING_HISTORY_RETENTION,
+                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
-            ] = NumberSelector(NumberSelectorConfig(min=1, max=3650, step=1))
+            ] = TextSelector()
 
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(schema), self.options
+                vol.Schema(schema), {**self.options, **(user_input or {})}
             ),
+            errors=errors,
         )
 
     async def _async_get_skills(self) -> list[dict[str, Any]]:
@@ -2238,22 +2284,32 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Handle advanced options step."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            # Merge advanced options with temp data
-            final_data = {**(self._temp_data or {}), **user_input}
+            errors = _validate_embedding_history_retention_input(
+                (self._temp_data or {}).get(
+                    CONF_CONTEXT_TRUNCATE_STRATEGY,
+                    DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                ),
+                user_input,
+            )
 
-            if self._is_new:
-                title = final_data.get(CONF_NAME, DEFAULT_AI_TASK_NAME)
-                final_data.pop(CONF_NAME, None)
-                return self.async_create_entry(
-                    title=title,
+            if not errors:
+                # Merge advanced options with temp data
+                final_data = {**(self._temp_data or {}), **user_input}
+
+                if self._is_new:
+                    title = final_data.get(CONF_NAME, DEFAULT_AI_TASK_NAME)
+                    final_data.pop(CONF_NAME, None)
+                    return self.async_create_entry(
+                        title=title,
+                        data=final_data,
+                    )
+                return self.async_update_and_abort(
+                    self._get_entry(),
+                    self._get_reconfigure_subentry(),
                     data=final_data,
                 )
-            return self.async_update_and_abort(
-                self._get_entry(),
-                self._get_reconfigure_subentry(),
-                data=final_data,
-            )
 
         # Build schema for advanced options based on selected model
         chat_model = (self._temp_data or {}).get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
@@ -2364,14 +2420,15 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         ) == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
             schema[
                 vol.Optional(
-                    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
-                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+                    CONF_EMBEDDING_HISTORY_RETENTION,
+                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
-            ] = NumberSelector(NumberSelectorConfig(min=1, max=3650, step=1))
+            ] = TextSelector()
 
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(schema), self.options
+                vol.Schema(schema), {**self.options, **(user_input or {})}
             ),
+            errors=errors,
         )

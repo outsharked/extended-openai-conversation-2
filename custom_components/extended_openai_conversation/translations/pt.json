@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "O endpoint de embeddings não devolveu um embedding válido.",
+            "invalid_embedding_history_retention": "Introduza um número inteiro positivo seguido de m, h ou d. Sem sufixo são usados dias.",
             "cannot_connect": "Não é possível ligar",
             "invalid_auth": "Autenticação inválida",
             "unknown": "Erro desconhecido"
@@ -105,14 +106,14 @@
                         "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Instrução de compactação",
-                        "embedding_history_retention_days": "Retenção do histórico de embeddings (dias)"
+                        "embedding_history_retention": "Retenção do histórico de embeddings"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
-                        "embedding_history_retention_days": "Número de dias de retenção do texto de conversa arquivado e dos embeddings antes de expirarem."
+                        "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo são usados dias."
                     }
                 }
             }
@@ -152,14 +153,14 @@
                         "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Instrução de compactação",
-                        "embedding_history_retention_days": "Retenção do histórico de embeddings (dias)"
+                        "embedding_history_retention": "Retenção do histórico de embeddings"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
-                        "embedding_history_retention_days": "Número de dias de retenção do texto de conversa arquivado e dos embeddings antes de expirarem."
+                        "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo são usados dias."
                     }
                 }
             }
