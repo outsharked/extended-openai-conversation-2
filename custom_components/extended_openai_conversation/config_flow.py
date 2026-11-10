@@ -7,7 +7,6 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from dataclasses import replace
 import logging
-import re
 import types
 from typing import Any, override
 
@@ -144,6 +143,10 @@ from .const import (
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
     SERVICE_TYPES,
+)
+from .embedding_memory import (
+    EmbeddingMemoryStore,
+    normalize_embedding_history_retention,
 )
 from .helpers import (
     async_check_openai_connection,
@@ -376,19 +379,6 @@ def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
     return strategies
 
 
-_EMBEDDING_RETENTION_PATTERN = re.compile(r"(?P<value>[1-9]\d*)(?P<unit>[mhd]?)")
-
-
-def _normalize_embedding_history_retention(value: Any) -> str:
-    """Validate an embedding retention duration and add the default unit."""
-    if not isinstance(value, str):
-        raise ValueError
-    match = _EMBEDDING_RETENTION_PATTERN.fullmatch(value.strip())
-    if match is None:
-        raise ValueError
-    return f"{match.group('value')}{match.group('unit') or 'd'}"
-
-
 def _validate_embedding_history_retention_input(
     strategy: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
@@ -397,7 +387,7 @@ def _validate_embedding_history_retention_input(
         return {}
     try:
         user_input[CONF_EMBEDDING_HISTORY_RETENTION] = (
-            _normalize_embedding_history_retention(
+            normalize_embedding_history_retention(
                 user_input.get(CONF_EMBEDDING_HISTORY_RETENTION)
             )
         )
@@ -1536,6 +1526,14 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
 
         title = str(data.get(CONF_NAME, DEFAULT_NAME))
         if self._reconfigure_entry is not None:
+            if (
+                self._selected_service_type == SERVICE_TYPE_AI_ENDPOINT
+                and self._clear_embedding_history_requested
+            ):
+                await EmbeddingMemoryStore.async_clear_endpoint(
+                    self.hass, self._reconfigure_entry.entry_id
+                )
+                self._clear_embedding_history_requested = False
             return self.async_update_reload_and_abort(
                 self._reconfigure_entry, title=title, data=data
             )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 from typing import cast
 
@@ -19,6 +20,7 @@ from .const import (
     CONF_API_PROVIDER,
     CONF_API_VERSION,
     CONF_BASE_URL,
+    CONF_EMBEDDINGS,
     CONF_ORGANIZATION,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_API_PROVIDER,
@@ -26,9 +28,11 @@ from .const import (
     DOMAIN,
     SERVICE_TYPE_MCP,
 )
+from .embedding_memory import EmbeddingMemoryStore
 from .helpers import get_authenticated_client, get_service_type
 from .mcp_client import MCPClient, MCPServerConfig
 from .mcp_oauth import async_get_mcp_oauth_auth
+from .runtime import OpenAIServiceRuntime
 from .services import async_setup_services
 from .template import async_setup_templates, async_unload_templates
 
@@ -37,7 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.AI_TASK, Platform.CONVERSATION]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-type ExtendedOpenAIConfigEntry = ConfigEntry[AsyncClient | MCPClient]
+type ExtendedOpenAIConfigEntry = ConfigEntry[OpenAIServiceRuntime | MCPClient]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -81,7 +85,32 @@ async def async_setup_entry(
     except OpenAIError as err:
         raise ConfigEntryNotReady(err) from err
 
-    entry.runtime_data = client
+    embedding_client: AsyncClient | None = None
+    embedding_memory: EmbeddingMemoryStore | None = None
+    embeddings = entry.data.get(CONF_EMBEDDINGS)
+    if isinstance(embeddings, Mapping):
+        embedding_client = await get_authenticated_client(
+            hass=hass,
+            api_key=embeddings[CONF_API_KEY],
+            base_url=embeddings.get(CONF_BASE_URL),
+            api_version=None,
+            organization=None,
+            api_provider=None,
+            skip_authentication=True,
+        )
+        embedding_memory = EmbeddingMemoryStore(hass, entry.entry_id)
+        try:
+            await embedding_memory.async_cleanup_expired()
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception(
+                "Unable to clean expired embedding memory; setup will continue"
+            )
+
+    entry.runtime_data = OpenAIServiceRuntime(
+        client=client,
+        embedding_client=embedding_client,
+        embedding_memory=embedding_memory,
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
 import json
 import logging
@@ -43,6 +43,9 @@ from .const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_HISTORY_RETENTION,
+    CONF_EMBEDDINGS,
+    CONF_EMBEDDINGS_MODEL,
     CONF_EXTRA_BODY,
     CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     CONF_MAX_TOKENS,
@@ -56,6 +59,7 @@ from .const import (
     CONF_SHORTEN_TOOL_CALL_ID,
     CONF_TEMPERATURE,
     CONF_TOP_P,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -64,6 +68,7 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+    DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
     DEFAULT_MAX_TOKENS,
@@ -82,6 +87,12 @@ from .const import (
     MCP_CONTEXT_PLACEMENT_DISABLED,
     MCP_CONTEXT_PLACEMENT_USER,
 )
+from .embedding_memory import (
+    EmbeddingMemoryRecord,
+    EmbeddingMemoryScope,
+    EmbeddingMemoryStore,
+    embedding_history_retention,
+)
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
 from .functions.mcp import build_mcp_function_tool
@@ -93,6 +104,7 @@ from .helpers import (
 )
 from .mcp_client import MCPContextRenderer
 from .mcp_service_manager import MCPServiceManager
+from .runtime import OpenAIServiceRuntime
 
 if TYPE_CHECKING:
     from . import ExtendedOpenAIConfigEntry
@@ -735,10 +747,24 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     @property
     def _client(self) -> AsyncClient:
         """Return the OpenAI client."""
-        client = self.entry.runtime_data
-        if not isinstance(client, AsyncClient):
+        runtime = self.entry.runtime_data
+        if not isinstance(runtime, OpenAIServiceRuntime):
             raise TypeError("An OpenAI entity requires an OpenAI client")
-        return client
+        return runtime.client
+
+    @property
+    def _embedding_runtime(
+        self,
+    ) -> tuple[AsyncClient, EmbeddingMemoryStore]:
+        """Return the configured embeddings client and memory store."""
+        runtime = self.entry.runtime_data
+        if (
+            not isinstance(runtime, OpenAIServiceRuntime)
+            or runtime.embedding_client is None
+            or runtime.embedding_memory is None
+        ):
+            raise HomeAssistantError("Embedding retrieval is not configured")
+        return runtime.embedding_client, runtime.embedding_memory
 
     def _get_mcp_function_tools(self) -> list[dict[str, Any]]:
         """Return the MCP dispatcher when servers are assigned to this agent."""
@@ -1483,6 +1509,85 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         )
         return True
 
+    async def _archive_message_history(
+        self,
+        chat_log: conversation.ChatLog,
+        preserve_current_turn: bool = False,
+        recent_turns_override: int | None = None,
+    ) -> bool:
+        """Embed and archive older complete turns before removing them."""
+        messages = chat_log.content
+        history_split_index = self._compaction_history_split_index(
+            messages, preserve_current_turn, recent_turns_override
+        )
+        if history_split_index is None or history_split_index <= 1:
+            _LOGGER.info(
+                "Context threshold exceeded, but there is no older history to archive"
+            )
+            return False
+
+        conversation_id = chat_log.conversation_id
+        if not isinstance(conversation_id, str) or not conversation_id:
+            raise HomeAssistantError(
+                "Conversation history cannot be archived without a conversation ID"
+            )
+
+        embeddings = self.entry.data.get(CONF_EMBEDDINGS)
+        if not isinstance(embeddings, Mapping):
+            raise HomeAssistantError("Embedding retrieval is not configured")
+        model = embeddings.get(CONF_EMBEDDINGS_MODEL)
+        if not isinstance(model, str) or not model:
+            raise HomeAssistantError("An embedding model is not configured")
+
+        groups = _group_compaction_contents(messages[1:history_split_index])
+        searchable_texts = [_compaction_transcript(group) for group in groups]
+        embedding_client, memory_store = self._embedding_runtime
+        response = await embedding_client.embeddings.create(
+            model=model,
+            input=searchable_texts,
+        )
+        vectors_by_index = {
+            item.index: item.embedding for item in response.data
+        }
+        if len(vectors_by_index) != len(groups) or any(
+            index not in vectors_by_index or not vectors_by_index[index]
+            for index in range(len(groups))
+        ):
+            raise HomeAssistantError(
+                "The embeddings endpoint returned an incomplete response"
+            )
+
+        retention = embedding_history_retention(
+            self.subentry.data.get(
+                CONF_EMBEDDING_HISTORY_RETENTION,
+                DEFAULT_EMBEDDING_HISTORY_RETENTION,
+            )
+        )
+        records = [
+            EmbeddingMemoryRecord.create(
+                model=model,
+                embedding=vectors_by_index[index],
+                searchable_text=searchable_texts[index],
+                messages=[content.as_dict() for content in group],
+                retention=retention,
+            )
+            for index, group in enumerate(groups)
+        ]
+        await memory_store.async_append(
+            EmbeddingMemoryScope(
+                entry_id=self.entry.entry_id,
+                agent_id=self.subentry.subentry_id,
+                conversation_id=conversation_id,
+            ),
+            records,
+        )
+
+        del messages[1:history_split_index]
+        _LOGGER.info(
+            "Context threshold exceeded, older conversation history archived"
+        )
+        return True
+
     async def _truncate_message_history(
         self,
         chat_log: conversation.ChatLog,
@@ -1500,7 +1605,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if strategy == "clear":
             _LOGGER.info("Context threshold exceeded, conversation history cleared")
             return self._clear_message_history(chat_log)
-        elif strategy == "compact":
+        if strategy == "compact":
             try:
                 return await self._compact_message_history(
                     chat_log,
@@ -1512,4 +1617,28 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             except Exception:
                 _LOGGER.exception("Conversation compaction failed; falling back to clearing history")
                 return self._clear_message_history(chat_log)
+        if strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+            try:
+                return await self._archive_message_history(
+                    chat_log,
+                    preserve_current_turn,
+                    recent_turns_override,
+                )
+            except Exception:
+                _LOGGER.exception(
+                    "Embedding archival failed; falling back to conversation compaction"
+                )
+                try:
+                    return await self._compact_message_history(
+                        chat_log,
+                        token_usage,
+                        preserve_current_turn,
+                        recent_turns_override,
+                        language,
+                    )
+                except Exception:
+                    _LOGGER.exception(
+                        "Conversation compaction failed; falling back to clearing history"
+                    )
+                    return self._clear_message_history(chat_log)
         return False

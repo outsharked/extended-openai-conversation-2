@@ -29,7 +29,6 @@ from custom_components.extended_openai_conversation.config_flow import (
     ExtendedOpenAISubentryFlowHandler,
     _mcp_failure_reason,
     _mcp_server_options,
-    _normalize_embedding_history_retention,
     validate_embeddings_input,
     validate_input,
 )
@@ -71,6 +70,9 @@ from custom_components.extended_openai_conversation.const import (
     MCP_OAUTH_ACTION_RETURN,
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
+)
+from custom_components.extended_openai_conversation.embedding_memory import (
+    normalize_embedding_history_retention,
 )
 from custom_components.extended_openai_conversation.mcp_client import (
     MCPAuthenticationError,
@@ -420,6 +422,38 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
     assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
         CONF_EMBEDDINGS
     ]
+
+
+async def test_reconfigure_save_performs_requested_embedding_history_wipe(hass):
+    """The transient wipe option clears only the reconfigured endpoint."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
+    flow._ai_endpoint_data = {
+        "name": "Local AI",
+        CONF_API_KEY: "chat-key",
+        CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+    }
+    flow._embeddings_endpoint_data = {
+        CONF_API_KEY: "embedding-key",
+        CONF_EMBEDDINGS_MODEL: "embed-model",
+    }
+    flow._clear_embedding_history_requested = True
+    entry = MagicMock(entry_id="endpoint-1")
+    flow._reconfigure_entry = entry
+    flow.async_update_reload_and_abort = MagicMock(
+        return_value={"type": "abort"}
+    )
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "EmbeddingMemoryStore.async_clear_endpoint",
+        new=AsyncMock(),
+    ) as clear_endpoint:
+        result = await flow.async_step_service_save()
+
+    assert result == {"type": "abort"}
+    clear_endpoint.assert_awaited_once_with(hass, "endpoint-1")
+    assert flow._clear_embedding_history_requested is False
 
 
 async def test_embeddings_failure_preserves_last_known_good_config(hass):
@@ -2230,7 +2264,7 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
 )
 def test_embedding_history_retention_normalization(value, expected):
     """Supported duration suffixes are retained and no suffix means days."""
-    assert _normalize_embedding_history_retention(value) == expected
+    assert normalize_embedding_history_retention(value) == expected
 
 
 @pytest.mark.parametrize(
@@ -2239,7 +2273,7 @@ def test_embedding_history_retention_normalization(value, expected):
 def test_embedding_history_retention_rejects_invalid_values(value):
     """Unsupported or non-positive retention durations are rejected."""
     with pytest.raises(ValueError):
-        _normalize_embedding_history_retention(value)
+        normalize_embedding_history_retention(value)
 
 
 @pytest.mark.parametrize(
