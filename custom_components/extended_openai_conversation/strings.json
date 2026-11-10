@@ -216,7 +216,8 @@
     "context_truncate_strategy": {
       "options": {
         "clear": "Clear all messages",
-        "compact": "Summarize and compact messages"
+        "compact": "Summarize and compact messages",
+        "retrieve": "Embedding retrieval memory"
       }
     }
   },
@@ -261,13 +262,15 @@
             "shorten_tool_call_id": "Shorten tool call IDs",
             "context_compaction_target": "Compacted context target (% of token threshold)",
             "context_compaction_recent_turns": "Recent turns to preserve",
-            "context_compaction_prompt": "Compaction prompt"
+            "context_compaction_prompt": "Compaction prompt",
+            "embedding_history_retention_days": "Embedding history retention (days)"
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
             "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
-            "context_compaction_prompt": "Instructions used to summarize older conversation history."
+            "context_compaction_prompt": "Instructions used to summarize older conversation history.",
+            "embedding_history_retention_days": "Number of days to retain archived conversation text and embeddings before they expire."
           }
         }
       }
@@ -307,13 +310,15 @@
             "shorten_tool_call_id": "Shorten tool call IDs",
             "context_compaction_target": "Compacted context target (% of token threshold)",
             "context_compaction_recent_turns": "Recent turns to preserve",
-            "context_compaction_prompt": "Compaction prompt"
+            "context_compaction_prompt": "Compaction prompt",
+            "embedding_history_retention_days": "Embedding history retention (days)"
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
             "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
-            "context_compaction_prompt": "Instructions used to summarize older conversation history."
+            "context_compaction_prompt": "Instructions used to summarize older conversation history.",
+            "embedding_history_retention_days": "Number of days to retain archived conversation text and embeddings before they expire."
           }
         }
       }

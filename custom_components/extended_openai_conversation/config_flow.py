@@ -77,6 +77,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_EXTRA_BODY,
@@ -101,6 +102,7 @@ from .const import (
     CONF_TEMPERATURE,
     CONF_TOP_P,
     CONTEXT_TRUNCATE_STRATEGIES,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     DEFAULT_ADVANCED_OPTIONS,
     DEFAULT_AI_TASK_NAME,
     DEFAULT_AI_TASK_OPTIONS,
@@ -114,6 +116,7 @@ from .const import (
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
+    DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
     DEFAULT_EMBEDDINGS_MODEL,
     DEFAULT_EXTRA_BODY,
     DEFAULT_MAX_FUNCTION_CALLS_PER_CONVERSATION,
@@ -344,6 +347,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+        CONF_EMBEDDING_HISTORY_RETENTION_DAYS: DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
         CONF_SHORTEN_TOOL_CALL_ID: DEFAULT_SHORTEN_TOOL_CALL_ID,
         CONF_ADVANCED_OPTIONS: DEFAULT_ADVANCED_OPTIONS,
     }
@@ -361,6 +365,14 @@ def _mcp_server_options(hass: HomeAssistant) -> list[SelectOptionDict]:
         if get_service_type(entry) == SERVICE_TYPE_MCP
         and isinstance(entry.data.get(CONF_MCP_SERVER_ID), str)
     ]
+
+
+def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
+    """Return context strategies supported by an AI endpoint entry."""
+    strategies = list(CONTEXT_TRUNCATE_STRATEGIES)
+    if isinstance(entry.data.get(CONF_EMBEDDINGS), Mapping):
+        strategies.append(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    return strategies
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
@@ -1809,6 +1821,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             self.options,
             self._available_skills,
             _mcp_server_options(self.hass),
+            _context_truncate_strategies(self._get_entry()),
         )
 
         if self._is_new:
@@ -1949,6 +1962,16 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = TextSelector(TextSelectorConfig(multiline=True))
 
+        if (self._temp_data or {}).get(
+            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        ) == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+            schema[
+                vol.Optional(
+                    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
+                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+                )
+            ] = NumberSelector(NumberSelectorConfig(min=1, max=3650, step=1))
+
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
@@ -1972,6 +1995,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         options: dict[str, Any],
         skills: list[dict[str, Any]] | None = None,
         mcp_servers: list[SelectOptionDict] | None = None,
+        context_strategies: list[str] | None = None,
     ) -> dict:
         """Return a schema for OpenAI completion options."""
         # If creating a new subentry and no skills in options, default to all loaded skills
@@ -2048,7 +2072,8 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 default=DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
             ): SelectSelector(
                 SelectSelectorConfig(
-                    options=list(CONTEXT_TRUNCATE_STRATEGIES),
+                    options=context_strategies
+                    or list(CONTEXT_TRUNCATE_STRATEGIES),
                     mode=SelectSelectorMode.DROPDOWN,
                     translation_key="context_truncate_strategy",
                 )
@@ -2190,7 +2215,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     ),
                 ): SelectSelector(
                     SelectSelectorConfig(
-                        options=list(CONTEXT_TRUNCATE_STRATEGIES),
+                        options=_context_truncate_strategies(self._get_entry()),
                         mode=SelectSelectorMode.DROPDOWN,
                         translation_key="context_truncate_strategy",
                     )
@@ -2333,6 +2358,16 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_CONTEXT_COMPACTION_PROMPT,
                 )
             ] = TextSelector(TextSelectorConfig(multiline=True))
+
+        if (self._temp_data or {}).get(
+            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        ) == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+            schema[
+                vol.Optional(
+                    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
+                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
+                )
+            ] = NumberSelector(NumberSelectorConfig(min=1, max=3650, step=1))
 
         return self.async_show_form(
             step_id="advanced",

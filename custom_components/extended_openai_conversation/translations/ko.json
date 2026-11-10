@@ -60,7 +60,8 @@
         "context_truncate_strategy": {
             "options": {
                 "clear": "모든 메시지 지우기",
-                "compact": "메시지 요약 및 압축"
+                "compact": "메시지 요약 및 압축",
+                "retrieve": "임베딩 검색 메모리"
             }
         }
     },
@@ -103,13 +104,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
-                        "context_compaction_prompt": "압축 프롬프트"
+                        "context_compaction_prompt": "압축 프롬프트",
+                        "embedding_history_retention_days": "임베딩 기록 보존 기간(일)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
-                        "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다."
+                        "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
+                        "embedding_history_retention_days": "보관된 대화 텍스트와 임베딩이 만료되기 전까지 유지할 일수입니다."
                     }
                 }
             }
@@ -148,13 +151,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
-                        "context_compaction_prompt": "압축 프롬프트"
+                        "context_compaction_prompt": "압축 프롬프트",
+                        "embedding_history_retention_days": "임베딩 기록 보존 기간(일)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
-                        "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다."
+                        "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
+                        "embedding_history_retention_days": "보관된 대화 텍스트와 임베딩이 만료되기 전까지 유지할 일수입니다."
                     }
                 }
             }

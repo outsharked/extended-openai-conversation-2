@@ -60,7 +60,8 @@
         "context_truncate_strategy": {
             "options": {
                 "clear": "Összes üzenet törlése",
-                "compact": "Üzenetek összegzése és tömörítése"
+                "compact": "Üzenetek összegzése és tömörítése",
+                "retrieve": "Beágyazásalapú visszakeresési memória"
             }
         }
     },
@@ -103,13 +104,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
-                        "context_compaction_prompt": "Tömörítési utasítás"
+                        "context_compaction_prompt": "Tömörítési utasítás",
+                        "embedding_history_retention_days": "Beágyazási előzmények megőrzése (nap)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
-                        "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra."
+                        "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
+                        "embedding_history_retention_days": "Az archivált beszélgetésszöveg és beágyazások megőrzési ideje napokban."
                     }
                 }
             }
@@ -148,13 +151,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
-                        "context_compaction_prompt": "Tömörítési utasítás"
+                        "context_compaction_prompt": "Tömörítési utasítás",
+                        "embedding_history_retention_days": "Beágyazási előzmények megőrzése (nap)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
-                        "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra."
+                        "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
+                        "embedding_history_retention_days": "Az archivált beszélgetésszöveg és beágyazások megőrzési ideje napokban."
                     }
                 }
             }

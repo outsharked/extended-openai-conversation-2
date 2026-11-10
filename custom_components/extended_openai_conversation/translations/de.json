@@ -60,7 +60,8 @@
         "context_truncate_strategy": {
             "options": {
                 "clear": "Alle Nachrichten löschen",
-                "compact": "Nachrichten zusammenfassen und komprimieren"
+                "compact": "Nachrichten zusammenfassen und komprimieren",
+                "retrieve": "Embedding-Abrufspeicher"
             }
         }
     },
@@ -103,13 +104,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
-                        "context_compaction_prompt": "Kompaktierungsanweisung"
+                        "context_compaction_prompt": "Kompaktierungsanweisung",
+                        "embedding_history_retention_days": "Aufbewahrung des Embedding-Verlaufs (Tage)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
-                        "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt."
+                        "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
+                        "embedding_history_retention_days": "Anzahl der Tage, nach denen archivierter Gesprächtext und Embeddings ablaufen."
                     }
                 }
             }
@@ -148,13 +151,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
-                        "context_compaction_prompt": "Kompaktierungsanweisung"
+                        "context_compaction_prompt": "Kompaktierungsanweisung",
+                        "embedding_history_retention_days": "Aufbewahrung des Embedding-Verlaufs (Tage)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
-                        "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt."
+                        "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
+                        "embedding_history_retention_days": "Anzahl der Tage, nach denen archivierter Gesprächtext und Embeddings ablaufen."
                     }
                 }
             }

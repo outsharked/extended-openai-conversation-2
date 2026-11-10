@@ -60,7 +60,8 @@
         "context_truncate_strategy": {
             "options": {
                 "clear": "Effacer tous les messages",
-                "compact": "Résumer et compacter les messages"
+                "compact": "Résumer et compacter les messages",
+                "retrieve": "Mémoire de récupération par embeddings"
             }
         }
     },
@@ -103,13 +104,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
                         "context_compaction_recent_turns": "Tours récents à conserver",
-                        "context_compaction_prompt": "Instruction de compaction"
+                        "context_compaction_prompt": "Instruction de compaction",
+                        "embedding_history_retention_days": "Conservation de l’historique d’embeddings (jours)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
-                        "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément."
+                        "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
+                        "embedding_history_retention_days": "Nombre de jours de conservation du texte archivé et des embeddings avant expiration."
                     }
                 }
             }
@@ -148,13 +151,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
                         "context_compaction_recent_turns": "Tours récents à conserver",
-                        "context_compaction_prompt": "Instruction de compaction"
+                        "context_compaction_prompt": "Instruction de compaction",
+                        "embedding_history_retention_days": "Conservation de l’historique d’embeddings (jours)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
-                        "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément."
+                        "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
+                        "embedding_history_retention_days": "Nombre de jours de conservation du texte archivé et des embeddings avant expiration."
                     }
                 }
             }

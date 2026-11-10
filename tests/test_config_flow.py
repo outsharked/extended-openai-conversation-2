@@ -42,6 +42,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_HISTORY_RETENTION_DAYS,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_FUNCTION_TOOLS,
@@ -56,10 +57,12 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SERVICE_TYPE,
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
+    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     DEFAULT_CONF_BASE_URL,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS,
     DEFAULT_EMBEDDINGS_MODEL,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
@@ -2083,6 +2086,55 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
+async def test_agent_schema_only_offers_retrieval_with_embeddings(
+    hass, handler_type
+):
+    """Embedding retrieval is unavailable unless the parent endpoint has it."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    if handler_type is ExtendedOpenAISubentryFlowHandler:
+        handler._available_skills = []
+    entry = MagicMock()
+    entry.state = ConfigEntryState.LOADED
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_init()
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    strategy_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_TRUNCATE_STRATEGY
+    )
+    assert schema[strategy_key].config["options"] == ["clear", "compact"]
+
+    entry.data = {
+        CONF_EMBEDDINGS: {
+            CONF_API_KEY: "embedding-key",
+            CONF_EMBEDDINGS_MODEL: "embed-model",
+        }
+    }
+    await handler.async_step_init()
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    strategy_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_TRUNCATE_STRATEGY
+    )
+    assert schema[strategy_key].config["options"] == [
+        "clear",
+        "compact",
+        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    ]
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
 @pytest.mark.parametrize("strategy", ["clear", "compact"])
 async def test_agent_advanced_schema_compaction_options(hass, handler_type, strategy):
     """Both agent types expose compaction options only for compaction."""
@@ -2134,3 +2186,40 @@ async def test_agent_advanced_schema_compaction_options(hass, handler_type, stra
     )
     assert prompt_key.default() == DEFAULT_CONTEXT_COMPACTION_PROMPT
     assert schema[prompt_key].config["multiline"] is True
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
+    """Both agent types expose retention only for embedding retrieval."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    retention_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key)
+        == CONF_EMBEDDING_HISTORY_RETENTION_DAYS
+    )
+    assert retention_key.default() == DEFAULT_EMBEDDING_HISTORY_RETENTION_DAYS
+    assert schema[retention_key].config["min"] == 1
+    assert schema[retention_key].config["max"] == 3650
+    assert schema[retention_key].config["step"] == 1
+    assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
+    assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
+    assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)

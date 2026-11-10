@@ -60,7 +60,8 @@
         "context_truncate_strategy": {
             "options": {
                 "clear": "Alle berichten wissen",
-                "compact": "Berichten samenvatten en compact maken"
+                "compact": "Berichten samenvatten en compact maken",
+                "retrieve": "Ophaalgeheugen met embeddings"
             }
         }
     },
@@ -103,13 +104,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
-                        "context_compaction_prompt": "Compactieprompt"
+                        "context_compaction_prompt": "Compactieprompt",
+                        "embedding_history_retention_days": "Bewaartermijn embeddinggeschiedenis (dagen)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
-                        "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd."
+                        "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
+                        "embedding_history_retention_days": "Aantal dagen dat gearchiveerde gesprekstekst en embeddings worden bewaard voordat ze verlopen."
                     }
                 }
             }
@@ -148,13 +151,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
-                        "context_compaction_prompt": "Compactieprompt"
+                        "context_compaction_prompt": "Compactieprompt",
+                        "embedding_history_retention_days": "Bewaartermijn embeddinggeschiedenis (dagen)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
-                        "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd."
+                        "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
+                        "embedding_history_retention_days": "Aantal dagen dat gearchiveerde gesprekstekst en embeddings worden bewaard voordat ze verlopen."
                     }
                 }
             }

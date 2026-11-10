@@ -60,7 +60,8 @@
         "context_truncate_strategy": {
             "options": {
                 "clear": "Cancella tutti i messaggi",
-                "compact": "Riassumi e compatta i messaggi"
+                "compact": "Riassumi e compatta i messaggi",
+                "retrieve": "Memoria di recupero tramite embedding"
             }
         }
     },
@@ -103,13 +104,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Obiettivo del contesto compattato (% della soglia token)",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
-                        "context_compaction_prompt": "Prompt di compattazione"
+                        "context_compaction_prompt": "Prompt di compattazione",
+                        "embedding_history_retention_days": "Conservazione cronologia embedding (giorni)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Dopo il riepilogo, usa come obiettivo questa percentuale della soglia token del contesto configurata.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
-                        "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente."
+                        "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
+                        "embedding_history_retention_days": "Numero di giorni di conservazione del testo archiviato e degli embedding prima della scadenza."
                     }
                 }
             }
@@ -148,13 +151,15 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Obiettivo del contesto compattato (% della soglia token)",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
-                        "context_compaction_prompt": "Prompt di compattazione"
+                        "context_compaction_prompt": "Prompt di compattazione",
+                        "embedding_history_retention_days": "Conservazione cronologia embedding (giorni)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Dopo il riepilogo, usa come obiettivo questa percentuale della soglia token del contesto configurata.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
-                        "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente."
+                        "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
+                        "embedding_history_retention_days": "Numero di giorni di conservazione del testo archiviato e degli embedding prima della scadenza."
                     }
                 }
             }
