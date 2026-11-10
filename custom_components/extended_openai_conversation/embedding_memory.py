@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 import json
 import logging
+import math
 import os
 from pathlib import Path
 import re
@@ -93,6 +94,27 @@ class EmbeddingMemoryRecord:
         return datetime.fromisoformat(self.expires_at) <= now
 
 
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryMatch:
+    """An archived turn and its similarity to a recall query."""
+
+    record: EmbeddingMemoryRecord
+    score: float
+
+
+def _cosine_similarity(first: list[float], second: list[float]) -> float | None:
+    """Return cosine similarity, or None for incompatible zero vectors."""
+    if not first or len(first) != len(second):
+        return None
+    first_norm = math.sqrt(sum(value * value for value in first))
+    second_norm = math.sqrt(sum(value * value for value in second))
+    if first_norm == 0 or second_norm == 0:
+        return None
+    return sum(a * b for a, b in zip(first, second, strict=True)) / (
+        first_norm * second_norm
+    )
+
+
 class EmbeddingMemoryStore:
     """Persist embedding memories in endpoint-scoped JSON files."""
 
@@ -140,6 +162,84 @@ class EmbeddingMemoryStore:
             await self._hass.async_add_executor_job(
                 self._append, scope, records, datetime.now(UTC)
             )
+
+    async def async_search(
+        self,
+        scope: EmbeddingMemoryScope,
+        query_embedding: list[float],
+        limit: int,
+        model: str | None = None,
+    ) -> list[EmbeddingMemoryMatch]:
+        """Return the nearest unexpired memories within one conversation."""
+        if limit <= 0 or not query_embedding:
+            return []
+        async with self._lock:
+            return await self._hass.async_add_executor_job(
+                self._search,
+                scope,
+                query_embedding,
+                limit,
+                model,
+                datetime.now(UTC),
+            )
+
+    async def async_has_memories(
+        self, scope: EmbeddingMemoryScope, model: str | None = None
+    ) -> bool:
+        """Return whether a conversation has any unexpired archived turns."""
+        async with self._lock:
+            return await self._hass.async_add_executor_job(
+                self._has_memories, scope, model, datetime.now(UTC)
+            )
+
+    def _has_memories(
+        self, scope: EmbeddingMemoryScope, model: str | None, now: datetime
+    ) -> bool:
+        """Synchronously check for unexpired records."""
+        return any(
+            model is None or record.model == model
+            for record in self._active_records(self._path(scope), now)
+        )
+
+    def _search(
+        self,
+        scope: EmbeddingMemoryScope,
+        query_embedding: list[float],
+        limit: int,
+        model: str | None,
+        now: datetime,
+    ) -> list[EmbeddingMemoryMatch]:
+        """Synchronously score memories and remove expired records."""
+        records = self._active_records(self._path(scope), now)
+
+        matches = [
+            EmbeddingMemoryMatch(record, score)
+            for record in records
+            if model is None or record.model == model
+            if (score := _cosine_similarity(query_embedding, record.embedding))
+            is not None
+        ]
+        matches.sort(key=lambda match: match.score, reverse=True)
+        return matches[:limit]
+
+    def _active_records(self, path: Path, now: datetime) -> list[EmbeddingMemoryRecord]:
+        """Read active records and persist expiry cleanup for one scope."""
+        payload = self._read_payload(path)
+        if payload is None:
+            return []
+        raw_records = payload.get("records", [])
+        records = [
+            record
+            for record in self._records_from_payload(payload)
+            if not record.is_expired(now)
+        ]
+        if not records:
+            path.unlink(missing_ok=True)
+            return []
+        if not isinstance(raw_records, list) or len(records) != len(raw_records):
+            payload["records"] = [asdict(record) for record in records]
+            self._atomic_write(path, payload)
+        return records
 
     def _append(
         self,
