@@ -24,6 +24,7 @@ from .const import DOMAIN
 _STORAGE_VERSION = 1
 _RETENTION_PATTERN = re.compile(r"(?P<value>[1-9]\d*)(?P<unit>[mhd]?)")
 _UNIT_SECONDS = {"m": 60, "h": 60 * 60, "d": 24 * 60 * 60}
+_ESTIMATED_CHARACTERS_PER_TOKEN = 4
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +46,32 @@ def embedding_history_retention(value: Any) -> timedelta:
     return timedelta(seconds=int(normalized[:-1]) * _UNIT_SECONDS[unit])
 
 
+def chunk_embedding_text(text: str, max_estimated_tokens: int) -> list[str]:
+    """Split text into bounded embedding inputs without dropping content."""
+    if max_estimated_tokens <= 0:
+        raise ValueError("max_estimated_tokens must be positive")
+    if not text:
+        return [text]
+
+    max_characters = max_estimated_tokens * _ESTIMATED_CHARACTERS_PER_TOKEN
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > max_characters:
+        split_at = max(
+            remaining.rfind(separator, 0, max_characters)
+            for separator in ("\n", "\t", " ")
+        )
+        if split_at < max_characters // 2:
+            split_at = max_characters
+        else:
+            split_at += 1
+        chunks.append(remaining[:split_at])
+        remaining = remaining[split_at:]
+    if remaining or not chunks:
+        chunks.append(remaining)
+    return chunks
+
+
 @dataclass(frozen=True, slots=True)
 class EmbeddingMemoryScope:
     """Identify one agent conversation within an AI endpoint."""
@@ -52,6 +79,14 @@ class EmbeddingMemoryScope:
     entry_id: str
     agent_id: str
     conversation_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryChunk:
+    """An additional search vector for one archived conversation turn."""
+
+    embedding: list[float]
+    searchable_text: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +100,7 @@ class EmbeddingMemoryRecord:
     embedding: list[float]
     searchable_text: str
     messages: list[dict[str, Any]]
+    additional_chunks: tuple[EmbeddingMemoryChunk, ...] = ()
 
     @classmethod
     def create(
@@ -75,6 +111,7 @@ class EmbeddingMemoryRecord:
         searchable_text: str,
         messages: list[dict[str, Any]],
         retention: timedelta,
+        additional_chunks: Iterable[EmbeddingMemoryChunk] = (),
         now: datetime | None = None,
     ) -> EmbeddingMemoryRecord:
         """Create a record without collapsing repeated identical turns."""
@@ -87,6 +124,15 @@ class EmbeddingMemoryRecord:
             embedding=list(embedding),
             searchable_text=searchable_text,
             messages=messages,
+            additional_chunks=tuple(additional_chunks),
+        )
+
+    @property
+    def chunks(self) -> tuple[EmbeddingMemoryChunk, ...]:
+        """Return every searchable chunk associated with this turn."""
+        return (
+            EmbeddingMemoryChunk(self.embedding, self.searchable_text),
+            *self.additional_chunks,
         )
 
     def is_expired(self, now: datetime) -> bool:
@@ -212,13 +258,20 @@ class EmbeddingMemoryStore:
         """Synchronously score memories and remove expired records."""
         records = self._active_records(self._path(scope), now)
 
-        matches = [
-            EmbeddingMemoryMatch(record, score)
-            for record in records
-            if model is None or record.model == model
-            if (score := _cosine_similarity(query_embedding, record.embedding))
-            is not None
-        ]
+        matches: list[EmbeddingMemoryMatch] = []
+        for record in records:
+            if model is not None and record.model != model:
+                continue
+            scores = [
+                score
+                for chunk in record.chunks
+                if (
+                    score := _cosine_similarity(query_embedding, chunk.embedding)
+                )
+                is not None
+            ]
+            if scores:
+                matches.append(EmbeddingMemoryMatch(record, max(scores)))
         matches.sort(key=lambda match: match.score, reverse=True)
         return matches[:limit]
 
@@ -328,7 +381,23 @@ class EmbeddingMemoryStore:
             if not isinstance(record, dict):
                 continue
             try:
-                records.append(EmbeddingMemoryRecord(**record))
+                record_data = dict(record)
+                raw_chunks = record_data.pop("additional_chunks", [])
+                if not isinstance(raw_chunks, list | tuple):
+                    raise TypeError
+                additional_chunks = tuple(
+                    EmbeddingMemoryChunk(**chunk)
+                    for chunk in raw_chunks
+                    if isinstance(chunk, dict)
+                )
+                if len(additional_chunks) != len(raw_chunks):
+                    raise TypeError
+                records.append(
+                    EmbeddingMemoryRecord(
+                        **record_data,
+                        additional_chunks=additional_chunks,
+                    )
+                )
             except TypeError, ValueError:
                 _LOGGER.warning("Ignoring an invalid embedding memory record")
         return records

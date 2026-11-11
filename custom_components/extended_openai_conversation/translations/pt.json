@@ -15,9 +15,11 @@
                     "api_key": "Chave da API",
                     "base_url": "URL base",
                     "embedding_model": "Modelo de embeddings",
+                    "embedding_chunk_size": "Tamanho máximo do bloco de embedding (tokens estimados)",
                     "clear_embedding_history": "Limpar o histórico de embeddings ao guardar"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Número máximo estimado de tokens enviados numa entrada de embedding. Escolha um valor inferior ao limite de contexto do modelo, pois a contagem varia entre modelos.",
                     "clear_embedding_history": "Esta ação nunca é guardada como definição. Quando selecionada, todo o histórico de conversas baseado em embeddings deste endpoint será removido ao guardar."
                 }
             },

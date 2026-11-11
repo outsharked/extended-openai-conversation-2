@@ -15,9 +15,11 @@
                     "api_key": "API-Schlüssel",
                     "base_url": "Basis-URL",
                     "embedding_model": "Embedding-Modell",
+                    "embedding_chunk_size": "Maximale Embedding-Chunk-Größe (geschätzte Token)",
                     "clear_embedding_history": "Gespeicherten Embedding-Verlauf beim Speichern löschen"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Maximale geschätzte Tokenzahl pro Embedding-Eingabe. Wählen Sie einen Wert unterhalb des Kontextlimits des Embedding-Modells, da die Tokenzählung je nach Modell variiert.",
                     "clear_embedding_history": "Diese Aktion wird nicht als Einstellung gespeichert. Bei Auswahl wird beim Speichern der gesamte Embedding-basierte Gesprächsverlauf dieses Endpunkts entfernt."
                 }
             },

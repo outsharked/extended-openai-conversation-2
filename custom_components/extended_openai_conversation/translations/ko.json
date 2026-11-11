@@ -15,9 +15,11 @@
                     "api_key": "API 키",
                     "base_url": "기본 URL",
                     "embedding_model": "임베딩 모델",
+                    "embedding_chunk_size": "최대 임베딩 청크 크기(예상 토큰)",
                     "clear_embedding_history": "저장할 때 저장된 임베딩 기록 지우기"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "한 번의 임베딩 입력으로 전송할 예상 최대 토큰 수입니다. 모델마다 토큰 계산이 다르므로 임베딩 모델의 컨텍스트 한도보다 낮게 설정하세요.",
                     "clear_embedding_history": "이 작업은 설정으로 저장되지 않습니다. 선택하면 서비스를 저장할 때 이 엔드포인트의 모든 임베딩 기반 대화 기록이 제거됩니다."
                 }
             },
