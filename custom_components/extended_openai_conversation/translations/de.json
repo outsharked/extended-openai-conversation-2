@@ -161,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Aktiven Gesprächsschritt bei neuer Nachricht abbrechen",
                         "tool_error_reporting": "Fehlerdetails für Tools",
                         "context_compaction_target": "Zielgröße des kompaktierten Prompts",
                         "context_compaction_intra_turn": "Kontextkomprimierung innerhalb eines Durchgangs aktivieren",
@@ -182,6 +183,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Erlaubt einer neuen Nachricht in derselben Unterhaltung, den aktiven Gesprächsschritt abzubrechen und zu ersetzen. Bereits ausgeführte Aktionen und Werkzeugaufrufe können nicht rückgängig gemacht werden.",
                         "tool_error_reporting": "Wähle, wie viele Fehlerinformationen bei einem fehlgeschlagenen Tool-Aufruf an den Agenten zurückgegeben werden. Vollständige Details werden immer in Home Assistant protokolliert.",
                         "context_compaction_target": "Maximale Größe des aktiven Prompts in Tokens nach der Kompaktierung. Zusammenfassung und beibehaltener Kontext müssen in dieses Ziel passen.",
                         "context_compaction_intra_turn": "Erlaubt der ausgewählten Kontextstrategie, abgeschlossene Werkzeugaufrufe während eines aktiven Durchgangs zu reduzieren, wenn die Anfrage sonst den Kontextgrenzwert überschreiten würde.",

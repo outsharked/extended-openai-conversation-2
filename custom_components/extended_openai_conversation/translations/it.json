@@ -161,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Annulla il turno attivo con un nuovo messaggio",
                         "tool_error_reporting": "Segnalazione errori degli strumenti",
                         "context_compaction_target": "Obiettivo del prompt compattato",
                         "context_compaction_intra_turn": "Abilita la compattazione del contesto nello stesso turno",
@@ -182,6 +183,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Consente a un nuovo messaggio nella stessa conversazione di annullare e sostituire il turno attivo. Le azioni e le chiamate agli strumenti già completate non possono essere annullate.",
                         "tool_error_reporting": "Scegli quante informazioni sull’errore restituire all’agente quando una chiamata a uno strumento non riesce. I dettagli completi vengono sempre registrati in Home Assistant.",
                         "context_compaction_target": "Dimensione massima del prompt attivo in token dopo la compattazione. Il riepilogo e il contesto conservato devono rientrare in questo obiettivo.",
                         "context_compaction_intra_turn": "Consente alla strategia di contesto selezionata di ridurre gli scambi di chiamate agli strumenti completati durante un turno attivo quando la richiesta supererebbe altrimenti la soglia del contesto.",

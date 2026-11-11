@@ -161,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Anuluj aktywną turę po otrzymaniu nowej wiadomości",
                         "tool_error_reporting": "Raportowanie błędów narzędzi",
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego monitu",
                         "context_compaction_intra_turn": "Włącz kompaktowanie kontekstu w trakcie tury",
@@ -182,6 +183,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Pozwala nowej wiadomości w tej samej rozmowie anulować i zastąpić aktywną turę. Wykonanych już działań i wywołań narzędzi nie można cofnąć.",
                         "tool_error_reporting": "Wybierz ilość informacji o błędzie zwracanych agentowi po nieudanym wywołaniu narzędzia. Pełne szczegóły są zawsze zapisywane w dzienniku Home Assistant.",
                         "context_compaction_target": "Maksymalny rozmiar aktywnego monitu w tokenach po kompaktowaniu. Podsumowanie i zachowany kontekst muszą zmieścić się w tym limicie.",
                         "context_compaction_intra_turn": "Zezwala wybranej strategii kontekstu ograniczać zakończone wywołania narzędzi podczas aktywnej tury, gdy żądanie przekroczyłoby inaczej próg kontekstu.",

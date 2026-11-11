@@ -161,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Annuler le tour actif lors d’un nouveau message",
                         "tool_error_reporting": "Rapport des erreurs d’outils",
                         "context_compaction_target": "Cible de l'invite compactée",
                         "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
@@ -182,6 +183,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Permet à un nouveau message de la même conversation d’annuler et de remplacer le tour actif. Les actions et appels d’outils déjà terminés ne peuvent pas être annulés.",
                         "tool_error_reporting": "Choisissez la quantité d’informations d’erreur renvoyée à l’agent lorsqu’un appel d’outil échoue. Les détails complets sont toujours consignés dans Home Assistant.",
                         "context_compaction_target": "Taille maximale de l'invite active en jetons après compactage. Le résumé et le contexte conservé doivent tenir dans cette cible.",
                         "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",

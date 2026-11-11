@@ -161,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Aktív beszélgetési kör megszakítása új üzenetnél",
                         "tool_error_reporting": "Eszközhibák jelentése",
                         "context_compaction_target": "Tömörített prompt célértéke",
                         "context_compaction_intra_turn": "Körön belüli kontextustömörítés engedélyezése",
@@ -182,6 +183,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Engedélyezi, hogy ugyanabban a beszélgetésben egy új üzenet megszakítsa és lecserélje az aktív kört. A már végrehajtott műveletek és eszközhívások nem vonhatók vissza.",
                         "tool_error_reporting": "Válassza ki, mennyi hibainformációt kapjon az ügynök egy sikertelen eszközhíváskor. A teljes részletek mindig naplózásra kerülnek a Home Assistantban.",
                         "context_compaction_target": "Az aktív prompt maximális mérete tokenekben a tömörítés után. Az összegzésnek és a megtartott kontextusnak bele kell férnie ebbe a célértékbe.",
                         "context_compaction_intra_turn": "Engedélyezi, hogy a kiválasztott kontextusstratégia csökkentse a befejezett eszközhívásokat egy aktív körön belül, ha a kérés egyébként túllépné a kontextusküszöböt.",

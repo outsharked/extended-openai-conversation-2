@@ -38,6 +38,7 @@ from custom_components.extended_openai_conversation.config_flow import (
 from custom_components.extended_openai_conversation.const import (
     CONF_API_PROVIDER,
     CONF_BASE_URL,
+    CONF_CANCEL_ACTIVE_CONVERSATION,
     CONF_CHAT_MODEL,
     CONF_CLEAR_EMBEDDING_HISTORY,
     CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
@@ -81,6 +82,7 @@ from custom_components.extended_openai_conversation.const import (
     CONTEXT_PRESERVATION_METHOD_COMPACT,
     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
     CONTEXT_PRESERVATION_METHOD_KEYWORD,
+    DEFAULT_CANCEL_ACTIVE_CONVERSATION,
     DEFAULT_CONF_BASE_URL,
     DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
@@ -2553,6 +2555,50 @@ async def test_agent_advanced_schema_tool_error_reporting(hass, handler_type):
     assert reporting_key.default() == DEFAULT_TOOL_ERROR_REPORTING
     assert selector.config["options"] == list(TOOL_ERROR_REPORTING_OPTIONS)
     assert selector.config["translation_key"] == "tool_error_reporting"
+
+
+async def test_conversation_advanced_schema_cancel_active_conversation(hass):
+    """Conversation agents expose the active-turn cancellation toggle."""
+    handler = ExtendedOpenAISubentryFlowHandler()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {CONF_CHAT_MODEL: "gpt-4o-mini"}
+    entry = MagicMock()
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    cancellation_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CANCEL_ACTIVE_CONVERSATION
+    )
+    assert cancellation_key.default() == DEFAULT_CANCEL_ACTIVE_CONVERSATION
+
+
+async def test_ai_task_advanced_schema_omits_conversation_cancellation(hass):
+    """AI Task agents do not expose the conversation-only cancellation toggle."""
+    handler = ExtendedOpenAIAITaskSubentryFlowHandler()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {CONF_CHAT_MODEL: "gpt-4o-mini"}
+    entry = MagicMock()
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    assert not any(
+        getattr(key, "schema", key) == CONF_CANCEL_ACTIVE_CONVERSATION
+        for key in schema
+    )
 
 
 @pytest.mark.parametrize(

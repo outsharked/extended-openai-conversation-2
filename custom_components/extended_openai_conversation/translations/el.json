@@ -161,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Ακύρωση ενεργής σειράς με νέο μήνυμα",
                         "tool_error_reporting": "Αναφορά σφαλμάτων εργαλείων",
                         "context_compaction_target": "Στόχος συμπτυγμένης προτροπής",
                         "context_compaction_intra_turn": "Ενεργοποίηση συμπύκνωσης περιεχομένου εντός της ίδιας σειράς",
@@ -182,6 +183,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Επιτρέπει σε ένα νέο μήνυμα στην ίδια συνομιλία να ακυρώσει και να αντικαταστήσει την ενεργή σειρά. Ενέργειες και κλήσεις εργαλείων που έχουν ήδη ολοκληρωθεί δεν μπορούν να αναιρεθούν.",
                         "tool_error_reporting": "Επιλέξτε πόσες πληροφορίες σφάλματος επιστρέφονται στον πράκτορα όταν αποτυγχάνει μια κλήση εργαλείου. Οι πλήρεις λεπτομέρειες καταγράφονται πάντα στο Home Assistant.",
                         "context_compaction_target": "Μέγιστο μέγεθος της ενεργής προτροπής σε διακριτικά μετά τη σύμπτυξη. Η σύνοψη και το διατηρημένο περιεχόμενο πρέπει να χωρούν σε αυτόν τον στόχο.",
                         "context_compaction_intra_turn": "Επιτρέπει στην επιλεγμένη στρατηγική περιεχομένου να μειώνει ολοκληρωμένες ανταλλαγές κλήσεων εργαλείων κατά τη διάρκεια μιας ενεργής σειράς όταν διαφορετικά το αίτημα θα ξεπερνούσε το όριο περιεχομένου.",
