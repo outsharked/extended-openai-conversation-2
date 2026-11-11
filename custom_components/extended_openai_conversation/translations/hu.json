@@ -70,6 +70,14 @@
                 "retrieve": "Beágyazásalapú visszakeresési memória",
                 "retrieve_compact": "Beágyazásalapú visszakeresés gördülő összegzéssel"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Általános hibák jelentése az ügynöknek",
+                "simple": "Egyszerű hibák jelentése az ügynöknek",
+                "detailed": "Részletes hibák jelentése az ügynöknek",
+                "raw": "Nyers hibák jelentése az ügynöknek"
+            }
         }
     },
     "config_subentries": {
@@ -109,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Eszközhibák jelentése",
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
@@ -117,6 +126,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Válassza ki, mennyi hibainformációt kapjon az ügynök egy sikertelen eszközhíváskor. A teljes részletek mindig naplózásra kerülnek a Home Assistantban.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
@@ -158,6 +168,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Eszközhibák jelentése",
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
@@ -166,6 +177,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Válassza ki, mennyi hibainformációt kapjon az ügynök egy sikertelen eszközhíváskor. A teljes részletek mindig naplózásra kerülnek a Home Assistantban.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",

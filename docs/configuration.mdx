@@ -188,6 +188,28 @@ Configure Extended OpenAI Conversation through the Options menu in your Voice As
 Enable **Advanced Options** in the configuration to access these model-specific parameters. The available options depend on the selected model.
 
 <AccordionGroup>
+  <Accordion title="Tool Error Reporting">
+    **Type**: Select
+
+    **Default**: `simple`
+
+    **Options**: `generic`, `simple`, `detailed`, `raw`
+
+    Controls how much diagnostic information a failed tool call returns to the
+    agent. `generic` returns stable error codes and safe fixed messages,
+    `simple` also returns a concise exception reason and `detailed` includes
+    the exception type and available bounded structured diagnostics. `raw`
+    returns the complete formatted exception and traceback without parsing or
+    truncation.
+
+    Complete errors are always logged in Home Assistant. Raw errors can expose
+    file paths, arguments, implementation details and sensitive values. Only
+    enable `raw` for agents and models you trust. Unbounded binary data is
+    never included. A result-processing error explicitly states that the tool
+    may already have run, so the agent does not blindly repeat an action with
+    real-world side effects.
+  </Accordion>
+
   <Accordion title="Compacted Context Target">
     **Type**: Number (1-100%)
 

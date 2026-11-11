@@ -10,6 +10,8 @@ import json
 import logging
 from mimetypes import guess_file_type
 from pathlib import Path
+import re
+import traceback
 from typing import TYPE_CHECKING, Any, Literal
 
 from openai import AsyncClient, AsyncStream
@@ -60,6 +62,7 @@ from .const import (
     CONF_SERVICE_TIER,
     CONF_SHORTEN_TOOL_CALL_ID,
     CONF_TEMPERATURE,
+    CONF_TOOL_ERROR_REPORTING,
     CONF_TOP_P,
     CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
@@ -87,12 +90,16 @@ from .const import (
     DEFAULT_SERVICE_TIER,
     DEFAULT_SHORTEN_TOOL_CALL_ID,
     DEFAULT_TEMPERATURE,
+    DEFAULT_TOOL_ERROR_REPORTING,
     DEFAULT_TOP_P,
     DOMAIN,
     MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM,
     MCP_CONTEXT_PLACEMENT_DEDICATED_SYSTEM,
     MCP_CONTEXT_PLACEMENT_DISABLED,
     MCP_CONTEXT_PLACEMENT_USER,
+    TOOL_ERROR_REPORTING_DETAILED,
+    TOOL_ERROR_REPORTING_RAW,
+    TOOL_ERROR_REPORTING_SIMPLE,
 )
 from .embedding_memory import (
     EmbeddingMemoryChunk,
@@ -103,7 +110,7 @@ from .embedding_memory import (
     chunk_embedding_text,
     embedding_history_retention,
 )
-from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
+from .exceptions import FunctionNotFound, TokenLengthExceededError
 from .functions import get_function
 from .functions.context_recall import (
     build_bounded_recall_result,
@@ -130,6 +137,23 @@ _LOGGER = logging.getLogger(__name__)
 MAX_TOOL_ITERATIONS = 20
 
 _NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY = "tool_call_extra_content_by_id"
+_TOOL_ARGUMENT_PARSE_ERROR_KEY = "__eoaic_tool_argument_parse_error"
+_MAX_MODEL_ERROR_DETAIL_LENGTH = 1000
+
+_GENERIC_TOOL_ERROR_MESSAGES = {
+    "call_service_error": "The Home Assistant service call was invalid.",
+    "entity_access_denied": "Access to a requested entity was denied.",
+    "entity_not_exposed": "A requested entity is not exposed to this agent.",
+    "entity_not_found": "A requested entity was not found.",
+    "function_not_found": "The requested tool was not found.",
+    "invalid_arguments": "The tool arguments were invalid.",
+    "native_not_found": "The requested native function was not found.",
+    "service_not_found": "The requested Home Assistant service was not found.",
+    "tool_execution_failed": "The tool could not be executed because of an internal error.",
+    "tool_result_processing_failed": (
+        "The tool ran, but its result could not be processed."
+    ),
+}
 
 _SUPPORTED_IMAGE_MIME_TYPES = {
     "image/gif",
@@ -349,6 +373,107 @@ def _tool_result_data(content: conversation.ToolResultContent) -> Any:
     if result is not None:
         return result.data
     return content.tool_result
+
+
+def _bounded_model_error_detail(value: object) -> str:
+    """Return a bounded diagnostic suitable for a model-facing result."""
+    text = str(value)
+    if len(text) <= _MAX_MODEL_ERROR_DETAIL_LENGTH:
+        return text
+    return f"{text[:_MAX_MODEL_ERROR_DETAIL_LENGTH]}…"
+
+
+def _tool_error_identity(error: Exception) -> tuple[str, str]:
+    """Return a stable code and generic message for a tool exception."""
+    if isinstance(error, KeyError):
+        return "invalid_arguments", _GENERIC_TOOL_ERROR_MESSAGES["invalid_arguments"]
+    if isinstance(error, (TypeError, ValueError, vol.Invalid)):
+        return "invalid_arguments", _GENERIC_TOOL_ERROR_MESSAGES["invalid_arguments"]
+    code = re.sub(r"(?<!^)(?=[A-Z])", "_", type(error).__name__).lower()
+    return code, _GENERIC_TOOL_ERROR_MESSAGES.get(
+        code, "The tool could not be executed."
+    )
+
+
+def _tool_error_reason(error: Exception) -> str:
+    """Return a useful bounded reason for a tool exception."""
+    if isinstance(error, KeyError):
+        missing_value = error.args[0] if error.args else "unknown"
+        return _bounded_model_error_detail(
+            f"Required value {missing_value!r} was not provided"
+        )
+    return _bounded_model_error_detail(error)
+
+
+def _tool_error_payload(
+    error: Exception,
+    reporting: str,
+    *,
+    code: str | None = None,
+    message: str | None = None,
+    details: Mapping[str, Any] | None = None,
+    exception_name: str | None = None,
+    simple_reason: bool = True,
+) -> dict[str, Any]:
+    """Build a tool error using the configured model-facing verbosity."""
+    if reporting == TOOL_ERROR_REPORTING_RAW:
+        raw_traceback = details.get("traceback") if details is not None else None
+        if not isinstance(raw_traceback, str):
+            raw_traceback = "".join(traceback.format_exception(error))
+        return {"error": raw_traceback}
+
+    default_code, default_message = _tool_error_identity(error)
+    payload: dict[str, Any] = {
+        "code": code or default_code,
+        "message": message or default_message,
+    }
+    reason = _tool_error_reason(error)
+    if reporting == TOOL_ERROR_REPORTING_SIMPLE and simple_reason:
+        payload["reason"] = reason
+    elif reporting == TOOL_ERROR_REPORTING_DETAILED:
+        structured_details = {
+            key: value for key, value in (details or {}).items() if key != "traceback"
+        }
+        payload["details"] = {
+            "exception": exception_name or type(error).__name__,
+            "reason": reason,
+            **structured_details,
+        }
+    return {"error": payload}
+
+
+def _tool_error_content(
+    agent_id: str,
+    tool_input: llm.ToolInput,
+    error: Exception,
+    reporting: str,
+    *,
+    code: str | None = None,
+    message: str | None = None,
+    details: Mapping[str, Any] | None = None,
+    exception_name: str | None = None,
+    simple_reason: bool = True,
+    log_traceback: bool = False,
+) -> conversation.ToolResultContent:
+    """Log and return a tool execution error to the model."""
+    if log_traceback:
+        _LOGGER.exception("Tool %s failed: %s", tool_input.tool_name, error)
+    else:
+        _LOGGER.error("Tool %s failed: %s", tool_input.tool_name, error)
+    return _make_tool_result_content(
+        agent_id=agent_id,
+        tool_call_id=tool_input.id,
+        tool_name=tool_input.tool_name,
+        data=_tool_error_payload(
+            error,
+            reporting,
+            code=code,
+            message=message,
+            details=details,
+            exception_name=exception_name,
+            simple_reason=simple_reason,
+        ),
+    )
 
 
 def _extract_mcp_media_content(
@@ -1234,6 +1359,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
             # Execute custom functions
             for tool_input in pending_tool_calls:
+                error_reporting = self.subentry.data.get(
+                    CONF_TOOL_ERROR_REPORTING, DEFAULT_TOOL_ERROR_REPORTING
+                )
                 function_tool = next(
                     (
                         f
@@ -1244,7 +1372,14 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 )
 
                 if function_tool is None:
-                    raise FunctionNotFound(tool_input.tool_name)
+                    tool_result_content = _tool_error_content(
+                        self.entity_id,
+                        tool_input,
+                        FunctionNotFound(tool_input.tool_name),
+                        error_reporting,
+                    )
+                    chat_log.async_add_assistant_content_without_tools(tool_result_content)
+                    continue
 
                 tool_result_content, media_parts = await self._execute_function_tool(
                     function_tool,
@@ -1365,7 +1500,29 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     try:
                         args = json.loads(tool_call["arguments"])
                     except json.JSONDecodeError as err:
-                        raise ParseArgumentsFailed(tool_call["arguments"]) from err
+                        args = {
+                            _TOOL_ARGUMENT_PARSE_ERROR_KEY: {
+                                "exception": type(err).__name__,
+                                "reason": err.msg,
+                                "line": err.lineno,
+                                "column": err.colno,
+                                "position": err.pos,
+                                "arguments_preview": _bounded_model_error_detail(
+                                    tool_call["arguments"]
+                                ),
+                                "traceback": "".join(
+                                    traceback.format_exception(err)
+                                ),
+                            }
+                        }
+                    if not isinstance(args, dict):
+                        args = {
+                            _TOOL_ARGUMENT_PARSE_ERROR_KEY: {
+                                "exception": "TypeError",
+                                "reason": "Tool arguments must be a JSON object",
+                                "parsed_type": type(args).__name__,
+                            }
+                        }
 
                     extra_content = tool_call.get("extra_content")
                     if tool_call["id"] and extra_content is not None:
@@ -1413,61 +1570,129 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     ]:
         """Execute a custom function."""
         arguments: dict[str, Any] = tool_input.tool_args
+        error_reporting = self.subentry.data.get(
+            CONF_TOOL_ERROR_REPORTING, DEFAULT_TOOL_ERROR_REPORTING
+        )
+        parse_error = arguments.pop(_TOOL_ARGUMENT_PARSE_ERROR_KEY, None)
+        if isinstance(parse_error, Mapping):
+            reason = str(parse_error.get("reason", "Invalid JSON arguments"))
+            return (
+                _tool_error_content(
+                    self.entity_id,
+                    tool_input,
+                    ValueError(reason),
+                    error_reporting,
+                    code="invalid_arguments",
+                    message=_GENERIC_TOOL_ERROR_MESSAGES["invalid_arguments"],
+                    details={
+                        key: value
+                        for key, value in parse_error.items()
+                        if key not in {"exception", "reason"}
+                    },
+                    exception_name=str(parse_error.get("exception", "ValueError")),
+                ),
+                [],
+            )
         function_config = function_tool["function"]
         if function_config["type"] == "context_recall":
             function_config = {
                 **function_config,
                 "conversation_id": chat_log.conversation_id,
             }
-        function = get_function(function_config["type"])
+        media_parts: list[
+            ChatCompletionContentPartImageParam
+            | ChatCompletionContentPartInputAudioParam
+        ] = []
 
-        if (
-            function_config["type"] != "context_recall"
-            and self.should_run_in_background(arguments)
-        ):
-            # create a delayed function and execute in background
-            function_config = self.get_delayed_function_config(
-                function_config, arguments
-            )
+        try:
             function = get_function(function_config["type"])
-            self.entry.async_create_task(
-                self.hass,
-                function.execute(
+
+            if (
+                function_config["type"] != "context_recall"
+                and self.should_run_in_background(arguments)
+            ):
+                # create a delayed function and execute in background
+                function_config = self.get_delayed_function_config(
+                    function_config, arguments
+                )
+                function = get_function(function_config["type"])
+                self.entry.async_create_task(
+                    self.hass,
+                    function.execute(
+                        self.hass,
+                        function_config,
+                        arguments,
+                        llm_context,
+                        exposed_entities,
+                    ),
+                )
+                result = "Scheduled"
+            else:
+                result = await function.execute(
                     self.hass,
                     function_config,
                     arguments,
                     llm_context,
                     exposed_entities,
+                )
+        except (HomeAssistantError, KeyError, TypeError, ValueError, vol.Invalid) as err:
+            return (
+                _tool_error_content(
+                    self.entity_id, tool_input, err, error_reporting
                 ),
+                media_parts,
             )
-            result = "Scheduled"
-        else:
-            result = await function.execute(
-                self.hass, function_config, arguments, llm_context, exposed_entities
+        except Exception as err:  # pylint: disable=broad-except
+            return (
+                _tool_error_content(
+                    self.entity_id,
+                    tool_input,
+                    err,
+                    error_reporting,
+                    code="tool_execution_failed",
+                    message=_GENERIC_TOOL_ERROR_MESSAGES["tool_execution_failed"],
+                    simple_reason=False,
+                    log_traceback=True,
+                ),
+                media_parts,
             )
 
-        media_parts: list[
-            ChatCompletionContentPartImageParam
-            | ChatCompletionContentPartInputAudioParam
-        ] = []
-        if function_config["type"] == "mcp":
-            result, media_parts = _extract_mcp_media_content(result)
+        try:
+            if function_config["type"] == "mcp":
+                result, media_parts = _extract_mcp_media_content(result)
 
-        return (
-            _make_tool_result_content(
-                agent_id=self.entity_id,
-                tool_call_id=tool_input.id,
-                tool_name=tool_input.tool_name,
-                data={
-                    "result": (
-                        result
-                        if function_config["type"] == "context_recall"
-                        else str(result)
-                    )
-                },
-            ),
-            media_parts,
-        )
+            result_data = {
+                "result": (
+                    result
+                    if function_config["type"] == "context_recall"
+                    else str(result)
+                )
+            }
+            orjson.dumps(result_data)
+            return (
+                _make_tool_result_content(
+                    agent_id=self.entity_id,
+                    tool_call_id=tool_input.id,
+                    tool_name=tool_input.tool_name,
+                    data=result_data,
+                ),
+                media_parts,
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            return (
+                _tool_error_content(
+                    self.entity_id,
+                    tool_input,
+                    err,
+                    error_reporting,
+                    code="tool_result_processing_failed",
+                    message=_GENERIC_TOOL_ERROR_MESSAGES[
+                        "tool_result_processing_failed"
+                    ],
+                    log_traceback=True,
+                ),
+                [],
+            )
 
     def should_run_in_background(self, arguments: dict[str, Any]) -> bool:
         """Check if function needs delay."""

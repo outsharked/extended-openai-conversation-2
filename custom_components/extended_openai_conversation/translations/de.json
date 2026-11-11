@@ -70,6 +70,14 @@
                 "retrieve": "Embedding-Abrufspeicher",
                 "retrieve_compact": "Embedding-Abruf mit fortlaufender Zusammenfassung"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Allgemeine Fehler an den Agenten melden",
+                "simple": "Einfache Fehler an den Agenten melden",
+                "detailed": "Detaillierte Fehler an den Agenten melden",
+                "raw": "Rohe Fehler an den Agenten melden"
+            }
         }
     },
     "config_subentries": {
@@ -109,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Fehlerdetails für Tools",
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
@@ -117,6 +126,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Wähle, wie viele Fehlerinformationen bei einem fehlgeschlagenen Tool-Aufruf an den Agenten zurückgegeben werden. Vollständige Details werden immer in Home Assistant protokolliert.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
@@ -158,6 +168,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Fehlerdetails für Tools",
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
@@ -166,6 +177,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Wähle, wie viele Fehlerinformationen bei einem fehlgeschlagenen Tool-Aufruf an den Agenten zurückgegeben werden. Vollständige Details werden immer in Home Assistant protokolliert.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",

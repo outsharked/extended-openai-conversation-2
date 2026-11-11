@@ -70,6 +70,14 @@
                 "retrieve": "Μνήμη ανάκτησης embeddings",
                 "retrieve_compact": "Ανάκτηση embeddings με κυλιόμενη σύνοψη"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Αναφορά γενικών σφαλμάτων στον πράκτορα",
+                "simple": "Αναφορά απλών σφαλμάτων στον πράκτορα",
+                "detailed": "Αναφορά λεπτομερών σφαλμάτων στον πράκτορα",
+                "raw": "Αναφορά ανεπεξέργαστων σφαλμάτων στον πράκτορα"
+            }
         }
     },
     "config_subentries": {
@@ -109,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Αναφορά σφαλμάτων εργαλείων",
                         "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
@@ -117,6 +126,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Επιλέξτε πόσες πληροφορίες σφάλματος επιστρέφονται στον πράκτορα όταν αποτυγχάνει μια κλήση εργαλείου. Οι πλήρεις λεπτομέρειες καταγράφονται πάντα στο Home Assistant.",
                         "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
@@ -158,6 +168,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Αναφορά σφαλμάτων εργαλείων",
                         "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
@@ -166,6 +177,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Επιλέξτε πόσες πληροφορίες σφάλματος επιστρέφονται στον πράκτορα όταν αποτυγχάνει μια κλήση εργαλείου. Οι πλήρεις λεπτομέρειες καταγράφονται πάντα στο Home Assistant.",
                         "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",

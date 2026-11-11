@@ -70,6 +70,14 @@
                 "retrieve": "Mémoire de récupération par embeddings",
                 "retrieve_compact": "Récupération par embeddings avec résumé évolutif"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Signaler des erreurs génériques à l’agent",
+                "simple": "Signaler des erreurs simples à l’agent",
+                "detailed": "Signaler des erreurs détaillées à l’agent",
+                "raw": "Signaler des erreurs brutes à l’agent"
+            }
         }
     },
     "config_subentries": {
@@ -109,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Rapport des erreurs d’outils",
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
@@ -117,6 +126,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Choisissez la quantité d’informations d’erreur renvoyée à l’agent lorsqu’un appel d’outil échoue. Les détails complets sont toujours consignés dans Home Assistant.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
@@ -158,6 +168,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Rapport des erreurs d’outils",
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
@@ -166,6 +177,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Choisissez la quantité d’informations d’erreur renvoyée à l’agent lorsqu’un appel d’outil échoue. Les détails complets sont toujours consignés dans Home Assistant.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",

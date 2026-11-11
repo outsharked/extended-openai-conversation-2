@@ -22,8 +22,12 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_MAX_TOKENS,
+    CONF_TOOL_ERROR_REPORTING,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
+    TOOL_ERROR_REPORTING_DETAILED,
+    TOOL_ERROR_REPORTING_GENERIC,
+    TOOL_ERROR_REPORTING_RAW,
 )
 from custom_components.extended_openai_conversation.embedding_memory import (
     EmbeddingMemoryMatch,
@@ -43,9 +47,11 @@ from custom_components.extended_openai_conversation.entity import (
     _place_mcp_context,
     _render_extra_body,
     _RequestTokenUsage,
+    _tool_error_payload,
     _tool_result_data,
     encode_attachments,
 )
+from custom_components.extended_openai_conversation.exceptions import EntityAccessDenied
 from custom_components.extended_openai_conversation.mcp_client import (
     MCPServerConfig,
     MCPServiceConfig,
@@ -1140,6 +1146,300 @@ async def test_context_recall_execution_injects_current_conversation_id():
     assert _tool_result_data(tool_result) == {
         "result": {"memories": [], "matches_returned": 0}
     }
+
+
+async def test_expected_function_error_is_returned_to_model(caplog):
+    """A model-correctable function failure becomes a logged tool result."""
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    function = MagicMock()
+    function.execute = AsyncMock(
+        side_effect=EntityAccessDenied(["lock.front_door"])
+    )
+    function_tool = {
+        "spec": {"name": "execute_services"},
+        "function": {"type": "native", "name": "execute_service"},
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="execute_services",
+        tool_args={"list": []},
+    )
+    chat_log = MagicMock(conversation_id="conversation-1")
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, media_parts = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            chat_log,
+            None,
+            [],
+        )
+
+    assert media_parts == []
+    assert _tool_result_data(tool_result) == {
+        "error": {
+            "code": "entity_access_denied",
+            "message": "Access to a requested entity was denied.",
+            "reason": "access to entity lock.front_door is denied",
+        }
+    }
+    assert "Tool execute_services failed" in caplog.text
+
+
+async def test_missing_function_argument_is_returned_to_model(caplog):
+    """A missing argument becomes an actionable invalid-arguments result."""
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    function = MagicMock()
+    function.execute = AsyncMock(side_effect=KeyError("domain"))
+    function_tool = {
+        "spec": {"name": "execute_services"},
+        "function": {"type": "native", "name": "execute_service"},
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="execute_services",
+        tool_args={"list": [{}]},
+    )
+    chat_log = MagicMock(conversation_id="conversation-1")
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, _ = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            chat_log,
+            None,
+            [],
+        )
+
+    assert _tool_result_data(tool_result) == {
+        "error": {
+            "code": "invalid_arguments",
+            "message": "The tool arguments were invalid.",
+            "reason": "Required value 'domain' was not provided",
+        }
+    }
+    assert "Tool execute_services failed" in caplog.text
+
+
+async def test_unexpected_function_error_is_hidden_from_model(caplog):
+    """An internal failure is logged but its details are not exposed."""
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    function = MagicMock()
+    function.execute = AsyncMock(side_effect=RuntimeError("sensitive detail"))
+    function_tool = {
+        "spec": {"name": "execute_services"},
+        "function": {"type": "native", "name": "execute_service"},
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="execute_services",
+        tool_args={"list": []},
+    )
+    chat_log = MagicMock(conversation_id="conversation-1")
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, _ = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            chat_log,
+            None,
+            [],
+        )
+
+    assert _tool_result_data(tool_result) == {
+        "error": {
+            "code": "tool_execution_failed",
+            "message": "The tool could not be executed because of an internal error.",
+        }
+    }
+    assert "sensitive detail" not in str(_tool_result_data(tool_result))
+    assert "Tool execute_services failed: sensitive detail" in caplog.text
+
+
+async def test_generic_function_error_omits_exception_reason():
+    """Generic reporting returns only stable model-facing information."""
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    entity.subentry.data[CONF_TOOL_ERROR_REPORTING] = TOOL_ERROR_REPORTING_GENERIC
+    function = MagicMock()
+    function.execute = AsyncMock(
+        side_effect=EntityAccessDenied(["lock.front_door"])
+    )
+    function_tool = {
+        "spec": {"name": "execute_services"},
+        "function": {"type": "native", "name": "execute_service"},
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="execute_services",
+        tool_args={"list": []},
+    )
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, _ = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            MagicMock(conversation_id="conversation-1"),
+            None,
+            [],
+        )
+
+    assert _tool_result_data(tool_result) == {
+        "error": {
+            "code": "entity_access_denied",
+            "message": "Access to a requested entity was denied.",
+        }
+    }
+
+
+async def test_malformed_tool_json_is_returned_with_detailed_diagnostics(caplog):
+    """Malformed streamed arguments become a repairable tool result."""
+    deltas = await _collect_stream_deltas(
+        [
+            _stream_chunk(
+                tool_calls=[
+                    _tool_call_delta(
+                        0,
+                        tool_call_id="call_1",
+                        name="execute_services",
+                        arguments='{"list":[',
+                    )
+                ],
+                finish_reason="tool_calls",
+            )
+        ]
+    )
+    tool_input = next(delta["tool_calls"][0] for delta in deltas if "tool_calls" in delta)
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    entity.subentry.data[CONF_TOOL_ERROR_REPORTING] = TOOL_ERROR_REPORTING_DETAILED
+    function = MagicMock()
+    function_tool = {
+        "spec": {"name": "execute_services"},
+        "function": {"type": "native", "name": "execute_service"},
+    }
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, _ = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            MagicMock(conversation_id="conversation-1"),
+            None,
+            [],
+        )
+
+    error = _tool_result_data(tool_result)["error"]
+    assert error["code"] == "invalid_arguments"
+    assert error["message"] == "The tool arguments were invalid."
+    assert error["details"]["exception"] == "JSONDecodeError"
+    assert error["details"]["reason"] == "Expecting value"
+    assert error["details"]["line"] == 1
+    assert error["details"]["column"] == 10
+    assert error["details"]["arguments_preview"] == '{"list":['
+    assert "traceback" not in error["details"]
+    assert tool_input.tool_args == {}
+    function.execute.assert_not_called()
+    assert "Tool execute_services failed" in caplog.text
+
+
+async def test_result_processing_failure_reports_detailed_exception(caplog):
+    """A returned result processing failure says execution may have occurred."""
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    entity.subentry.data[CONF_TOOL_ERROR_REPORTING] = TOOL_ERROR_REPORTING_DETAILED
+    function = MagicMock()
+    function.execute = AsyncMock(return_value={"content": []})
+    function_tool = {
+        "spec": {"name": "mcp"},
+        "function": {"type": "mcp", "server_ids": ["server-1"]},
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="mcp",
+        tool_args={"action": "execute_tool"},
+    )
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.entity.get_function",
+            return_value=function,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity._extract_mcp_media_content",
+            side_effect=ValueError("invalid base64 image data"),
+        ),
+    ):
+        tool_result, media_parts = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            MagicMock(conversation_id="conversation-1"),
+            None,
+            [],
+        )
+
+    assert media_parts == []
+    error = _tool_result_data(tool_result)["error"]
+    assert error["code"] == "tool_result_processing_failed"
+    assert error["message"] == (
+        "The tool ran, but its result could not be processed."
+    )
+    assert error["details"]["exception"] == "ValueError"
+    assert error["details"]["reason"] == "invalid base64 image data"
+    assert "traceback" not in error["details"]
+    assert "Tool mcp failed" in caplog.text
+
+
+def test_raw_tool_error_returns_unparsed_untruncated_traceback():
+    """Raw reporting returns the complete exception output unchanged."""
+    message = "sensitive failure " + "x" * 1200
+
+    try:
+        raise ValueError(message)
+    except ValueError as err:
+        payload = _tool_error_payload(err, TOOL_ERROR_REPORTING_RAW)
+
+    raw_error = payload["error"]
+    assert isinstance(raw_error, str)
+    assert "Traceback (most recent call last):" in raw_error
+    assert "test_raw_tool_error_returns_unparsed_untruncated_traceback" in raw_error
+    assert f"ValueError: {message}" in raw_error
+
+
+def test_raw_tool_error_preserves_original_parse_traceback():
+    """Raw reporting uses a traceback captured at the original failure site."""
+    original_traceback = "Traceback (most recent call last):\noriginal parser error"
+
+    payload = _tool_error_payload(
+        ValueError("wrapped error"),
+        TOOL_ERROR_REPORTING_RAW,
+        details={"traceback": original_traceback},
+    )
+
+    assert payload == {"error": original_traceback}
 
 
 async def test_compaction_summarizes_old_history_and_keeps_latest_turn():

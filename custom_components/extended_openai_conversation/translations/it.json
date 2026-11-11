@@ -70,6 +70,14 @@
                 "retrieve": "Memoria di recupero tramite embedding",
                 "retrieve_compact": "Recupero tramite embedding con riepilogo progressivo"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Segnala errori generici all’agente",
+                "simple": "Segnala errori semplici all’agente",
+                "detailed": "Segnala errori dettagliati all’agente",
+                "raw": "Segnala errori non elaborati all’agente"
+            }
         }
     },
     "config_subentries": {
@@ -109,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Segnalazione errori degli strumenti",
                         "context_compaction_target": "Obiettivo del contesto compattato (% della soglia token)",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
@@ -117,6 +126,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Scegli quante informazioni sull’errore restituire all’agente quando una chiamata a uno strumento non riesce. I dettagli completi vengono sempre registrati in Home Assistant.",
                         "context_compaction_target": "Dopo il riepilogo, usa come obiettivo questa percentuale della soglia token del contesto configurata.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
@@ -158,6 +168,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Segnalazione errori degli strumenti",
                         "context_compaction_target": "Obiettivo del contesto compattato (% della soglia token)",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
@@ -166,6 +177,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Scegli quante informazioni sull’errore restituire all’agente quando una chiamata a uno strumento non riesce. I dettagli completi vengono sempre registrati in Home Assistant.",
                         "context_compaction_target": "Dopo il riepilogo, usa come obiettivo questa percentuale della soglia token del contesto configurata.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",

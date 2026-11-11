@@ -226,6 +226,14 @@
         "retrieve": "Embedding retrieval memory",
         "retrieve_compact": "Embedding retrieval with rolling summary"
       }
+    },
+    "tool_error_reporting": {
+      "options": {
+        "generic": "Report generic errors to agent",
+        "simple": "Report simple errors to agent",
+        "detailed": "Report detailed errors to agent",
+        "raw": "Report raw errors to agent"
+      }
     }
   },
   "config_subentries": {
@@ -267,6 +275,7 @@
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
             "shorten_tool_call_id": "Shorten tool call IDs",
+            "tool_error_reporting": "Tool error reporting",
             "context_compaction_target": "Compacted context target (% of token threshold)",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
@@ -275,6 +284,7 @@
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+            "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
             "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",
@@ -317,6 +327,7 @@
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
             "shorten_tool_call_id": "Shorten tool call IDs",
+            "tool_error_reporting": "Tool error reporting",
             "context_compaction_target": "Compacted context target (% of token threshold)",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
@@ -325,6 +336,7 @@
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+            "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
             "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",

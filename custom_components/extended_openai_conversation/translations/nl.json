@@ -70,6 +70,14 @@
                 "retrieve": "Ophaalgeheugen met embeddings",
                 "retrieve_compact": "Ophalen met embeddings en doorlopende samenvatting"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Algemene fouten aan de agent melden",
+                "simple": "Eenvoudige fouten aan de agent melden",
+                "detailed": "Gedetailleerde fouten aan de agent melden",
+                "raw": "Ruwe fouten aan de agent melden"
+            }
         }
     },
     "config_subentries": {
@@ -109,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Rapportage van toolfouten",
                         "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
@@ -117,6 +126,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Kies hoeveel foutinformatie aan de agent wordt teruggestuurd wanneer een toolaanroep mislukt. Volledige details worden altijd in Home Assistant vastgelegd.",
                         "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
@@ -158,6 +168,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Rapportage van toolfouten",
                         "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
@@ -166,6 +177,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Kies hoeveel foutinformatie aan de agent wordt teruggestuurd wanneer een toolaanroep mislukt. Volledige details worden altijd in Home Assistant vastgelegd.",
                         "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
