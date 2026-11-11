@@ -1191,6 +1191,50 @@ async def test_expected_function_error_is_returned_to_model(caplog):
     assert "Tool execute_services failed" in caplog.text
 
 
+async def test_delayed_function_error_is_returned_before_scheduling(caplog):
+    """A delayed function is preflight checked before reporting success."""
+    entity = _entity_for_compaction()
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    function = MagicMock()
+    function.validate_execution.side_effect = EntityAccessDenied(
+        ["lock.front_door"]
+    )
+    function_tool = {
+        "spec": {"name": "execute_services"},
+        "function": {"type": "native", "name": "execute_service"},
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="execute_services",
+        tool_args={"delay": {"seconds": 30}, "list": []},
+    )
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, media_parts = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            MagicMock(conversation_id="conversation-1"),
+            None,
+            [],
+        )
+
+    assert media_parts == []
+    assert _tool_result_data(tool_result) == {
+        "error": {
+            "code": "entity_access_denied",
+            "message": "Access to a requested entity was denied.",
+            "reason": "access to entity lock.front_door is denied",
+        }
+    }
+    entity.entry.async_create_task.assert_not_called()
+    function.execute.assert_not_called()
+    assert "Tool execute_services failed" in caplog.text
+
+
 async def test_missing_function_argument_is_returned_to_model(caplog):
     """A missing argument becomes an actionable invalid-arguments result."""
     entity = _entity_for_compaction()

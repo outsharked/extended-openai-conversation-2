@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import binascii
 from collections.abc import AsyncGenerator, Mapping
@@ -883,6 +884,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         # Request parameters the API has rejected, per model, so later
         # requests skip them instead of failing first
         self._unsupported_params: dict[str, set[str]] = {}
+        self._active_conversation_tasks: dict[str, asyncio.Task[Any]] = {}
 
     @property
     def _client(self) -> AsyncClient:
@@ -1611,6 +1613,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 function_config["type"] != "context_recall"
                 and self.should_run_in_background(arguments)
             ):
+                function.validate_execution(
+                    self.hass,
+                    function_config,
+                    arguments,
+                    exposed_entities,
+                )
                 # create a delayed function and execute in background
                 function_config = self.get_delayed_function_config(
                     function_config, arguments

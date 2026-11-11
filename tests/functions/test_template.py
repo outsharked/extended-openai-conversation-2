@@ -5,7 +5,6 @@ import pytest
 from custom_components.extended_openai_conversation.exceptions import EntityAccessDenied
 from custom_components.extended_openai_conversation.functions import TemplateFunction
 from homeassistant.core import State
-from homeassistant.exceptions import HomeAssistantError
 from tests.helpers import prepare_function_tool_from_yaml
 
 
@@ -170,7 +169,7 @@ class TestTemplateFunctionYaml:
         )
 
         with pytest.raises(
-            HomeAssistantError,
+            ValueError,
             match="entity_id must be a string or a list of strings",
         ):
             await function.execute(

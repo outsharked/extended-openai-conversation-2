@@ -1,6 +1,8 @@
 """Tests for the conversation platform's setup."""
 
-from unittest.mock import MagicMock
+import asyncio
+from contextlib import contextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -92,6 +94,70 @@ def test_agent_entity_supports_all_languages():
     )
 
     assert entity.supported_languages == MATCH_ALL
+
+
+async def test_new_turn_cancels_active_turn_for_same_conversation():
+    """The newest message replaces a stuck turn in the same conversation."""
+    entity = ExtendedOpenAIAgentEntity(
+        MagicMock(), _mock_subentry("conversation", "sub_1")
+    )
+    entity.hass = MagicMock()
+    chat_log = MagicMock()
+    chat_log.content = [MagicMock(role="system")]
+    first_started = asyncio.Event()
+    first_cancelled = asyncio.Event()
+    second_result = MagicMock()
+
+    @contextmanager
+    def fake_session(_hass, conversation_id):
+        yield MagicMock(conversation_id=conversation_id)
+
+    @contextmanager
+    def fake_chat_log(_hass, _session, user_input):
+        chat_log.content.append(MagicMock(role="user", content=user_input.text))
+        yield chat_log
+
+    async def handle_message(user_input, _chat_log):
+        if user_input.text == "first":
+            first_started.set()
+            try:
+                await asyncio.Future()
+            except asyncio.CancelledError:
+                first_cancelled.set()
+                raise
+        return second_result
+
+    first_input = MagicMock(conversation_id="conversation-1", text="first")
+    second_input = MagicMock(conversation_id="conversation-1", text="second")
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.conversation."
+            "async_get_chat_session",
+            side_effect=fake_session,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.conversation."
+            "async_get_chat_log",
+            side_effect=fake_chat_log,
+        ),
+        patch.object(
+            entity,
+            "_async_handle_message",
+            new=AsyncMock(side_effect=handle_message),
+        ),
+    ):
+        first_task = asyncio.create_task(entity.async_process(first_input))
+        await first_started.wait()
+        result = await entity.async_process(second_input)
+
+    with pytest.raises(asyncio.CancelledError):
+        await first_task
+
+    assert result is second_result
+    assert first_cancelled.is_set()
+    assert [content.content for content in chat_log.content[1:]] == ["second"]
+    assert entity._active_conversation_tasks == {}
 
 
 def test_get_function_tools_returns_default_when_unconfigured():

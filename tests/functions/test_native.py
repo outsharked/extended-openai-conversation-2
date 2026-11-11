@@ -263,6 +263,36 @@ class TestNativeFunctionYaml:
 
         hass.services.async_call.assert_not_called()
 
+    def test_delayed_service_preflight_applies_entity_filter(
+        self, hass, function, exposed_entities
+    ):
+        """A denied delayed call is rejected before it is scheduled."""
+        function_config = {
+            "type": "native",
+            "name": "execute_service",
+            "entity_filter": {
+                "mode": "exclude",
+                "entities": ["light.living_room"],
+            },
+        }
+        arguments = {
+            "delay": {"seconds": 30},
+            "list": [
+                {
+                    "domain": "light",
+                    "service": "turn_on",
+                    "service_data": {"entity_id": ["light.living_room"]},
+                }
+            ],
+        }
+
+        with pytest.raises(EntityAccessDenied):
+            function.validate_execution(
+                hass, function_config, arguments, exposed_entities
+            )
+
+        hass.services.async_call.assert_not_called()
+
     async def test_execute_service_filter_resolves_area_targets(
         self, hass, function, exposed_entities, llm_context
     ):

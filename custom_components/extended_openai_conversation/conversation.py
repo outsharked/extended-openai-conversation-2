@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 import logging
 from pathlib import Path
@@ -106,11 +107,45 @@ class ExtendedOpenAIAgentEntity(
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         """Process a sentence."""
+        conversation_id = user_input.conversation_id
+        current_task = asyncio.current_task()
+        if conversation_id is None or current_task is None:
+            return await self._async_process_turn(user_input)
+
+        previous_task = self._active_conversation_tasks.get(conversation_id)
+        self._active_conversation_tasks[conversation_id] = current_task
+        try:
+            if (
+                previous_task is not None
+                and previous_task is not current_task
+                and not previous_task.done()
+            ):
+                previous_task.cancel()
+                await asyncio.gather(previous_task, return_exceptions=True)
+            return await self._async_process_turn(user_input)
+        finally:
+            if self._active_conversation_tasks.get(conversation_id) is current_task:
+                self._active_conversation_tasks.pop(conversation_id, None)
+
+    async def _async_process_turn(
+        self, user_input: ConversationInput
+    ) -> ConversationResult:
+        """Process one turn and discard it cleanly when superseded."""
+        cancelled_error: asyncio.CancelledError | None = None
         with (
             async_get_chat_session(self.hass, user_input.conversation_id) as session,
             async_get_chat_log(self.hass, session, user_input) as chat_log,
         ):
-            return await self._async_handle_message(user_input, chat_log)
+            turn_start = len(chat_log.content) - 1
+            try:
+                return await self._async_handle_message(user_input, chat_log)
+            except asyncio.CancelledError as err:
+                del chat_log.content[turn_start:]
+                cancelled_error = err
+
+        if cancelled_error is not None:
+            raise cancelled_error
+        raise RuntimeError("Conversation turn completed without a result")
 
     async def _async_handle_message(
         self,
