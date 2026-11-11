@@ -117,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "새 메시지 수신 시 활성 대화 차례 취소",
                         "tool_error_reporting": "도구 오류 보고",
                         "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
@@ -126,6 +127,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "같은 대화의 새 메시지가 활성 차례를 취소하고 대체하도록 허용합니다. 이미 완료된 작업과 도구 호출은 되돌릴 수 없습니다.",
                         "tool_error_reporting": "도구 호출이 실패할 때 에이전트에 반환할 오류 정보의 수준을 선택합니다. 전체 세부 정보는 항상 Home Assistant에 기록됩니다.",
                         "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",

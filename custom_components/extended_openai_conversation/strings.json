@@ -275,6 +275,7 @@
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
             "shorten_tool_call_id": "Shorten tool call IDs",
+            "cancel_active_conversation": "Cancel active turn on new message",
             "tool_error_reporting": "Tool error reporting",
             "context_compaction_target": "Compacted context target (% of token threshold)",
             "context_compaction_recent_turns": "Recent turns to preserve",
@@ -284,6 +285,7 @@
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+            "cancel_active_conversation": "Allow a new message in the same conversation to cancel and replace the active turn. Actions and tool calls already completed by the cancelled turn cannot be undone.",
             "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
             "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",

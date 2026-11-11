@@ -117,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Actieve beurt annuleren bij een nieuw bericht",
                         "tool_error_reporting": "Rapportage van toolfouten",
                         "context_compaction_target": "Doel voor gecompacte context (% van tokendrempel)",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
@@ -126,6 +127,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Sta toe dat een nieuw bericht in hetzelfde gesprek de actieve beurt annuleert en vervangt. Reeds voltooide acties en toolaanroepen kunnen niet ongedaan worden gemaakt.",
                         "tool_error_reporting": "Kies hoeveel foutinformatie aan de agent wordt teruggestuurd wanneer een toolaanroep mislukt. Volledige details worden altijd in Home Assistant vastgelegd.",
                         "context_compaction_target": "Streef na het samenvatten naar dit percentage van de ingestelde contexttokendrempel.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",

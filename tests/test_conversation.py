@@ -6,6 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from custom_components.extended_openai_conversation.const import (
+    CONF_CANCEL_ACTIVE_CONVERSATION,
+)
 from custom_components.extended_openai_conversation.conversation import (
     ExtendedOpenAIAgentEntity,
     async_setup_entry,
@@ -98,9 +101,9 @@ def test_agent_entity_supports_all_languages():
 
 async def test_new_turn_cancels_active_turn_for_same_conversation():
     """The newest message replaces a stuck turn in the same conversation."""
-    entity = ExtendedOpenAIAgentEntity(
-        MagicMock(), _mock_subentry("conversation", "sub_1")
-    )
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_CANCEL_ACTIVE_CONVERSATION: True}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
     entity.hass = MagicMock()
     chat_log = MagicMock()
     chat_log.content = [MagicMock(role="system")]
@@ -157,6 +160,42 @@ async def test_new_turn_cancels_active_turn_for_same_conversation():
     assert result is second_result
     assert first_cancelled.is_set()
     assert [content.content for content in chat_log.content[1:]] == ["second"]
+    assert entity._active_conversation_tasks == {}
+
+
+async def test_new_turn_does_not_cancel_when_disabled():
+    """A new turn does not cancel the active turn when replacement is disabled."""
+    entity = ExtendedOpenAIAgentEntity(
+        MagicMock(), _mock_subentry("conversation", "sub_1")
+    )
+    entity.hass = MagicMock()
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+    first_cancelled = False
+
+    async def process_turn(user_input):
+        nonlocal first_cancelled
+        if user_input.text == "first":
+            first_started.set()
+            try:
+                await release_first.wait()
+            except asyncio.CancelledError:
+                first_cancelled = True
+                raise
+        return user_input.text
+
+    first_input = MagicMock(conversation_id="conversation-1", text="first")
+    second_input = MagicMock(conversation_id="conversation-1", text="second")
+
+    with patch.object(entity, "_async_process_turn", side_effect=process_turn):
+        first_task = asyncio.create_task(entity.async_process(first_input))
+        await first_started.wait()
+        assert await entity.async_process(second_input) == "second"
+        assert not first_task.done()
+        release_first.set()
+        assert await first_task == "first"
+
+    assert first_cancelled is False
     assert entity._active_conversation_tasks == {}
 
 

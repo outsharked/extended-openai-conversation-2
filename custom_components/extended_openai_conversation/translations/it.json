@@ -117,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Annulla il turno attivo con un nuovo messaggio",
                         "tool_error_reporting": "Segnalazione errori degli strumenti",
                         "context_compaction_target": "Obiettivo del contesto compattato (% della soglia token)",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
@@ -126,6 +127,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Consente a un nuovo messaggio nella stessa conversazione di annullare e sostituire il turno attivo. Le azioni e le chiamate agli strumenti già completate non possono essere annullate.",
                         "tool_error_reporting": "Scegli quante informazioni sull’errore restituire all’agente quando una chiamata a uno strumento non riesce. I dettagli completi vengono sempre registrati in Home Assistant.",
                         "context_compaction_target": "Dopo il riepilogo, usa come obiettivo questa percentuale della soglia token del contesto configurata.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",

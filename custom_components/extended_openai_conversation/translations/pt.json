@@ -117,6 +117,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Cancelar o turno ativo com uma nova mensagem",
                         "tool_error_reporting": "Relatório de erros das ferramentas",
                         "context_compaction_target": "Objetivo do contexto compactado (% do limite de tokens)",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
@@ -126,6 +127,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Permite que uma nova mensagem na mesma conversa cancele e substitua o turno ativo. As ações e chamadas de ferramentas já concluídas não podem ser anuladas.",
                         "tool_error_reporting": "Escolha a quantidade de informação de erro devolvida ao agente quando uma chamada de ferramenta falha. Os detalhes completos são sempre registados no Home Assistant.",
                         "context_compaction_target": "Após o resumo, utilize como objetivo esta percentagem do limite configurado de tokens de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",

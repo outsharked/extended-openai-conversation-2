@@ -188,6 +188,23 @@ Configure Extended OpenAI Conversation through the Options menu in your Voice As
 Enable **Advanced Options** in the configuration to access these model-specific parameters. The available options depend on the selected model.
 
 <AccordionGroup>
+  <Accordion title="Cancel Active Turn on New Message">
+    **Type**: Boolean
+
+    **Default**: Off
+
+    **Available for**: Conversation agents
+
+    When enabled, a new message using the same conversation ID cancels and
+    replaces the active turn instead of being rejected while the conversation
+    is busy. The cancelled turn is removed from the conversation history.
+
+    <Warning>
+    Cancellation stops further processing, but it cannot undo Home Assistant
+    actions or tool calls that the cancelled turn already completed.
+    </Warning>
+  </Accordion>
+
   <Accordion title="Tool Error Reporting">
     **Type**: Select
 

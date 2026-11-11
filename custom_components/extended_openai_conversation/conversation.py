@@ -29,9 +29,11 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ExtendedOpenAIConfigEntry
 from .const import (
+    CONF_CANCEL_ACTIVE_CONVERSATION,
     CONF_FUNCTION_TOOLS,
     CONF_PROMPT,
     CONF_SKILLS,
+    DEFAULT_CANCEL_ACTIVE_CONVERSATION,
     DEFAULT_CONF_FUNCTION_TOOLS,
     DEFAULT_PROMPT,
     DEFAULT_WORKING_DIRECTORY,
@@ -107,6 +109,12 @@ class ExtendedOpenAIAgentEntity(
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         """Process a sentence."""
+        if not self.subentry.data.get(
+            CONF_CANCEL_ACTIVE_CONVERSATION,
+            DEFAULT_CANCEL_ACTIVE_CONVERSATION,
+        ):
+            return await self._async_process_turn(user_input)
+
         conversation_id = user_input.conversation_id
         current_task = asyncio.current_task()
         if conversation_id is None or current_task is None:
