@@ -42,6 +42,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDING_HISTORY_RETENTION,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
@@ -63,6 +64,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DOMAIN,
@@ -399,6 +401,7 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
         CONF_API_KEY: "embedding-key",
         CONF_BASE_URL: "https://embeddings.example.com/v1",
         CONF_EMBEDDINGS_MODEL: "embed-model",
+        CONF_EMBEDDING_CHUNK_SIZE: 7000,
         CONF_CLEAR_EMBEDDING_HISTORY: True,
     }
 
@@ -418,6 +421,7 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
             CONF_API_KEY: "embedding-key",
             CONF_BASE_URL: "https://embeddings.example.com/v1",
             CONF_EMBEDDINGS_MODEL: "embed-model",
+            CONF_EMBEDDING_CHUNK_SIZE: 7000,
         },
     }
     assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
@@ -520,6 +524,12 @@ async def test_embeddings_form_never_rechecks_clear_history(hass):
         if getattr(key, "schema", key) == CONF_CLEAR_EMBEDDING_HISTORY
     )
     assert clear_key.default() is False
+    chunk_key = next(
+        key
+        for key in schema.schema
+        if getattr(key, "schema", key) == CONF_EMBEDDING_CHUNK_SIZE
+    )
+    assert chunk_key.default() == DEFAULT_EMBEDDING_CHUNK_SIZE
 
 
 async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
@@ -1732,6 +1742,20 @@ async def test_validate_embeddings_input_makes_real_embedding_request(hass):
         input="EOAIC2 embedding connection test",
     )
     assert data[CONF_EMBEDDINGS_MODEL] == "embed-model"
+    assert data[CONF_EMBEDDING_CHUNK_SIZE] == DEFAULT_EMBEDDING_CHUNK_SIZE
+
+
+async def test_validate_embeddings_input_rejects_invalid_chunk_size(hass):
+    """Embedding chunk sizes outside the supported range are rejected."""
+    with pytest.raises(HomeAssistantError, match="chunk size is invalid"):
+        await validate_embeddings_input(
+            hass,
+            {
+                CONF_API_KEY: "embedding-key",
+                CONF_EMBEDDINGS_MODEL: DEFAULT_EMBEDDINGS_MODEL,
+                CONF_EMBEDDING_CHUNK_SIZE: 99,
+            },
+        )
 
 
 async def test_validate_embeddings_input_rejects_empty_vector(hass):

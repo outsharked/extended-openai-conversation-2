@@ -15,9 +15,11 @@
                     "api_key": "Chiave API",
                     "base_url": "URL di base",
                     "embedding_model": "Modello embedding",
+                    "embedding_chunk_size": "Dimensione massima del blocco embedding (token stimati)",
                     "clear_embedding_history": "Cancella la cronologia degli embedding al salvataggio"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Numero massimo stimato di token inviati in un singolo input embedding. Scegli un valore inferiore al limite di contesto del modello, poiché il conteggio varia tra i modelli.",
                     "clear_embedding_history": "Questa azione non viene salvata come impostazione. Se selezionata, al salvataggio verrà rimossa tutta la cronologia delle conversazioni basata sugli embedding per questo endpoint."
                 }
             },

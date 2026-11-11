@@ -77,6 +77,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDING_HISTORY_RETENTION,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
@@ -119,6 +120,7 @@ from .const import (
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
+    DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DEFAULT_EXTRA_BODY,
@@ -138,9 +140,11 @@ from .const import (
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_P,
     DOMAIN,
+    MAX_EMBEDDING_CHUNK_SIZE,
     MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
+    MIN_EMBEDDING_CHUNK_SIZE,
     REASONING_EFFORT_OPTIONS,
     SERVICE_TIER_OPTIONS,
     SERVICE_TYPE_AI_ENDPOINT,
@@ -328,6 +332,16 @@ STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA = vol.Schema(
         vol.Required(
             CONF_EMBEDDINGS_MODEL, default=DEFAULT_EMBEDDINGS_MODEL
         ): str,
+        vol.Required(
+            CONF_EMBEDDING_CHUNK_SIZE,
+            default=DEFAULT_EMBEDDING_CHUNK_SIZE,
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_EMBEDDING_CHUNK_SIZE,
+                max=MAX_EMBEDDING_CHUNK_SIZE,
+                step=100,
+            )
+        ),
         vol.Optional(
             CONF_CLEAR_EMBEDDING_HISTORY, default=False
         ): BooleanSelector(),
@@ -449,6 +463,19 @@ async def validate_embeddings_input(
     if not model:
         raise HomeAssistantError("An embedding model is required.")
     data[CONF_EMBEDDINGS_MODEL] = model
+    chunk_size = data.get(
+        CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
+    )
+    if (
+        not isinstance(chunk_size, int | float)
+        or isinstance(chunk_size, bool)
+        or int(chunk_size) != chunk_size
+        or not MIN_EMBEDDING_CHUNK_SIZE
+        <= int(chunk_size)
+        <= MAX_EMBEDDING_CHUNK_SIZE
+    ):
+        raise HomeAssistantError("The embedding chunk size is invalid.")
+    data[CONF_EMBEDDING_CHUNK_SIZE] = int(chunk_size)
 
     base_url = data.get(CONF_BASE_URL)
     if base_url == DEFAULT_CONF_BASE_URL:

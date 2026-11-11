@@ -15,9 +15,11 @@
                     "api_key": "Clé API",
                     "base_url": "URL de base",
                     "embedding_model": "Modèle d'embedding",
+                    "embedding_chunk_size": "Taille maximale d’un segment d’embedding (jetons estimés)",
                     "clear_embedding_history": "Effacer l'historique d'embeddings lors de l'enregistrement"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Nombre maximal estimé de jetons envoyé dans une entrée d’embedding. Choisissez une valeur inférieure à la limite de contexte du modèle, car le comptage varie selon le modèle.",
                     "clear_embedding_history": "Cette action n'est jamais enregistrée comme paramètre. Si elle est sélectionnée, tout l'historique de conversation basé sur les embeddings de ce point de terminaison sera supprimé lors de l'enregistrement."
                 }
             },

@@ -5,12 +5,25 @@ import json
 from pathlib import Path
 
 from custom_components.extended_openai_conversation.embedding_memory import (
+    EmbeddingMemoryChunk,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
     EmbeddingMemoryStore,
+    chunk_embedding_text,
     embedding_history_retention,
     normalize_embedding_history_retention,
 )
+
+
+def test_embedding_chunks_preserve_text_and_respect_estimated_limit():
+    """Chunking retains every character within the configured estimate."""
+    text = "alpha beta gamma delta epsilon zeta eta theta"
+
+    chunks = chunk_embedding_text(text, max_estimated_tokens=3)
+
+    assert len(chunks) > 1
+    assert "".join(chunks) == text
+    assert all(len(chunk) <= 12 for chunk in chunks)
 
 
 def _configure_path(hass, tmp_path: Path) -> None:
@@ -142,6 +155,38 @@ async def test_search_returns_nearest_compatible_memories(hass, tmp_path: Path):
     assert [match.record.searchable_text for match in matches] == [
         "closest",
         "second",
+    ]
+    assert matches[0].score == 1.0
+
+
+async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
+    """Multiple chunk vectors produce one deduplicated turn match."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    scope = EmbeddingMemoryScope(
+        entry_id="endpoint-1",
+        agent_id="agent-1",
+        conversation_id="conversation-1",
+    )
+    record = EmbeddingMemoryRecord.create(
+        model="embedding-model",
+        embedding=[0.0, 1.0],
+        searchable_text="unrelated first chunk",
+        additional_chunks=(
+            EmbeddingMemoryChunk([1.0, 0.0], "matching second chunk"),
+        ),
+        messages=[{"role": "user", "content": "complete original turn"}],
+        retention=timedelta(days=1),
+    )
+    await store.async_append(scope, [record])
+
+    matches = await store.async_search(
+        scope, [1.0, 0.0], limit=5, model="embedding-model"
+    )
+
+    assert len(matches) == 1
+    assert matches[0].record.messages == [
+        {"role": "user", "content": "complete original turn"}
     ]
     assert matches[0].score == 1.0
 

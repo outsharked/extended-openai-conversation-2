@@ -70,9 +70,11 @@
           "api_key": "[%key:common::config_flow::data::api_key%]",
           "base_url": "[%key:common::config_flow::data::base_url%]",
           "embedding_model": "Embedding model",
+          "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
           "clear_embedding_history": "Clear stored embedding history when saving"
         },
         "data_description": {
+          "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input. Choose a value below the embedding model's context limit because token counts vary by model.",
           "clear_embedding_history": "This action is never saved as a setting. When selected, all embedding-backed conversation history for this endpoint will be removed when the service configuration is saved."
         }
       },

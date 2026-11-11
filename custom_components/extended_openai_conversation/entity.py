@@ -43,6 +43,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDING_HISTORY_RETENTION,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
@@ -70,6 +71,7 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+    DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDING_RECALL_RESULTS,
     DEFAULT_EXTRA_BODY,
@@ -91,10 +93,12 @@ from .const import (
     MCP_CONTEXT_PLACEMENT_USER,
 )
 from .embedding_memory import (
+    EmbeddingMemoryChunk,
     EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
     EmbeddingMemoryStore,
+    chunk_embedding_text,
     embedding_history_retention,
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
@@ -1706,20 +1710,31 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         model = embeddings.get(CONF_EMBEDDINGS_MODEL)
         if not isinstance(model, str) or not model:
             raise HomeAssistantError("An embedding model is not configured")
+        chunk_size = embeddings.get(
+            CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
+        )
+        if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
+            raise HomeAssistantError("The embedding chunk size is invalid")
 
         groups = _group_compaction_contents(messages[1:history_split_index])
-        searchable_texts = [_compaction_transcript(group) for group in groups]
+        searchable_chunks = [
+            chunk_embedding_text(_compaction_transcript(group), chunk_size)
+            for group in groups
+        ]
+        embedding_inputs = [
+            chunk for group_chunks in searchable_chunks for chunk in group_chunks
+        ]
         embedding_client, memory_store = self._embedding_runtime
         response = await embedding_client.embeddings.create(
             model=model,
-            input=searchable_texts,
+            input=embedding_inputs,
         )
         vectors_by_index = {
             item.index: item.embedding for item in response.data
         }
-        if len(vectors_by_index) != len(groups) or any(
+        if len(vectors_by_index) != len(embedding_inputs) or any(
             index not in vectors_by_index or not vectors_by_index[index]
-            for index in range(len(groups))
+            for index in range(len(embedding_inputs))
         ):
             raise HomeAssistantError(
                 "The embeddings endpoint returned an incomplete response"
@@ -1731,16 +1746,29 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 DEFAULT_EMBEDDING_HISTORY_RETENTION,
             )
         )
-        records = [
-            EmbeddingMemoryRecord.create(
-                model=model,
-                embedding=vectors_by_index[index],
-                searchable_text=searchable_texts[index],
-                messages=[content.as_dict() for content in group],
-                retention=retention,
+        records: list[EmbeddingMemoryRecord] = []
+        chunk_index = 0
+        for group, group_chunks in zip(groups, searchable_chunks, strict=True):
+            group_vectors = [
+                vectors_by_index[index]
+                for index in range(chunk_index, chunk_index + len(group_chunks))
+            ]
+            records.append(
+                EmbeddingMemoryRecord.create(
+                    model=model,
+                    embedding=group_vectors[0],
+                    searchable_text=group_chunks[0],
+                    messages=[content.as_dict() for content in group],
+                    retention=retention,
+                    additional_chunks=(
+                        EmbeddingMemoryChunk(embedding, searchable_text)
+                        for embedding, searchable_text in zip(
+                            group_vectors[1:], group_chunks[1:], strict=True
+                        )
+                    ),
+                )
             )
-            for index, group in enumerate(groups)
-        ]
+            chunk_index += len(group_chunks)
         await memory_store.async_append(
             EmbeddingMemoryScope(
                 entry_id=self.entry.entry_id,

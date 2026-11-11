@@ -18,6 +18,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
+    CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_MAX_TOKENS,
@@ -1520,6 +1521,54 @@ async def test_retrieve_compact_archives_and_summarizes_the_same_history():
         "Summary of earlier conversation:\nThe user prefers 20 C.",
         "What temperature do I prefer?",
         "You prefer 20 C.",
+    ]
+
+
+async def test_embedding_archival_chunks_one_turn_and_stores_messages_once():
+    """Oversized searchable text uses several vectors for one lossless record."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {
+            CONF_EMBEDDINGS_MODEL: "embedding-model",
+            CONF_EMBEDDING_CHUNK_SIZE: 10,
+        }
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+
+    async def create_embeddings(**kwargs):
+        return SimpleNamespace(
+            data=[
+                SimpleNamespace(index=index, embedding=[float(index), 1.0])
+                for index, _value in enumerate(kwargs["input"])
+            ]
+        )
+
+    embedding_client.embeddings.create = AsyncMock(side_effect=create_embeddings)
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        changed = await entity._archive_message_history(chat_log)
+
+    assert changed is True
+    embedding_inputs = embedding_client.embeddings.create.await_args.kwargs["input"]
+    assert len(embedding_inputs) > 1
+    assert all(len(value) <= 40 for value in embedding_inputs)
+    records = memory_store.async_append.await_args.args[1]
+    assert len(records) == 1
+    assert len(records[0].additional_chunks) == len(embedding_inputs) - 1
+    assert [message["role"] for message in records[0].messages] == [
+        "user",
+        "assistant",
     ]
 
 

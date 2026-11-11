@@ -15,9 +15,11 @@
                     "api_key": "API-sleutel",
                     "base_url": "Basis-URL",
                     "embedding_model": "Embeddingmodel",
+                    "embedding_chunk_size": "Maximale grootte van embeddingsegment (geschatte tokens)",
                     "clear_embedding_history": "Opgeslagen embeddinggeschiedenis wissen bij opslaan"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Maximaal geschat aantal tokens per embeddinginvoer. Kies een waarde onder de contextlimiet van het embeddingmodel, omdat de tokentelling per model verschilt.",
                     "clear_embedding_history": "Deze actie wordt nooit als instelling opgeslagen. Wanneer geselecteerd, wordt alle embeddinggebaseerde gespreksgeschiedenis voor dit eindpunt bij het opslaan verwijderd."
                 }
             },

@@ -15,9 +15,11 @@
                     "api_key": "API-kulcs",
                     "base_url": "Alap URL",
                     "embedding_model": "Beágyazási modell",
+                    "embedding_chunk_size": "Beágyazási darab legnagyobb mérete (becsült tokenek)",
                     "clear_embedding_history": "Tárolt beágyazási előzmények törlése mentéskor"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Az egy beágyazási bemenetben elküldött becsült tokenek maximális száma. Válasszon a modell kontextuskorlátjánál kisebb értéket, mert a tokenszámítás modellenként eltér.",
                     "clear_embedding_history": "Ez a művelet nem kerül beállításként mentésre. Kiválasztásakor a mentés eltávolítja a végponthoz tartozó összes beágyazásalapú beszélgetési előzményt."
                 }
             },

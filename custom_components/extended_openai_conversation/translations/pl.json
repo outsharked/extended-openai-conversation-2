@@ -15,9 +15,11 @@
                     "api_key": "Klucz API",
                     "base_url": "Bazowy adres URL",
                     "embedding_model": "Model osadzania",
+                    "embedding_chunk_size": "Maksymalny rozmiar fragmentu osadzania (szacowane tokeny)",
                     "clear_embedding_history": "Wyczyść zapisaną historię osadzania podczas zapisu"
                 },
                 "data_description": {
+                    "embedding_chunk_size": "Maksymalna szacowana liczba tokenów w jednym wejściu osadzania. Wybierz wartość poniżej limitu kontekstu modelu, ponieważ liczba tokenów zależy od modelu.",
                     "clear_embedding_history": "Ta czynność nie jest zapisywana jako ustawienie. Po jej wybraniu cała historia rozmów oparta na osadzeniach dla tego punktu końcowego zostanie usunięta podczas zapisu."
                 }
             },
