@@ -50,6 +50,16 @@ class Function(ABC):
         if not_exposed:
             raise EntityNotExposed(", ".join(not_exposed))
 
+    def validate_execution(
+        self,
+        hass: HomeAssistant,
+        function_config: dict[str, Any],
+        arguments: dict[str, Any],
+        exposed_entities: list[dict[str, Any]],
+    ) -> None:
+        """Validate an execution before it is scheduled in the background."""
+        return None
+
     @abstractmethod
     async def execute(
         self,
