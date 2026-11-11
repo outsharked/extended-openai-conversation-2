@@ -7,6 +7,7 @@ from typing import Any
 import probatio as vol
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, llm
 
 from ..const import CONF_ENTITY_FILTER
@@ -39,16 +40,18 @@ class TemplateFunction(Function):
         entity_ids = arguments.get("entity_id")
         if entity_filter_config is not None and entity_ids is not None:
             if isinstance(entity_ids, str):
-                entity_ids = [
+                normalized_entity_ids  = [
                     entity_id.strip()
                     for entity_id in entity_ids.split(",")
                     if entity_id.strip()
                 ]
-            if isinstance(entity_ids, list) and all(
-                isinstance(entity_id, str) for entity_id in entity_ids
-            ):
-                EntityFilter.from_config(entity_filter_config).validate(entity_ids)
+            elif (isinstance(entity_ids, list) and
+                all(isinstance(entity_id, str) for entity_id in entity_ids)):
+                normalized_entity_ids = entity_ids
+            else:
+                raise HomeAssistantError("entity_id must be a string or a list of strings")
 
+            EntityFilter.from_config(entity_filter_config).validate(normalized_entity_ids)
         return function_config["value_template"].async_render(
             arguments,
             parse_result=function_config.get("parse_result", False),

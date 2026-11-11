@@ -90,11 +90,7 @@ class EntityFilter:
         """Return whether an entity is allowed by the policy."""
         if self.deny_pattern:
             try:
-                if regex.fullmatch(
-                    self.deny_pattern,
-                    entity_id,
-                    timeout=self.regex_timeout,
-                ):
+                if regex.fullmatch(self.deny_pattern,entity_id,timeout=self.regex_timeout):
                     return False
             except TimeoutError:
                 return False
@@ -105,8 +101,6 @@ class EntityFilter:
 
     def validate(self, entity_ids: Collection[str]) -> None:
         """Raise when any entity is denied by the policy."""
-        denied = sorted(
-            entity_id for entity_id in entity_ids if not self.is_allowed(entity_id)
-        )
+        denied = sorted(entity_id for entity_id in entity_ids if not self.is_allowed(entity_id))
         if denied:
             raise EntityAccessDenied(denied)
