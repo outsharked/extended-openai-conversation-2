@@ -113,6 +113,14 @@
                 "embeddings": "Semantisch ophalen met embeddings",
                 "keyword": "Letterlijk tekst zoeken"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Algemene fouten aan de agent melden",
+                "simple": "Eenvoudige fouten aan de agent melden",
+                "detailed": "Gedetailleerde fouten aan de agent melden",
+                "raw": "Ruwe fouten aan de agent melden"
+            }
         }
     },
     "config_subentries": {
@@ -153,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Rapportage van toolfouten",
                         "context_compaction_target": "Doel voor gecompacteerde prompt",
                         "context_compaction_intra_turn": "Contextcompactie binnen één beurt inschakelen",
                         "clear_embedding_history": "Opgeslagen archieven van deze agent wissen bij opslaan",
@@ -173,6 +182,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Kies hoeveel foutinformatie aan de agent wordt teruggestuurd wanneer een toolaanroep mislukt. Volledige details worden altijd in Home Assistant vastgelegd.",
                         "context_compaction_target": "Maximale grootte van de actieve prompt in tokens na compactie. De samenvatting en behouden context moeten binnen dit doel passen.",
                         "context_compaction_intra_turn": "Staat toe dat de geselecteerde contextstrategie voltooide toolaanroepen tijdens een actieve beurt verkleint wanneer het verzoek anders de contextdrempel zou overschrijden.",
                         "clear_embedding_history": "Deze actie wordt niet opgeslagen. De permanente archieven van deze agent worden verwijderd.",
@@ -227,6 +237,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Rapportage van toolfouten",
                         "context_compaction_target": "Doel voor gecompacteerde prompt",
                         "context_compaction_intra_turn": "Contextcompactie binnen één beurt inschakelen",
                         "clear_embedding_history": "Opgeslagen archieven van deze agent wissen bij opslaan",
@@ -247,6 +258,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Kies hoeveel foutinformatie aan de agent wordt teruggestuurd wanneer een toolaanroep mislukt. Volledige details worden altijd in Home Assistant vastgelegd.",
                         "context_compaction_target": "Maximale grootte van de actieve prompt in tokens na compactie. De samenvatting en behouden context moeten binnen dit doel passen.",
                         "context_compaction_intra_turn": "Staat toe dat de geselecteerde contextstrategie voltooide toolaanroepen tijdens een actieve beurt verkleint wanneer het verzoek anders de contextdrempel zou overschrijden.",
                         "clear_embedding_history": "Deze actie wordt niet opgeslagen. De permanente archieven van deze agent worden verwijderd.",

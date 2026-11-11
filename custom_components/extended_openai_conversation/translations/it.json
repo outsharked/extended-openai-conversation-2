@@ -113,6 +113,14 @@
                 "embeddings": "Recupero semantico tramite embedding",
                 "keyword": "Ricerca testuale letterale"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Segnala errori generici all’agente",
+                "simple": "Segnala errori semplici all’agente",
+                "detailed": "Segnala errori dettagliati all’agente",
+                "raw": "Segnala errori non elaborati all’agente"
+            }
         }
     },
     "config_subentries": {
@@ -153,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Segnalazione errori degli strumenti",
                         "context_compaction_target": "Obiettivo del prompt compattato",
                         "context_compaction_intra_turn": "Abilita la compattazione del contesto nello stesso turno",
                         "clear_embedding_history": "Cancella gli archivi memorizzati di questo agente al salvataggio",
@@ -173,6 +182,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Scegli quante informazioni sull’errore restituire all’agente quando una chiamata a uno strumento non riesce. I dettagli completi vengono sempre registrati in Home Assistant.",
                         "context_compaction_target": "Dimensione massima del prompt attivo in token dopo la compattazione. Il riepilogo e il contesto conservato devono rientrare in questo obiettivo.",
                         "context_compaction_intra_turn": "Consente alla strategia di contesto selezionata di ridurre gli scambi di chiamate agli strumenti completati durante un turno attivo quando la richiesta supererebbe altrimenti la soglia del contesto.",
                         "clear_embedding_history": "Questa azione non viene salvata. Se selezionata, gli archivi persistenti di questo agente vengono rimossi al salvataggio.",
@@ -227,6 +237,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Segnalazione errori degli strumenti",
                         "context_compaction_target": "Obiettivo del prompt compattato",
                         "context_compaction_intra_turn": "Abilita la compattazione del contesto nello stesso turno",
                         "clear_embedding_history": "Cancella gli archivi memorizzati di questo agente al salvataggio",
@@ -247,6 +258,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Scegli quante informazioni sull’errore restituire all’agente quando una chiamata a uno strumento non riesce. I dettagli completi vengono sempre registrati in Home Assistant.",
                         "context_compaction_target": "Dimensione massima del prompt attivo in token dopo la compattazione. Il riepilogo e il contesto conservato devono rientrare in questo obiettivo.",
                         "context_compaction_intra_turn": "Consente alla strategia di contesto selezionata di ridurre gli scambi di chiamate agli strumenti completati durante un turno attivo quando la richiesta supererebbe altrimenti la soglia del contesto.",
                         "clear_embedding_history": "Questa azione non viene salvata. Se selezionata, gli archivi persistenti di questo agente vengono rimossi al salvataggio.",

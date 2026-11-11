@@ -261,6 +261,14 @@
         "embeddings": "Semantic embedding recall",
         "keyword": "Literal text recall"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Report generic errors to agent",
+                "simple": "Report simple errors to agent",
+                "detailed": "Report detailed errors to agent",
+                "raw": "Report raw errors to agent"
+            }
         }
     },
     "config_subentries": {
@@ -303,6 +311,7 @@
                         "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Tool error reporting",
                         "context_compaction_target": "Compacted prompt target",
                         "context_compaction_intra_turn": "Enable intra-turn context compaction",
                         "clear_embedding_history": "Clear this agent's stored archived memories when saving",
@@ -323,6 +332,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
                         "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
                         "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
                         "clear_embedding_history": "This action is never saved as a setting. When selected, this agent's persistent semantic and literal-recall archives are removed when the agent configuration is saved.",
@@ -378,6 +388,7 @@
                         "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Tool error reporting",
                         "context_compaction_target": "Compacted prompt target",
                         "context_compaction_intra_turn": "Enable intra-turn context compaction",
                         "clear_embedding_history": "Clear this agent's stored archived memories when saving",
@@ -398,6 +409,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
                         "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
                         "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
                         "clear_embedding_history": "This action is never saved as a setting. When selected, this agent's persistent semantic and literal-recall archives are removed when the agent configuration is saved.",

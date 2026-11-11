@@ -77,6 +77,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SERVICE_TYPE,
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
+    CONF_TOOL_ERROR_REPORTING,
     CONTEXT_PRESERVATION_METHOD_COMPACT,
     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
     CONTEXT_PRESERVATION_METHOD_KEYWORD,
@@ -98,6 +99,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DEFAULT_MCP_MEDIA_TYPES,
+    DEFAULT_TOOL_ERROR_REPORTING,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
     MCP_MEDIA_TYPES,
@@ -106,6 +108,7 @@ from custom_components.extended_openai_conversation.const import (
     MIN_CONTEXT_RECALL_MAX_TOKENS,
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
+    TOOL_ERROR_REPORTING_OPTIONS,
 )
 from custom_components.extended_openai_conversation.context_management import (
     EmbeddingMemoryCounts,
@@ -2520,6 +2523,36 @@ async def test_agent_advanced_schema_compaction_options(hass, handler_type, meth
     )
     assert prompt_key.default() == DEFAULT_CONTEXT_COMPACTION_PROMPT
     assert schema[prompt_key].config["multiline"] is True
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_schema_tool_error_reporting(hass, handler_type):
+    """Both agent types expose localized tool error reporting options."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {CONF_CHAT_MODEL: "gpt-4o-mini"}
+    entry = MagicMock()
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    reporting_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_TOOL_ERROR_REPORTING
+    )
+    selector = schema[reporting_key]
+    assert reporting_key.default() == DEFAULT_TOOL_ERROR_REPORTING
+    assert selector.config["options"] == list(TOOL_ERROR_REPORTING_OPTIONS)
+    assert selector.config["translation_key"] == "tool_error_reporting"
 
 
 @pytest.mark.parametrize(

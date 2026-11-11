@@ -113,6 +113,14 @@
                 "embeddings": "의미 기반 임베딩 검색",
                 "keyword": "리터럴 텍스트 검색"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "에이전트에 일반 오류 보고",
+                "simple": "에이전트에 간단한 오류 보고",
+                "detailed": "에이전트에 상세 오류 보고",
+                "raw": "에이전트에 원시 오류 보고"
+            }
         }
     },
     "config_subentries": {
@@ -153,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "도구 오류 보고",
                         "context_compaction_target": "압축 프롬프트 목표",
                         "context_compaction_intra_turn": "턴 내 컨텍스트 압축 활성화",
                         "clear_embedding_history": "저장할 때 이 에이전트의 저장된 아카이브 지우기",
@@ -173,6 +182,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "도구 호출이 실패할 때 에이전트에 반환할 오류 정보의 수준을 선택합니다. 전체 세부 정보는 항상 Home Assistant에 기록됩니다.",
                         "context_compaction_target": "압축 후 활성 프롬프트의 최대 토큰 크기입니다. 요약과 유지된 컨텍스트가 이 목표 안에 들어가야 합니다.",
                         "context_compaction_intra_turn": "요청이 컨텍스트 임계값을 초과할 경우 선택한 컨텍스트 전략이 활성 턴 중 완료된 도구 호출 교환을 줄일 수 있도록 합니다.",
                         "clear_embedding_history": "이 작업은 저장되지 않으며 이 에이전트의 영구 아카이브를 제거합니다.",
@@ -227,6 +237,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "도구 오류 보고",
                         "context_compaction_target": "압축 프롬프트 목표",
                         "context_compaction_intra_turn": "턴 내 컨텍스트 압축 활성화",
                         "clear_embedding_history": "저장할 때 이 에이전트의 저장된 아카이브 지우기",
@@ -247,6 +258,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "도구 호출이 실패할 때 에이전트에 반환할 오류 정보의 수준을 선택합니다. 전체 세부 정보는 항상 Home Assistant에 기록됩니다.",
                         "context_compaction_target": "압축 후 활성 프롬프트의 최대 토큰 크기입니다. 요약과 유지된 컨텍스트가 이 목표 안에 들어가야 합니다.",
                         "context_compaction_intra_turn": "요청이 컨텍스트 임계값을 초과할 경우 선택한 컨텍스트 전략이 활성 턴 중 완료된 도구 호출 교환을 줄일 수 있도록 합니다.",
                         "clear_embedding_history": "이 작업은 저장되지 않으며 이 에이전트의 영구 아카이브를 제거합니다.",

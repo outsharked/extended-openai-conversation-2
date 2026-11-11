@@ -113,6 +113,14 @@
                 "embeddings": "Recuperação semântica por embeddings",
                 "keyword": "Pesquisa literal de texto"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Relatar erros genéricos ao agente",
+                "simple": "Relatar erros simples ao agente",
+                "detailed": "Relatar erros detalhados ao agente",
+                "raw": "Relatar erros brutos ao agente"
+            }
         }
     },
     "config_subentries": {
@@ -153,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Relatório de erros das ferramentas",
                         "context_compaction_target": "Meta do prompt compactado",
                         "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
                         "clear_embedding_history": "Limpar os arquivos armazenados deste agente ao salvar",
@@ -173,6 +182,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Escolha quantas informações de erro são retornadas ao agente quando uma chamada de ferramenta falha. Os detalhes completos são sempre registrados no Home Assistant.",
                         "context_compaction_target": "Tamanho máximo do prompt ativo em tokens após a compactação. O resumo e o contexto mantido devem caber nessa meta.",
                         "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando a solicitação excederia o limite de contexto.",
                         "clear_embedding_history": "Esta ação não é salva e remove os arquivos persistentes deste agente.",
@@ -227,6 +237,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Relatório de erros das ferramentas",
                         "context_compaction_target": "Meta do prompt compactado",
                         "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
                         "clear_embedding_history": "Limpar os arquivos armazenados deste agente ao salvar",
@@ -247,6 +258,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Escolha quantas informações de erro são retornadas ao agente quando uma chamada de ferramenta falha. Os detalhes completos são sempre registrados no Home Assistant.",
                         "context_compaction_target": "Tamanho máximo do prompt ativo em tokens após a compactação. O resumo e o contexto mantido devem caber nessa meta.",
                         "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando a solicitação excederia o limite de contexto.",
                         "clear_embedding_history": "Esta ação não é salva e remove os arquivos persistentes deste agente.",

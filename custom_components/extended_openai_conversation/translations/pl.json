@@ -113,6 +113,14 @@
                 "embeddings": "Semantyczne wyszukiwanie osadzeń",
                 "keyword": "Dosłowne wyszukiwanie tekstu"
             }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Zgłaszaj agentowi błędy ogólne",
+                "simple": "Zgłaszaj agentowi błędy proste",
+                "detailed": "Zgłaszaj agentowi błędy szczegółowe",
+                "raw": "Zgłaszaj agentowi surowe błędy"
+            }
         }
     },
     "config_subentries": {
@@ -153,6 +161,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Raportowanie błędów narzędzi",
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego monitu",
                         "context_compaction_intra_turn": "Włącz kompaktowanie kontekstu w trakcie tury",
                         "clear_embedding_history": "Wyczyść zapisane archiwa tego agenta podczas zapisu",
@@ -173,6 +182,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Wybierz ilość informacji o błędzie zwracanych agentowi po nieudanym wywołaniu narzędzia. Pełne szczegóły są zawsze zapisywane w dzienniku Home Assistant.",
                         "context_compaction_target": "Maksymalny rozmiar aktywnego monitu w tokenach po kompaktowaniu. Podsumowanie i zachowany kontekst muszą zmieścić się w tym limicie.",
                         "context_compaction_intra_turn": "Zezwala wybranej strategii kontekstu ograniczać zakończone wywołania narzędzi podczas aktywnej tury, gdy żądanie przekroczyłoby inaczej próg kontekstu.",
                         "clear_embedding_history": "Ta czynność nie jest zapisywana i usuwa trwałe archiwa tego agenta.",
@@ -227,6 +237,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Raportowanie błędów narzędzi",
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego monitu",
                         "context_compaction_intra_turn": "Włącz kompaktowanie kontekstu w trakcie tury",
                         "clear_embedding_history": "Wyczyść zapisane archiwa tego agenta podczas zapisu",
@@ -247,6 +258,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Wybierz ilość informacji o błędzie zwracanych agentowi po nieudanym wywołaniu narzędzia. Pełne szczegóły są zawsze zapisywane w dzienniku Home Assistant.",
                         "context_compaction_target": "Maksymalny rozmiar aktywnego monitu w tokenach po kompaktowaniu. Podsumowanie i zachowany kontekst muszą zmieścić się w tym limicie.",
                         "context_compaction_intra_turn": "Zezwala wybranej strategii kontekstu ograniczać zakończone wywołania narzędzi podczas aktywnej tury, gdy żądanie przekroczyłoby inaczej próg kontekstu.",
                         "clear_embedding_history": "Ta czynność nie jest zapisywana i usuwa trwałe archiwa tego agenta.",

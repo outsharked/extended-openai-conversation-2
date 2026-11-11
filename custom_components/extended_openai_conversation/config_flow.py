@@ -118,6 +118,7 @@ from .const import (
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     CONF_TEMPERATURE,
+    CONF_TOOL_ERROR_REPORTING,
     CONF_TOP_P,
     CONTEXT_PRESERVATION_METHOD_COMPACT,
     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
@@ -165,6 +166,7 @@ from .const import (
     DEFAULT_SHORTEN_TOOL_CALL_ID,
     DEFAULT_SKIP_AUTHENTICATION,
     DEFAULT_TEMPERATURE,
+    DEFAULT_TOOL_ERROR_REPORTING,
     DEFAULT_TOP_P,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
@@ -177,6 +179,7 @@ from .const import (
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
     SERVICE_TYPES,
+    TOOL_ERROR_REPORTING_OPTIONS,
 )
 from .context_management import (
     EmbeddingMemoryStore,
@@ -431,6 +434,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_PRESERVATION_METHODS,
         CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
         CONF_SHORTEN_TOOL_CALL_ID: DEFAULT_SHORTEN_TOOL_CALL_ID,
+        CONF_TOOL_ERROR_REPORTING: DEFAULT_TOOL_ERROR_REPORTING,
         CONF_ADVANCED_OPTIONS: DEFAULT_ADVANCED_OPTIONS,
     }
 )
@@ -2583,6 +2587,19 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             )
         ] = BooleanSelector()
 
+        schema[
+            vol.Optional(
+                CONF_TOOL_ERROR_REPORTING,
+                default=DEFAULT_TOOL_ERROR_REPORTING,
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=list(TOOL_ERROR_REPORTING_OPTIONS),
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="tool_error_reporting",
+            )
+        )
+
         methods = _selected_context_methods(
             (self._temp_data or {}).get(
                 CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_PRESERVATION_METHODS
@@ -3164,6 +3181,19 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 default=DEFAULT_SHORTEN_TOOL_CALL_ID,
             )
         ] = BooleanSelector()
+
+        schema[
+            vol.Optional(
+                CONF_TOOL_ERROR_REPORTING,
+                default=DEFAULT_TOOL_ERROR_REPORTING,
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=list(TOOL_ERROR_REPORTING_OPTIONS),
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="tool_error_reporting",
+            )
+        )
 
         methods = _selected_context_methods(
             (self._temp_data or {}).get(
