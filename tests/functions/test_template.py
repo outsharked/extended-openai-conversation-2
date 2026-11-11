@@ -5,6 +5,7 @@ import pytest
 from custom_components.extended_openai_conversation.exceptions import EntityAccessDenied
 from custom_components.extended_openai_conversation.functions import TemplateFunction
 from homeassistant.core import State
+from homeassistant.exceptions import HomeAssistantError
 from tests.helpers import prepare_function_tool_from_yaml
 
 
@@ -120,3 +121,62 @@ class TestTemplateFunctionYaml:
         )
 
         assert result == "sensor.temperature"
+
+    async def test_entity_filter_accepts_comma_separated_entity_string(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """A valid comma-separated string is normalized for policy validation."""
+        function_config = function.validate_schema(
+            {
+                "type": "template",
+                "value_template": "{{ entity_id }}",
+                "entity_filter": {
+                    "mode": "include",
+                    "entities": ["sensor.temperature", "sensor.humidity"],
+                },
+            }
+        )
+
+        result = await function.execute(
+            hass,
+            function_config,
+            {"entity_id": "sensor.temperature, sensor.humidity"},
+            llm_context,
+            exposed_entities,
+        )
+
+        assert result == "sensor.temperature, sensor.humidity"
+
+    @pytest.mark.parametrize(
+        "entity_ids",
+        [
+            {"sensor.private_room": True},
+            ["sensor.temperature", 123],
+        ],
+    )
+    async def test_entity_filter_rejects_malformed_entity_ids(
+        self, hass, function, exposed_entities, llm_context, entity_ids
+    ):
+        """Malformed entity arguments cannot bypass policy validation."""
+        function_config = function.validate_schema(
+            {
+                "type": "template",
+                "value_template": "{{ entity_id }}",
+                "entity_filter": {
+                    "mode": "exclude",
+                    "entities": ["sensor.private_room"],
+                },
+            }
+        )
+
+        with pytest.raises(
+            HomeAssistantError,
+            match="entity_id must be a string or a list of strings",
+        ):
+            await function.execute(
+                hass,
+                function_config,
+                {"entity_id": entity_ids},
+                llm_context,
+                exposed_entities,
+            )
