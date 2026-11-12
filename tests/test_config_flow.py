@@ -37,6 +37,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_CLEAR_EMBEDDING_HISTORY,
+    CONF_CONTEXT_COMPACTION_INTRA_TURN,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
@@ -63,6 +64,7 @@ from custom_components.extended_openai_conversation.const import (
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
     DEFAULT_CONF_BASE_URL,
+    DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
@@ -115,7 +117,11 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_API_KEY, CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import SelectOptionDict, TextSelector
+from homeassistant.helpers.selector import (
+    BooleanSelector,
+    SelectOptionDict,
+    TextSelector,
+)
 
 
 def _schema_keys(schema: dict) -> set[str]:
@@ -2224,10 +2230,19 @@ async def test_agent_advanced_schema_compaction_options(hass, handler_type, stra
 
     schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
     if strategy == "clear":
+        assert CONF_CONTEXT_COMPACTION_INTRA_TURN not in _schema_keys(schema)
         assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
         assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
         assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
         return
+
+    intra_turn_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_COMPACTION_INTRA_TURN
+    )
+    assert intra_turn_key.default() is DEFAULT_CONTEXT_COMPACTION_INTRA_TURN
+    assert isinstance(schema[intra_turn_key], BooleanSelector)
 
     target_key = next(
         key
@@ -2308,6 +2323,13 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     )
     assert "max" not in schema[snapshot_ttl_key].config
     assert schema[snapshot_ttl_key].config["step"] == 1
+    intra_turn_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_COMPACTION_INTRA_TURN
+    )
+    assert intra_turn_key.default() is DEFAULT_CONTEXT_COMPACTION_INTRA_TURN
+    assert isinstance(schema[intra_turn_key], BooleanSelector)
     assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
@@ -2341,6 +2363,7 @@ async def test_agent_advanced_schema_combined_retrieval_and_compaction(
     keys = _schema_keys(handler.async_show_form.call_args.kwargs["data_schema"].schema)
     assert CONF_EMBEDDING_HISTORY_RETENTION in keys
     assert CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS in keys
+    assert CONF_CONTEXT_COMPACTION_INTRA_TURN in keys
     assert CONF_CONTEXT_COMPACTION_TARGET in keys
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS in keys
     assert CONF_CONTEXT_COMPACTION_PROMPT in keys

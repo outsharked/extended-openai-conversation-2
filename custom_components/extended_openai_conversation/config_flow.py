@@ -72,6 +72,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_CLEAR_EMBEDDING_HISTORY,
+    CONF_CONTEXT_COMPACTION_INTRA_TURN,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
@@ -116,6 +117,7 @@ from .const import (
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONF_BASE_URL,
     DEFAULT_CONF_FUNCTION_TOOLS,
+    DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
@@ -369,6 +371,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_TOP_P: DEFAULT_TOP_P,
         CONF_TEMPERATURE: DEFAULT_TEMPERATURE,
         CONF_FUNCTION_TOOLS: DEFAULT_CONF_FUNCTION_TOOLS_STR,
+        CONF_CONTEXT_COMPACTION_INTRA_TURN: DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
         CONF_CONTEXT_COMPACTION_PROMPT: DEFAULT_CONTEXT_COMPACTION_PROMPT,
         CONF_CONTEXT_COMPACTION_RECENT_TURNS: DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
@@ -2027,6 +2030,14 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         strategy = (self._temp_data or {}).get(
             CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
         )
+        if strategy != "clear":
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_INTRA_TURN,
+                    default=DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
+                )
+            ] = BooleanSelector()
+
         if strategy in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
             schema[
                 vol.Optional(
@@ -2456,6 +2467,14 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         strategy = (self._temp_data or {}).get(
             CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
         )
+        if strategy != "clear":
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_COMPACTION_INTRA_TURN,
+                    default=DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
+                )
+            ] = BooleanSelector()
+
         if strategy in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
             schema[
                 vol.Optional(

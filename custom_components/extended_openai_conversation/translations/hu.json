@@ -110,6 +110,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
+                        "context_compaction_intra_turn": "Körön belüli kontextustömörítés engedélyezése",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
                         "embedding_history_retention": "Beágyazási előzmények megőrzése",
@@ -119,6 +120,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
+                        "context_compaction_intra_turn": "Engedélyezi, hogy a kiválasztott kontextusstratégia csökkentse a befejezett eszközhívásokat egy aktív körön belül, ha a kérés egyébként túllépné a kontextusküszöböt.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
                         "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk.",
@@ -161,6 +163,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
+                        "context_compaction_intra_turn": "Körön belüli kontextustömörítés engedélyezése",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
                         "embedding_history_retention": "Beágyazási előzmények megőrzése",
@@ -170,6 +173,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
+                        "context_compaction_intra_turn": "Engedélyezi, hogy a kiválasztott kontextusstratégia csökkentse a befejezett eszközhívásokat egy aktív körön belül, ha a kérés egyébként túllépné a kontextusküszöböt.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
                         "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk.",

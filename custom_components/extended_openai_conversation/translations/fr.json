@@ -110,6 +110,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
+                        "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
                         "embedding_history_retention": "Conservation de l’historique d’embeddings",
@@ -119,6 +120,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
+                        "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
                         "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
@@ -161,6 +163,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
+                        "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
                         "embedding_history_retention": "Conservation de l’historique d’embeddings",
@@ -170,6 +173,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
+                        "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
                         "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",

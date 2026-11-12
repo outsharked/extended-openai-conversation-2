@@ -110,6 +110,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Meta do contexto compactado (% do limite de tokens)",
+                        "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Prompt de compactação",
                         "embedding_history_retention": "Retenção do histórico de embeddings",
@@ -119,6 +120,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Após o resumo, use como meta esta porcentagem do limite configurado de tokens de contexto.",
+                        "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando a solicitação excederia o limite de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções usadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
                         "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo, o valor usa dias.",
@@ -161,6 +163,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Meta do contexto compactado (% do limite de tokens)",
+                        "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Prompt de compactação",
                         "embedding_history_retention": "Retenção do histórico de embeddings",
@@ -170,6 +173,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Após o resumo, use como meta esta porcentagem do limite configurado de tokens de contexto.",
+                        "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando a solicitação excederia o limite de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções usadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
                         "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo, o valor usa dias.",

@@ -110,6 +110,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
+                        "context_compaction_intra_turn": "Ενεργοποίηση συμπύκνωσης περιεχομένου εντός της ίδιας σειράς",
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
                         "embedding_history_retention": "Διατήρηση ιστορικού embeddings",
@@ -119,6 +120,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
+                        "context_compaction_intra_turn": "Επιτρέπει στην επιλεγμένη στρατηγική περιεχομένου να μειώνει ολοκληρωμένες ανταλλαγές κλήσεων εργαλείων κατά τη διάρκεια μιας ενεργής σειράς όταν διαφορετικά το αίτημα θα ξεπερνούσε το όριο περιεχομένου.",
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
                         "embedding_history_retention": "Θετικός ακέραιος με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
@@ -161,6 +163,7 @@
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
+                        "context_compaction_intra_turn": "Ενεργοποίηση συμπύκνωσης περιεχομένου εντός της ίδιας σειράς",
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
                         "embedding_history_retention": "Διατήρηση ιστορικού embeddings",
@@ -170,6 +173,7 @@
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
+                        "context_compaction_intra_turn": "Επιτρέπει στην επιλεγμένη στρατηγική περιεχομένου να μειώνει ολοκληρωμένες ανταλλαγές κλήσεων εργαλείων κατά τη διάρκεια μιας ενεργής σειράς όταν διαφορετικά το αίτημα θα ξεπερνούσε το όριο περιεχομένου.",
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
                         "embedding_history_retention": "Θετικός ακέραιος με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
