@@ -6,7 +6,7 @@ from ..exceptions import FunctionNotFound
 from .base import Function
 from .bash import BashFunction
 from .composite import CompositeFunction
-from .context_recall import ContextRecallFunction
+from .context_recall import BrowseRecalledContextFunction, ContextRecallFunction
 from .file import EditFileFunction, ReadFileFunction, WriteFileFunction
 from .mcp import MCPFunction
 from .native import NativeFunction
@@ -17,6 +17,7 @@ from .web import RestFunction, ScrapeFunction
 
 __all__ = [
     "BashFunction",
+    "BrowseRecalledContextFunction",
     "CompositeFunction",
     "ContextRecallFunction",
     "EditFileFunction",
@@ -47,6 +48,7 @@ FUNCTIONS: dict[str, Function] = {
     "edit_file": EditFileFunction(),
     "mcp": MCPFunction(),
     "context_recall": ContextRecallFunction(),
+    "browse_recalled_context": BrowseRecalledContextFunction(),
 }
 
 

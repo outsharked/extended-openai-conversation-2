@@ -136,5 +136,6 @@ async def test_generate_data_provides_context_recall_for_retrieval(strategy):
     await entity._async_generate_data(task, chat_log)
 
     function_tools = entity._async_handle_chat_log.await_args.kwargs["function_tools"]
-    assert len(function_tools) == 1
+    assert len(function_tools) == 2
     assert function_tools[0]["spec"]["name"] == "context_recall"
+    assert function_tools[1]["spec"]["name"] == "browse_recalled_context"

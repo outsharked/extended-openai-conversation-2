@@ -46,6 +46,9 @@ from custom_components.extended_openai_conversation.entity import (
     _tool_result_data,
     encode_attachments,
 )
+from custom_components.extended_openai_conversation.functions.context_recall import (
+    build_paginated_recall_result,
+)
 from custom_components.extended_openai_conversation.mcp_client import (
     MCPServerConfig,
     MCPServiceConfig,
@@ -1007,8 +1010,11 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         scope, [1.0, 0.0], 3, "embedding-model"
     )
 
+    recall_result = build_paginated_recall_result(
+        matches, 4000, include_relevance=False
+    )
     recall_message = entity._embedding_recall_message(
-        matches, "Relevant earlier context:", 4000
+        recall_result, "Relevant earlier context:"
     )
     assert recall_message["role"] == "user"
     assert recall_message["content"].startswith("Relevant earlier context:\n")
@@ -1019,7 +1025,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         {"role": "user", "content": "Current question"},
     ]
     entity._place_embedding_recall(
-        request_messages, matches, "Relevant earlier context:", 4000
+        request_messages, recall_result, "Relevant earlier context:"
     )
     assert [message["role"] for message in request_messages] == [
         "system",
@@ -1139,6 +1145,58 @@ async def test_context_recall_execution_injects_current_conversation_id():
     assert media_parts == []
     assert _tool_result_data(tool_result) == {
         "result": {"memories": [], "matches_returned": 0}
+    }
+
+
+async def test_browse_recalled_context_injects_current_conversation_id():
+    """The model cannot browse a snapshot from another conversation."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.hass = MagicMock()
+    entity._attr_entity_id = "conversation.test"
+    function = MagicMock()
+    function.execute = AsyncMock(return_value={"memories": [], "current_page": 2})
+    function_tool = {
+        "spec": {"name": "browse_recalled_context"},
+        "function": {
+            "type": "browse_recalled_context",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+        },
+    }
+    tool_input = MagicMock(
+        id="tool-call-1",
+        tool_name="browse_recalled_context",
+        tool_args={"snapshot_id": "snapshot-1", "page": 2},
+    )
+    chat_log = MagicMock(conversation_id="conversation-1")
+
+    with patch(
+        "custom_components.extended_openai_conversation.entity.get_function",
+        return_value=function,
+    ):
+        tool_result, media_parts = await entity._execute_function_tool(
+            function_tool,
+            tool_input,
+            chat_log,
+            None,
+            [],
+        )
+
+    function.execute.assert_awaited_once_with(
+        entity.hass,
+        {
+            "type": "browse_recalled_context",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+            "conversation_id": "conversation-1",
+        },
+        {"snapshot_id": "snapshot-1", "page": 2},
+        None,
+        [],
+    )
+    assert media_parts == []
+    assert _tool_result_data(tool_result) == {
+        "result": {"memories": [], "current_page": 2}
     }
 
 

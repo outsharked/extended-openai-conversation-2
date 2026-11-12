@@ -2494,6 +2494,17 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             )
             schema[
                 vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    step=1,
+                )
+            )
+            schema[
+                vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,
                     default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )

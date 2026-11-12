@@ -141,6 +141,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         CONF_EMBEDDINGS,
         CONF_FUNCTION_TOOLS,
         DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     )
 
     subentry = _mock_subentry("conversation", "sub_1")
@@ -154,13 +155,20 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
 
     tools = entity._get_function_tools()
 
-    assert len(tools) == 1
+    assert len(tools) == 2
     assert tools[0]["spec"]["name"] == "context_recall"
     assert tools[0]["function"] == {
         "type": "context_recall",
         "entry_id": "endpoint-1",
         "agent_id": "sub_1",
-            "max_tokens": DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+        "max_tokens": DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+        "snapshot_ttl_turns": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+    }
+    assert tools[1]["spec"]["name"] == "browse_recalled_context"
+    assert tools[1]["function"] == {
+        "type": "browse_recalled_context",
+        "entry_id": "endpoint-1",
+        "agent_id": "sub_1",
     }
 
 

@@ -42,6 +42,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
+    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EMBEDDING_CHUNK_SIZE,
@@ -71,6 +72,7 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
@@ -106,8 +108,9 @@ from .embedding_memory import (
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
 from .functions.context_recall import (
-    build_bounded_recall_result,
+    build_browse_recalled_context_function_tool,
     build_context_recall_function_tool,
+    build_paginated_recall_result,
 )
 from .functions.mcp import build_mcp_function_tool
 from .helpers import (
@@ -119,6 +122,7 @@ from .helpers import (
 )
 from .mcp_client import MCPContextRenderer
 from .mcp_service_manager import MCPServiceManager
+from .recall_snapshot import RecallSnapshotScope
 from .runtime import OpenAIServiceRuntime
 
 if TYPE_CHECKING:
@@ -809,7 +813,17 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
                     )
                 ),
-            )
+                int(
+                    self.subentry.data.get(
+                        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    )
+                ),
+            ),
+            build_browse_recalled_context_function_tool(
+                self.entry.entry_id,
+                self.subentry.subentry_id,
+            ),
         ]
 
     def _get_internal_function_tools(self) -> list[dict[str, Any]]:
@@ -875,28 +889,25 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             return []
 
     @staticmethod
-    def _embedding_recall_message(
-        matches: list[EmbeddingMemoryMatch], prefix: str, max_tokens: int
-    ) -> ChatCompletionUserMessageParam:
+    def _embedding_recall_message(recall_result: dict[str, Any], prefix: str) -> ChatCompletionUserMessageParam:
         """Render recalled turns as inert historical request context."""
-        payload = build_bounded_recall_result(
-            matches, max_tokens, include_relevance=False
-        )
         return ChatCompletionUserMessageParam(
             role="user",
-            content=f"{prefix}\n{json.dumps(payload, ensure_ascii=False, default=str)}",
+            content=(
+                f"{prefix}\n"
+                f"{json.dumps(recall_result, ensure_ascii=False, default=str)}"
+            ),
         )
 
     @classmethod
     def _place_embedding_recall(
         cls,
         messages: list[ChatCompletionMessageParam],
-        matches: list[EmbeddingMemoryMatch],
+        recall_result: dict[str, Any] | None,
         prefix: str,
-        max_tokens: int,
     ) -> None:
         """Insert temporary recalled context immediately before the latest user."""
-        if not matches:
+        if recall_result is None or not recall_result["memories"]:
             return
         latest_user_index = next(
             (
@@ -908,7 +919,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         )
         messages.insert(
             latest_user_index,
-            cls._embedding_recall_message(matches, prefix, max_tokens),
+            cls._embedding_recall_message(recall_result, prefix),
         )
 
     async def _async_get_mcp_agent_context(
@@ -1027,7 +1038,63 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
             )
         )
+        recall_snapshot_ttl_turns = int(
+            options.get(
+                CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+            )
+        )
+        runtime = self.entry.runtime_data
+        conversation_id = chat_log.conversation_id
+        recall_snapshot_scope = (
+            RecallSnapshotScope(
+                agent_id=self.subentry.subentry_id,
+                conversation_id=conversation_id,
+            )
+            if isinstance(runtime, OpenAIServiceRuntime)
+            and isinstance(conversation_id, str)
+            and conversation_id
+            else None
+        )
+        if isinstance(runtime, OpenAIServiceRuntime):
+            runtime.recall_snapshots.advance_turn(self.subentry.subentry_id)
+
         recalled_memories = await self._async_recall_embedding_memories(chat_log)
+        recall_result: dict[str, Any] | None = None
+        automatic_snapshot_id: str | None = None
+
+        def _refresh_recall_result() -> None:
+            """Rebuild automatic recall and discard any superseded snapshot."""
+            nonlocal automatic_snapshot_id, recall_result
+            if (
+                automatic_snapshot_id is not None
+                and recall_snapshot_scope is not None
+                and isinstance(runtime, OpenAIServiceRuntime)
+            ):
+                runtime.recall_snapshots.discard(
+                    recall_snapshot_scope, automatic_snapshot_id
+                )
+            automatic_snapshot_id = None
+            recall_result = None
+            if not recalled_memories:
+                return
+            recall_result = build_paginated_recall_result(
+                recalled_memories,
+                recall_max_tokens,
+                snapshot_store=(
+                    runtime.recall_snapshots
+                    if isinstance(runtime, OpenAIServiceRuntime)
+                    else None
+                ),
+                snapshot_scope=recall_snapshot_scope,
+                snapshot_ttl_turns=recall_snapshot_ttl_turns,
+                include_relevance=False,
+            )
+            snapshot_id = recall_result.get("snapshot_id")
+            if isinstance(snapshot_id, str):
+                automatic_snapshot_id = snapshot_id
+
+        _refresh_recall_result()
 
         async def _build_request_messages() -> list[ChatCompletionMessageParam]:
             """Build messages again after history has potentially changed."""
@@ -1042,9 +1109,8 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             )
             self._place_embedding_recall(
                 converted_messages,
-                recalled_memories,
+                recall_result,
                 recall_prefix,
-                recall_max_tokens,
             )
             if (
                 permanent_tools_placement is None
@@ -1172,6 +1238,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
                 if recalled_memories:
                     recalled_memories.pop()
+                    _refresh_recall_result()
                     messages = await _build_request_messages()
                     continue
 
@@ -1190,6 +1257,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         recalled_memories = (
                             await self._async_recall_embedding_memories(chat_log)
                         )
+                        _refresh_recall_result()
                     messages = await _build_request_messages()
                     recent_turns_override = max(0, recent_turns_override - 1)
                     continue
@@ -1414,7 +1482,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         """Execute a custom function."""
         arguments: dict[str, Any] = tool_input.tool_args
         function_config = function_tool["function"]
-        if function_config["type"] == "context_recall":
+        if function_config["type"] in {"context_recall", "browse_recalled_context"}:
             function_config = {
                 **function_config,
                 "conversation_id": chat_log.conversation_id,
@@ -1422,7 +1490,8 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         function = get_function(function_config["type"])
 
         if (
-            function_config["type"] != "context_recall"
+            function_config["type"]
+            not in {"context_recall", "browse_recalled_context"}
             and self.should_run_in_background(arguments)
         ):
             # create a delayed function and execute in background
@@ -1461,7 +1530,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 data={
                     "result": (
                         result
-                        if function_config["type"] == "context_recall"
+                        if function_config["type"] in {"context_recall", "browse_recalled_context"}
                         else str(result)
                     )
                 },
