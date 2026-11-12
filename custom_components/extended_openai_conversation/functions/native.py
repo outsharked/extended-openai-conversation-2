@@ -113,16 +113,15 @@ class NativeFunction(Function):
             selected = target_helpers.async_extract_referenced_entity_ids(
                 hass, selection, primary_entities_only=False
             )
-            selected_entity_ids = selected.referenced | selected.indirectly_referenced
+            resolved_entity_ids = selected.referenced | selected.indirectly_referenced
             if domain != "homeassistant":
-                selected_entity_ids = {
-                    selected_entity_id
-                    for selected_entity_id in selected_entity_ids
-                    if selected_entity_id.partition(".")[0] == domain
+                resolved_entity_ids = {
+                    entity_id
+                    for entity_id in resolved_entity_ids
+                    if entity_id.partition(".")[0] == domain
                 }
-            EntityFilter.from_config(entity_filter_config).validate(
-                selected_entity_ids
-            )
+            selected_entity_ids = set(selection.entity_ids) | resolved_entity_ids
+            EntityFilter.from_config(entity_filter_config).validate(selected_entity_ids)
 
         try:
             await hass.services.async_call(
