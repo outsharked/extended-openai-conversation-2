@@ -7,6 +7,7 @@
   ],
   "config_flow": true,
   "dependencies": [
+    "application_credentials",
     "ai_task",
     "conversation",
     "energy",
@@ -20,7 +21,9 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/outsharked/extended-openai-conversation-2/issues",
   "requirements": [
-    "openai>=2.21.0"
+    "mcp>=2.3.0",
+    "openai>=2.21.0",
+    "regex>=2024.11.6"
   ],
   "version": "1.2.1b2"
 }

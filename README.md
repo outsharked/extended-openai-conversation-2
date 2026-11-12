@@ -26,6 +26,7 @@ fixes made here)_
 - Ability to get data from external API or web page
 - Ability to retrieve state history of entities
 - Option to pass the current user's name to OpenAI via the user message context
+- Ability to call MCP Servers and filter what servers and tools are available to each agent
 
 ## How it works
 
@@ -170,6 +171,57 @@ options and two new options.
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | <img width="608" alt="1" src="https://github.com/jekalmin/extended_openai_conversation/assets/2917984/bb394cd4-5790-4ac9-9311-dbcab0fcca56"> | <img width="591" alt="스크린샷 2023-10-10 오후 10 53 57" src="https://github.com/jekalmin/extended_openai_conversation/assets/2917984/431e4bc5-87a0-4d7b-8da0-6273f955877f"> |
 
+### MCP Options
+- `Server ID`: This is a unique ID that the agent uses when identifying which server a tool belongs to. Changing this value after assigning permanent tools can cause an agent to attempt to call the tool with incorrect data and will likely cause the call to fail or call an incorrect server
+- `Description`: This is an optional description that is used to give the agent an overview of the server and its purpose
+- `HTTP headers`: Custom headers sent to the MCP server with every request. This can be a key pair with each key and pair as a new YAML object. E.g `Authorization: "Bearer <your bearer token>"`
+- `Server uses OAuth`: This is used to enable OAuth based authentication on the server
+- `Perform initial tool discovery`: The integration will attempt to connect to the MCP server during configuration and gather a list of exposed tools. This can be used to provide a list of tools that are disabled so the agent cannot call (or even see) the tool. It can also be used to provide a list of tools that are always visible to the agent on each prompt without the agent needing to do a lookup/search.
+- `Enable on-demand discovery`: This allows the agent to perform a search for additional tools that were not permanently assigned.
+- `Permanent tool selection behaviour`: This is used to tell the integration to either include (Selected) or Exclude (Unselected) the tools added in the `Permanent tool selection`. Permanent tools are always sent to the agent with every prompt so the agent can see them without having to do a lookup/search.
+- `Include permanent tool schemas`: This allows any permanent tools to also include their schema with each prompt. This will consume more tokens and the agent can always lookup the schema if this is unchecked
+- `Disabled tool selection behaviour`: This is used to prevent the agent from seeing any of the tools shown (Selected) or to only see the tools shown (Unselected) when it performs a lookup/search
+- `Tool name regular expression`: This is a filter to exclude any tools that match this filter when an agent does a tool search/lookup. This only searches the name of the tool and does not search descriptions. This filter uses Regular expressions (regex). Any tools that match this search will not be available or seen by an agent. E.g
+```
+.*delete.*
+```
+will disable any tools that contain the word `delete` (case sensitive) in the name
+- `Regular expression timeout`: When the integration attempts a search with regular expressions (including if an agent is also performing a search and is using regular expressions to search for a tool/server), this timeout is used to prevent the integration from getting stuck. This can be a decimal number
+
+Conversation agents provide `Automatically add permanent MCP tools`
+and `Automatically add default MCP prompt` options. Each adds its content as a
+separate system message. The main prompt template can independently place MCP
+context using these Jinja variables:
+
+- `{{ permanent_mcp_tools }}`: The permanent catalogues for all assigned and
+  loaded MCP servers, or an empty string when none are available.
+- `{{ default_mcp_prompt }}`: The default MCP dispatcher instructions, or an
+  empty string when no assigned MCP server is loaded.
+
+Enabling automatic addition while also using the corresponding template variable
+will result in the agent receiving that content more than once in a request.
+
+AI Task agents provide separate `Permanent MCP tools placement` and `Default MCP
+prompt placement` selectors instead of an editable prompt. For each type of
+content, `Dedicated system prompt` adds an additional system message, `Merged
+system prompt` prepends it to the existing system message for models that only
+support one system message, `User input` prepends it to the existing user
+message, and `Disabled` omits its automatic insertion.
+
+**NOTES:**
+- If `On-Demand Discovery` is disabled and no permanent tools are provided, then the Agent will not be able to call any MCP tool.
+- Setting permanent and specific disabled tools is only possible if `Perform initial tool discovery` was enabled. Setting specific disabled tools also requires `On-Demand Discovery` to be enabled. Regex based disabling of tools is only available if `On-Demand Discovery` is enabled.
+- If a tool is in the disabled tool selection but would be excluded from the regex, the tool will still be unavailable to the agent. The regex search does not override the manually specified disabled tools.
+- Permanent tools always bypass the disabled filters and are always available
+- If a server ID and tool name are manually given to the agent in a prompt but they are disabled in the config and the agent attempts to call the tool, the integration will deny the request
+- If an agent is given a server ID in the prompt but the server has not been assigned to the agent, then the integration will prevent the agent from using any tool on that server
+- If the server ID is changed or deleted and is assigned to an agent, the agent will need to have its config updated to the new ID or have the ID removed
+- A tool cannot be both in the `Permanent tool selection` and the `Disabled tool selection` for a single server
+- The permanent context size in the review section is an estimation of how many additional tokens are consumed by any agent using the current MCP server with its present configuration. The size can be reduced by enabling `On-Demand discovery` and reducing the number of `Permanent tools`. You may also turn off `Include permanent tool schemas`. However these actions will lead to more tool calls
+- If the config reports a connection has failed, the MCP server can still be saved, but calls to that MCP server may fail
+- Both Conversation Agents and Task Agents can have access to MCP servers but they must be assigned an MCP server to be able to use it
+- You can also manually specify a tool to manually expose to a conversation Agent in the prompt settings by telling it the server ID and tool name however, this method will not bypass any disabled tool filtering
+- The integration will always check for MCP server connectivity during configuration even if `Perform initial tool discovery` is disabled.
 ### Functions
 
 #### Supported function types
@@ -833,6 +885,15 @@ When using
         {{ raise("entity_id should be exposed.") }}
       {%- endif -%}
 ```
+
+### 8. MCP
+The MCP functions are embedded in and automatically provided to the agent when an MCP server is assigned to it and are not user editable. For reference, the agent is able to see 4 actions through its MCP function:
+- **List servers**: This is a query in which it can lookup what servers it can access. It can optionally return cached initialization information or query the server for the latest information and report which fields changed. While the agent can compare the latest against the cached, it cannot update the cached data and this requires reconfiguring the MCP server and resaving after it performs the connection check (no config modifications are required as this is automatically updated if the configuration menu reports the connection as successful)
+- **List tools**: The agent can search for any tools across any of its assigned MCP servers and is capable of limiting its search to specific sections such as tool name and tool description
+- **Get Tool Details**: The agent can retrieve a tool's input and output schemas plus any title, description, MCP annotations, and task-support status supplied by the server. Details the server does not provide are omitted. It can only get details of tools that it has been permitted to use within its assigned MCP servers.
+- **Execute Tool**: The agent uses this to make a call to the MCP server. The tool supports most image common formats and wav and mp3. If a format is unsupported, the agent is told it is unsupported.
+
+**NOTE: If the MCP Server has `On-Demand Discovery` disabled in the config, then `List tools` will always give the agent an empty list of tools. If the agent tries to use a tool that it is not permitted to use, such as if it remembers the tool name and server but then it was disabled, the agent will be told the tool cannot be found**
 
 ## Practical Usage
 
