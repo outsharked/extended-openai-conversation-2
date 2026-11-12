@@ -1,10 +1,11 @@
 """Tests for NativeFunction using yaml definitions."""
 
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Import Tools and test helpers
+from custom_components.extended_openai_conversation.exceptions import EntityAccessDenied
 from custom_components.extended_openai_conversation.functions import (
     NativeFunction,
     get_function,
@@ -202,6 +203,155 @@ class TestNativeFunctionYaml:
             await function.execute(
                 hass, function_config, arguments, llm_context, exposed_entities
             )
+
+    async def test_execute_service_entity_filter_denies_exact_entity(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """An exact excluded entity is not passed to Home Assistant."""
+        function_config = {
+            "type": "native",
+            "name": "execute_service",
+            "entity_filter": {
+                "mode": "exclude",
+                "entities": ["light.living_room"],
+            },
+        }
+        arguments = {
+            "list": [
+                {
+                    "domain": "light",
+                    "service": "turn_on",
+                    "service_data": {"entity_id": ["light.living_room"]},
+                }
+            ]
+        }
+
+        with pytest.raises(EntityAccessDenied):
+            await function.execute(
+                hass, function_config, arguments, llm_context, exposed_entities
+            )
+
+        hass.services.async_call.assert_not_called()
+
+    async def test_execute_service_deny_pattern_overrides_include_mode(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """A hard-deny regex overrides an entity selected in include mode."""
+        function_config = {
+            "type": "native",
+            "name": "execute_service",
+            "entity_filter": {
+                "mode": "include",
+                "entities": ["light.living_room"],
+                "deny_pattern": ".*living_room.*",
+            },
+        }
+        arguments = {
+            "list": [
+                {
+                    "domain": "light",
+                    "service": "turn_on",
+                    "service_data": {"entity_id": ["light.living_room"]},
+                }
+            ]
+        }
+
+        with pytest.raises(EntityAccessDenied):
+            await function.execute(
+                hass, function_config, arguments, llm_context, exposed_entities
+            )
+
+        hass.services.async_call.assert_not_called()
+
+    async def test_execute_service_filter_resolves_area_targets(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """Area and device targets cannot bypass entity policy."""
+        function_config = {
+            "type": "native",
+            "name": "execute_service",
+            "entity_filter": {
+                "mode": "exclude",
+                "entities": ["light.protected_room"],
+            },
+        }
+        arguments = {
+            "list": [
+                {
+                    "domain": "light",
+                    "service": "turn_on",
+                    "service_data": {"area_id": ["downstairs"]},
+                }
+            ]
+        }
+        selected = SimpleNamespace(
+            referenced=set(),
+            indirectly_referenced={
+                "light.living_room",
+                "light.protected_room",
+                "sensor.temperature",
+            },
+        )
+
+        with (
+            patch(
+                "custom_components.extended_openai_conversation.functions.native.target_helpers.async_extract_referenced_entity_ids",
+                return_value=selected,
+            ),
+            pytest.raises(EntityAccessDenied),
+        ):
+            await function.execute(
+                hass, function_config, arguments, llm_context, exposed_entities
+            )
+
+        hass.services.async_call.assert_not_called()
+
+    async def test_execute_service_filter_denies_explicit_group_target(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """Group expansion cannot discard an explicitly denied group ID."""
+        exposed_entities.append(
+            {
+                "entity_id": "group.downstairs",
+                "name": "Downstairs",
+                "state": "on",
+                "aliases": [],
+            }
+        )
+        function_config = {
+            "type": "native",
+            "name": "execute_service",
+            "entity_filter": {
+                "mode": "exclude",
+                "entities": ["group.downstairs"],
+            },
+        }
+        arguments = {
+            "list": [
+                {
+                    "domain": "homeassistant",
+                    "service": "turn_on",
+                    "service_data": {"entity_id": ["group.downstairs"]},
+                }
+            ]
+        }
+        selected = SimpleNamespace(
+            referenced={"light.living_room"},
+            indirectly_referenced=set(),
+        )
+
+        with (
+            patch(
+                "custom_components.extended_openai_conversation.functions.native.target_helpers.async_extract_referenced_entity_ids",
+                return_value=selected,
+            ),
+            pytest.raises(EntityAccessDenied),
+        ):
+            await function.execute(
+                hass, function_config, arguments, llm_context, exposed_entities
+            )
+
+        hass.services.async_call.assert_not_called()
 
 
 class TestNativeGetHistory:

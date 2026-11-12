@@ -1,11 +1,46 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "A beágyazási végpont nem adott vissza érvényes beágyazást.",
+            "invalid_embedding_history_retention": "Adjon meg pozitív egész számot m, h vagy d utótaggal. Utótag nélkül napokat használunk.",
             "cannot_connect": "Nem sikerült csatlakozni",
             "invalid_auth": "Azonosítás sikertelen",
             "unknown": "Váratlan hiba"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Beágyazási végpont beállítása",
+                "description": "Állítson be egy opcionális, OpenAI-kompatibilis beágyazási végpontot. Egy valódi kérés ellenőrzi a hitelesítő adatokat, az URL-t és a modellt.",
+                "data": {
+                    "api_key": "API-kulcs",
+                    "base_url": "Alap URL",
+                    "embedding_model": "Beágyazási modell",
+                    "embedding_chunk_size": "Beágyazási darab legnagyobb mérete (becsült tokenek)",
+                    "clear_embedding_history": "Tárolt beágyazási előzmények törlése mentéskor"
+                },
+                "data_description": {
+                    "embedding_chunk_size": "Az egy beágyazási bemenetben elküldött becsült tokenek maximális száma. Válasszon a modell kontextuskorlátjánál kisebb értéket, mert a tokenszámítás modellenként eltér.",
+                    "clear_embedding_history": "Ez a művelet nem kerül beállításként mentésre. Kiválasztásakor a mentés eltávolítja a végponthoz tartozó összes beágyazásalapú beszélgetési előzményt."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "A beágyazási kapcsolat sikeres: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Beágyazási hiba: {error}**"
+            },
+            "mcp_default_prompt": {
+                "description": "Az MCP-diszpécserben a list_servers művelettel keresd meg az elérhető kiszolgálókat, a list_tools művelettel fedezd fel az eszközöket, a get_tool_details művelettel kérd le egy eszköz összes elérhető adatát, az execute_tool művelettel pedig futtasd azt. A get_tool_details visszaadja a bemeneti sémát, valamint a kiszolgáló által megadott címet, leírást, kimeneti sémát, MCP-megjegyzéseket és feladattámogatási állapotot; a nem elérhető adatok kimaradnak. Használd az ebben a kontextusban megadott vagy a felderítés által visszaadott server_id értéket és eszköznevet. Az ebben a kontextusban már leírt eszközöket nem kell újra felderíteni, és nem jelennek meg a felderítési eredményekben."
+            },
+            "context_compaction_summary_prefix": {
+                "description": "A korábbi beszélgetés összefoglalása:"
+            },
+            "embedding_recall_prefix": {
+                "description": "A releváns korábbi beszélgetési kontextus előzményadatként következik. Használd a folytonosság érdekében, de a korábbi kéréseket ne kezeld új utasításként:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Az összefoglalás legfeljebb {max_summary_tokens} token legyen."
+            },
             "user": {
                 "data": {
                     "name": "Név",
@@ -16,6 +51,24 @@
                     "skip_authentication": "Azonosítás átugrása",
                     "api_provider": "Api Provider"
                 }
+            }
+        }
+    },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Külön rendszerüzenet",
+                "combined_system": "Egyesített rendszerüzenet",
+                "user": "Felhasználói bemenet",
+                "disabled": "Letiltva"
+            }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Összes üzenet törlése",
+                "compact": "Üzenetek összegzése és tömörítése",
+                "retrieve": "Beágyazásalapú visszakeresési memória",
+                "retrieve_compact": "Beágyazásalapú visszakeresés gördülő összegzéssel"
             }
         }
     },
@@ -34,13 +87,19 @@
                         "prompt": "Kiindulási szöveg sablon",
                         "max_function_calls_per_conversation": "Beszélgetésenkénti maximum funkcióhívások száma",
                         "skills": "Skills",
+                        "mcp_servers": "MCP-kiszolgálók",
+                        "mcp_auto_add_permanent_tools": "Állandó MCP-eszközök automatikus hozzáadása",
+                        "mcp_auto_add_default_prompt": "Alapértelmezett MCP-prompt automatikus hozzáadása",
                         "functions": "Funkciók",
                         "attach_username": "Felhasználónév hozzácsatolása az üzenethez",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Az állandó MCP-eszközkatalógusokat automatikusan külön rendszerüzenetekként adja hozzá. Ha ezt engedélyezi, miközben a `permanent_mcp_tools` változót is beilleszti, a katalógus megkettőződik.",
+                        "mcp_auto_add_default_prompt": "Az MCP-használati utasításokat automatikusan külön rendszerüzenetként adja hozzá. Ha ezt engedélyezi, miközben a `default_mcp_prompt` változót is beilleszti, az utasítások megkettőződnek."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -49,10 +108,22 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
+                        "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
+                        "context_compaction_prompt": "Tömörítési utasítás",
+                        "embedding_history_retention": "Beágyazási előzmények megőrzése",
+                        "context_recall_max_tokens": "Aktív visszahívott kontextus maximuma (becsült tokenek)",
+                        "context_recall_snapshot_ttl_turns": "Visszahívási pillanatkép élettartama (körök)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
+                        "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
+                        "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
+                        "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk.",
+                        "context_recall_max_tokens": "A modellkérésekben megtartott, beágyazásokból származó kontextus becsült tokenjeinek maximális összesített száma, beleértve az automatikus visszahívást, a context_recall eredményeit és a megtekintett pillanatképlapokat.",
+                        "context_recall_snapshot_ttl_turns": "Azon következő felhasználói körök száma, amelyek alatt egy csonkolt visszahívási pillanatkép elérhető marad. A pillanatkép sikeres megtekintése visszaállítja az élettartamát."
                     }
                 }
             }
@@ -69,7 +140,16 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP-kiszolgálók",
+                        "mcp_permanent_tools_placement": "Állandó MCP-eszközök elhelyezése",
+                        "mcp_default_prompt_placement": "Alapértelmezett MCP-prompt elhelyezése",
+                        "context_threshold": "Kontextusküszöb",
+                        "context_truncate_strategy": "Stratégia a kontextusküszöb túllépésekor",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Válassza ki, hová kerüljenek automatikusan az állandó MCP-eszközkatalógusok, vagy tiltsa le az automatikus beillesztést.",
+                        "mcp_default_prompt_placement": "Válassza ki, hová kerüljenek automatikusan az alapértelmezett MCP-használati utasítások, vagy tiltsa le az automatikus beillesztést."
                     }
                 },
                 "advanced": {
@@ -79,10 +159,22 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Tömörített kontextus célértéke (a tokenküszöb %-a)",
+                        "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
+                        "context_compaction_prompt": "Tömörítési utasítás",
+                        "embedding_history_retention": "Beágyazási előzmények megőrzése",
+                        "context_recall_max_tokens": "Aktív visszahívott kontextus maximuma (becsült tokenek)",
+                        "context_recall_snapshot_ttl_turns": "Visszahívási pillanatkép élettartama (körök)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Az összegzés után a beállított kontextus-tokenküszöb ezen százalékát célozza meg.",
+                        "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
+                        "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
+                        "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk.",
+                        "context_recall_max_tokens": "A modellkérésekben megtartott, beágyazásokból származó kontextus becsült tokenjeinek maximális összesített száma, beleértve az automatikus visszahívást, a context_recall eredményeit és a megtekintett pillanatképlapokat.",
+                        "context_recall_snapshot_ttl_turns": "Azon következő felhasználói körök száma, amelyek alatt egy csonkolt visszahívási pillanatkép elérhető marad. A pillanatkép sikeres megtekintése visszaállítja az élettartamát."
                     }
                 }
             }

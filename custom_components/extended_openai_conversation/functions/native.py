@@ -17,12 +17,13 @@ from homeassistant.config import AUTOMATION_CONFIG_PATH
 from homeassistant.const import SERVICE_RELOAD
 from homeassistant.core import HomeAssistant, State
 from homeassistant.exceptions import HomeAssistantError, ServiceNotFound
-from homeassistant.helpers import llm
+from homeassistant.helpers import llm, target as target_helpers
 import homeassistant.util.dt as dt_util
 
-from ..const import EVENT_AUTOMATION_REGISTERED
+from ..const import CONF_ENTITY_FILTER, EVENT_AUTOMATION_REGISTERED
 from ..exceptions import CallServiceError, NativeNotFound
 from .base import Function
+from .entity_filter import EntityFilter, validate_entity_filter_config
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,7 +31,14 @@ _LOGGER = logging.getLogger(__name__)
 class NativeFunction(Function):
     def __init__(self) -> None:
         """Initialize native tool."""
-        super().__init__(vol.Schema({vol.Required("name"): str}))
+        super().__init__(
+            vol.Schema(
+                {
+                    vol.Required("name"): str,
+                    vol.Optional(CONF_ENTITY_FILTER): validate_entity_filter_config,
+                }
+            )
+        )
 
     async def execute(
         self,
@@ -98,6 +106,22 @@ class NativeFunction(Function):
         if not hass.services.has_service(domain, service):
             raise ServiceNotFound(domain, service)
         self.validate_entity_ids(hass, entity_id or [], exposed_entities)
+
+        entity_filter_config = function_config.get(CONF_ENTITY_FILTER)
+        if entity_filter_config is not None:
+            selection = target_helpers.TargetSelection(service_data)
+            selected = target_helpers.async_extract_referenced_entity_ids(
+                hass, selection, primary_entities_only=False
+            )
+            resolved_entity_ids = selected.referenced | selected.indirectly_referenced
+            if domain != "homeassistant":
+                resolved_entity_ids = {
+                    entity_id
+                    for entity_id in resolved_entity_ids
+                    if entity_id.partition(".")[0] == domain
+                }
+            selected_entity_ids = set(selection.entity_ids) | resolved_entity_ids
+            EntityFilter.from_config(entity_filter_config).validate(selected_entity_ids)
 
         try:
             await hass.services.async_call(
@@ -262,16 +286,21 @@ class NativeFunction(Function):
         start_time = dt_util.as_utc(start_time_parsed)
         end_time = dt_util.as_utc(end_time_parsed)
 
-        return await recorder.get_instance(hass).async_add_executor_job(
-            recorder.statistics.statistics_during_period,
-            hass,
-            start_time,
-            end_time,
-            statistic_ids,
-            arguments.get("period", "day"),
-            arguments.get("units"),
-            arguments.get("types", {"change"}),
+        statistics: dict[str, Any] = (
+            await recorder.get_instance(hass).async_add_executor_job(
+                recorder.statistics.statistics_during_period,
+                hass,
+                start_time,
+                end_time,
+                statistic_ids,
+                arguments.get("period", "day"),
+                arguments.get("units"),
+                arguments.get("types", {"change"}),
+            )
         )
+        if not isinstance(statistics, dict):
+            raise HomeAssistantError("Unexpected statistics result")
+        return statistics
 
     def as_utc(
         self, value: str | None, default_value: Any, parse_error_message: str
@@ -287,5 +316,6 @@ class NativeFunction(Function):
 
     def as_dict(self, state: State | dict[str, Any]) -> dict[str, Any]:
         if isinstance(state, State):
-            return state.as_dict()
+            state_dict: dict[str, Any] = state.as_dict()
+            return state_dict
         return state

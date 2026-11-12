@@ -1,11 +1,14 @@
 """Tests for the ai_task platform's setup."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from custom_components.extended_openai_conversation.ai_task import (
     ExtendedOpenAITaskEntity,
     async_setup_entry,
 )
+from homeassistant.components import conversation
 
 
 def _mock_subentry(subentry_type: str, subentry_id: str) -> MagicMock:
@@ -81,3 +84,58 @@ def test_task_entity_supports_generate_data_and_attachments():
         == ai_task.AITaskEntityFeature.GENERATE_DATA
         | ai_task.AITaskEntityFeature.SUPPORT_ATTACHMENTS
     )
+
+
+async def test_generate_data_provides_assigned_mcp_servers():
+    """AI tasks expose the MCP dispatcher for their assigned servers."""
+    from custom_components.extended_openai_conversation.const import CONF_MCP_SERVERS
+
+    subentry = _mock_subentry("ai_task_data", "sub_1")
+    subentry.data = {CONF_MCP_SERVERS: ["weather"]}
+    entity = ExtendedOpenAITaskEntity(MagicMock(), subentry)
+    entity._async_handle_chat_log = AsyncMock()
+    task = MagicMock(structure=None, name="test")
+    chat_log = MagicMock(
+        conversation_id="conversation-id",
+        content=[conversation.AssistantContent(agent_id="agent", content="done")],
+    )
+
+    result = await entity._async_generate_data(task, chat_log)
+
+    function_tools = entity._async_handle_chat_log.await_args.kwargs["function_tools"]
+    assert function_tools[0]["spec"]["name"] == "mcp"
+    assert function_tools[0]["function"] == {
+        "type": "mcp",
+        "server_ids": ["weather"],
+    }
+    assert result.data == "done"
+
+
+@pytest.mark.parametrize("strategy", ["retrieve", "retrieve_compact"])
+async def test_generate_data_provides_context_recall_for_retrieval(strategy):
+    """AI tasks expose conversation recall when retrieval is configured."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_CONTEXT_TRUNCATE_STRATEGY,
+        CONF_EMBEDDINGS,
+    )
+
+    subentry = _mock_subentry("ai_task_data", "sub_1")
+    subentry.data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy
+    }
+    entry = MagicMock(entry_id="endpoint-1")
+    entry.data = {CONF_EMBEDDINGS: {}}
+    entity = ExtendedOpenAITaskEntity(entry, subentry)
+    entity._async_handle_chat_log = AsyncMock()
+    task = MagicMock(structure=None, name="test")
+    chat_log = MagicMock(
+        conversation_id="conversation-id",
+        content=[conversation.AssistantContent(agent_id="agent", content="done")],
+    )
+
+    await entity._async_generate_data(task, chat_log)
+
+    function_tools = entity._async_handle_chat_log.await_args.kwargs["function_tools"]
+    assert len(function_tools) == 2
+    assert function_tools[0]["spec"]["name"] == "context_recall"
+    assert function_tools[1]["spec"]["name"] == "browse_recalled_context"
