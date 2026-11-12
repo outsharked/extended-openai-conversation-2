@@ -38,6 +38,7 @@ from homeassistant.util import slugify
 from .const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
+    CONF_CONTEXT_COMPACTION_INTRA_TURN,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
@@ -66,6 +67,7 @@ from .const import (
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
     DEFAULT_CHAT_MODEL,
+    DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
@@ -97,6 +99,8 @@ from .const import (
     MCP_CONTEXT_PLACEMENT_USER,
 )
 from .embedding_memory import (
+    EMBEDDING_MEMORY_SOURCE_CONVERSATION,
+    EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryChunk,
     EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
@@ -136,6 +140,7 @@ MAX_TOOL_ITERATIONS = 20
 _NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY = "tool_call_extra_content_by_id"
 
 _RECALL_TOOL_NAMES = {"context_recall", "browse_recalled_context"}
+_INTRA_TURN_SUMMARY_NATIVE_KEY = "eoaic_intra_turn_summary"
 
 _SUPPORTED_IMAGE_MIME_TYPES = {
     "image/gif",
@@ -172,6 +177,17 @@ class _RequestTokenUsage:
         """Retain the largest reported usage across tool-call iterations."""
         self.prompt_tokens = max(self.prompt_tokens, prompt_tokens)
         self.total_tokens = max(self.total_tokens, total_tokens)
+
+
+@dataclass(frozen=True, slots=True)
+class _IntraTurnReduction:
+    """Completed active-turn tool exchanges eligible for reduction."""
+
+    summary_groups: tuple[tuple[conversation.Content, ...], ...]
+    archive_groups: tuple[tuple[conversation.Content, ...], ...]
+    remove_indexes: frozenset[int]
+    insert_at: int
+    turn_id: str
 
 
 def _place_mcp_context(
@@ -836,6 +852,73 @@ def _group_compaction_contents(contents: list[conversation.Content]) -> list[lis
     if current:
         groups.append(current)
     return groups
+
+
+def _intra_turn_reduction(contents: list[conversation.Content]) -> _IntraTurnReduction | None:
+    """Return older completed tool exchanges from the active turn."""
+    latest_user_index = next(
+        (
+            index
+            for index in reversed(range(len(contents)))
+            if isinstance(contents[index], conversation.UserContent)
+        ),
+        None,
+    )
+    if latest_user_index is None:
+        return None
+
+    latest_user = contents[latest_user_index]
+    turn_id = latest_user.created.isoformat()
+    exchange_ranges: list[tuple[int, int]] = []
+    index = latest_user_index + 1
+    while index < len(contents):
+        content = contents[index]
+        if not isinstance(content, conversation.AssistantContent) or not content.tool_calls:
+            index += 1
+            continue
+
+        tool_call_ids = {tool_call.id for tool_call in content.tool_calls}
+        result_ids: set[str] = set()
+        end = index + 1
+        while end < len(contents) and isinstance(contents[end], conversation.ToolResultContent):
+            result_ids.add(contents[end].tool_call_id)
+            end += 1
+        if tool_call_ids and tool_call_ids <= result_ids:
+            exchange_ranges.append((index, end))
+        index = end
+
+    # Keep the newest completed exchange verbatim so the model can continue from it.
+    compactable_ranges = exchange_ranges[:-1]
+    if not compactable_ranges:
+        return None
+
+    groups_by_index: list[tuple[int, tuple[conversation.Content, ...], bool]] = []
+    remove_indexes: set[int] = set()
+    for index in range(latest_user_index + 1, len(contents)):
+        content = contents[index]
+        if (
+            isinstance(content, conversation.AssistantContent)
+            and isinstance(content.native, Mapping)
+            and content.native.get(_INTRA_TURN_SUMMARY_NATIVE_KEY) is True
+        ):
+            groups_by_index.append((index, (content,), False))
+            remove_indexes.add(index)
+
+    for start, end in compactable_ranges:
+        group = tuple(contents[start:end])
+        groups_by_index.append((start, group, True))
+        remove_indexes.update(range(start, end))
+
+    groups_by_index.sort(key=lambda item: item[0])
+    return _IntraTurnReduction(
+        summary_groups=tuple(group for _index, group, _archive in groups_by_index),
+        archive_groups=tuple(
+            group for _index, group, archive in groups_by_index if archive
+        ),
+        remove_indexes=frozenset(remove_indexes),
+        insert_at=min(remove_indexes),
+        turn_id=turn_id,
+    )
 
 
 class ExtendedOpenAIBaseLLMEntity(Entity):
@@ -1740,33 +1823,14 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         max_output_tokens = int(options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS))
         return max(1, min(available_tokens, max_output_tokens))
 
-    async def _compact_message_history(
+    async def _summarize_compaction_groups(
         self,
-        chat_log: conversation.ChatLog,
-        token_usage: _RequestTokenUsage,
-        preserve_current_turn: bool = False,
-        recent_turns_override: int | None = None,
-        language: str | None = None,
-    ) -> bool:
-        """Replace older completed turns with a rolling conversation summary."""
-        messages = chat_log.content
-        history_split_index = self._compaction_history_split_index(
-            messages, preserve_current_turn, recent_turns_override
-        )
-        if history_split_index is None or history_split_index <= 1:
-            _LOGGER.info(
-                "Context threshold exceeded, but there is no older history to compact"
-            )
-            return False
-
-        history_to_summarize = messages[1:history_split_index]
-        retained_contents = [messages[0], *messages[history_split_index:]]
-        max_summary_tokens = self._compaction_max_tokens(
-            chat_log, retained_contents, token_usage.prompt_tokens
-        )
-        threshold = int(
-            self.subentry.data.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD)
-        )
+        groups: list[list[conversation.Content]],
+        max_summary_tokens: int,
+        threshold: int,
+        language: str | None,
+    ) -> tuple[str, str]:
+        """Summarize bounded complete conversation or tool-exchange groups."""
         prompt = str(
             self.subentry.data.get(
                 CONF_CONTEXT_COMPACTION_PROMPT,
@@ -1786,7 +1850,6 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         system_prompt = f"{prompt}\n{token_limit}"
         model = self.subentry.data.get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
         model_config = get_model_config(model, self.entry.data.get(CONF_BASE_URL))
-        groups = _group_compaction_contents(history_to_summarize)
         summary = ""
         while groups:
             selected_groups: list[list[conversation.Content]] = []
@@ -1809,14 +1872,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     {"role": "user", "content": candidate_payload},
                 ]
                 if (
-                    _estimate_serialized_tokens(candidate_messages) + max_summary_tokens
+                    _estimate_serialized_tokens(candidate_messages)
+                    + max_summary_tokens
                     > threshold
                 ):
                     break
                 selected_groups = candidate_groups
 
             if not selected_groups:
-                raise HomeAssistantError("A complete conversation turn is too large to compact safely")
+                raise HomeAssistantError("A complete conversation or tool exchange is too large to compact safely")
 
             payload = json.dumps(
                 {
@@ -1854,6 +1918,40 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             summary = result.strip()
             del groups[: len(selected_groups)]
 
+        return summary_prefix, summary
+
+    async def _compact_message_history(
+        self,
+        chat_log: conversation.ChatLog,
+        token_usage: _RequestTokenUsage,
+        preserve_current_turn: bool = False,
+        recent_turns_override: int | None = None,
+        language: str | None = None,
+    ) -> bool:
+        """Replace older completed turns with a rolling conversation summary."""
+        messages = chat_log.content
+        history_split_index = self._compaction_history_split_index(
+            messages, preserve_current_turn, recent_turns_override
+        )
+        if history_split_index is None or history_split_index <= 1:
+            _LOGGER.info(
+                "Context threshold exceeded, but there is no older history to compact"
+            )
+            return False
+
+        history_to_summarize = messages[1:history_split_index]
+        retained_contents = [messages[0], *messages[history_split_index:]]
+        max_summary_tokens = self._compaction_max_tokens(
+            chat_log, retained_contents, token_usage.prompt_tokens
+        )
+        threshold = int(self.subentry.data.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
+        summary_prefix, summary = await self._summarize_compaction_groups(
+            _group_compaction_contents(history_to_summarize),
+            max_summary_tokens,
+            threshold,
+            language,
+        )
+
         agent_id = next(
             (
                 content.agent_id
@@ -1873,24 +1971,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         )
         return True
 
-    async def _archive_message_history(
+    async def _archive_embedding_groups(
         self,
         chat_log: conversation.ChatLog,
-        preserve_current_turn: bool = False,
-        recent_turns_override: int | None = None,
-        remove_archived_history: bool = True,
-    ) -> bool:
-        """Embed and archive older complete turns before removing them."""
-        messages = chat_log.content
-        history_split_index = self._compaction_history_split_index(
-            messages, preserve_current_turn, recent_turns_override
-        )
-        if history_split_index is None or history_split_index <= 1:
-            _LOGGER.info(
-                "Context threshold exceeded, but there is no older history to archive"
-            )
-            return False
-
+        groups: list[list[conversation.Content]],
+        *,
+        source: str,
+        turn_id: str | None = None,
+    ) -> None:
+        """Embed complete history or intra-turn groups in the conversation store."""
         conversation_id = chat_log.conversation_id
         if not isinstance(conversation_id, str) or not conversation_id:
             raise HomeAssistantError(
@@ -1909,7 +1998,6 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
             raise HomeAssistantError("The embedding chunk size is invalid")
 
-        groups = _group_compaction_contents(messages[1:history_split_index])
         searchable_chunks = [
             chunk_embedding_text(_compaction_transcript(group), chunk_size)
             for group in groups
@@ -1953,6 +2041,8 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     searchable_text=group_chunks[0],
                     messages=[content.as_dict() for content in group],
                     retention=retention,
+                    source=source,
+                    turn_id=turn_id,
                     additional_chunks=(
                         EmbeddingMemoryChunk(embedding, searchable_text)
                         for embedding, searchable_text in zip(
@@ -1969,6 +2059,30 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 conversation_id=conversation_id,
             ),
             records,
+        )
+
+    async def _archive_message_history(
+        self,
+        chat_log: conversation.ChatLog,
+        preserve_current_turn: bool = False,
+        recent_turns_override: int | None = None,
+        remove_archived_history: bool = True,
+    ) -> bool:
+        """Embed and archive older complete turns before removing them."""
+        messages = chat_log.content
+        history_split_index = self._compaction_history_split_index(
+            messages, preserve_current_turn, recent_turns_override
+        )
+        if history_split_index is None or history_split_index <= 1:
+            _LOGGER.info(
+                "Context threshold exceeded, but there is no older history to archive"
+            )
+            return False
+
+        await self._archive_embedding_groups(
+            chat_log,
+            _group_compaction_contents(messages[1:history_split_index]),
+            source=EMBEDDING_MEMORY_SOURCE_CONVERSATION,
         )
 
         if remove_archived_history:
@@ -2011,9 +2125,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 remove_archived_history=False,
             )
         except Exception:
-            _LOGGER.exception(
-                "Embedding archival failed; continuing with conversation compaction"
-            )
+            _LOGGER.exception("Embedding archival failed. Continuing with conversation compaction")
 
         try:
             return await self._compact_message_history(
@@ -2074,9 +2186,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     recent_turns_override,
                 )
             except Exception:
-                _LOGGER.exception(
-                    "Embedding archival failed; falling back to conversation compaction"
-                )
+                _LOGGER.exception("Embedding archival failed. Falling back to conversation compaction")
                 try:
                     return await self._compact_message_history(
                         chat_log,
@@ -2086,9 +2196,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         language,
                     )
                 except Exception:
-                    _LOGGER.exception(
-                        "Conversation compaction failed; falling back to clearing history"
-                    )
+                    _LOGGER.exception("Conversation compaction failed. Falling back to clearing history")
                     return self._clear_message_history(chat_log)
         if strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT:
             return await self._retrieve_and_compact_message_history(

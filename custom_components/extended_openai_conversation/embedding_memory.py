@@ -26,6 +26,9 @@ _RETENTION_PATTERN = re.compile(r"(?P<value>[1-9]\d*)(?P<unit>[mhd]?)")
 _UNIT_SECONDS = {"m": 60, "h": 60 * 60, "d": 24 * 60 * 60}
 _ESTIMATED_CHARACTERS_PER_TOKEN = 4
 
+EMBEDDING_MEMORY_SOURCE_CONVERSATION = "conversation_turn"
+EMBEDDING_MEMORY_SOURCE_INTRA_TURN = "intra_turn_tool"
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -101,6 +104,8 @@ class EmbeddingMemoryRecord:
     searchable_text: str
     messages: list[dict[str, Any]]
     additional_chunks: tuple[EmbeddingMemoryChunk, ...] = ()
+    source: str = EMBEDDING_MEMORY_SOURCE_CONVERSATION
+    turn_id: str | None = None
 
     @classmethod
     def create(
@@ -112,6 +117,8 @@ class EmbeddingMemoryRecord:
         messages: list[dict[str, Any]],
         retention: timedelta,
         additional_chunks: Iterable[EmbeddingMemoryChunk] = (),
+        source: str = EMBEDDING_MEMORY_SOURCE_CONVERSATION,
+        turn_id: str | None = None,
         now: datetime | None = None,
     ) -> EmbeddingMemoryRecord:
         """Create a record without collapsing repeated identical turns."""
@@ -125,6 +132,8 @@ class EmbeddingMemoryRecord:
             searchable_text=searchable_text,
             messages=messages,
             additional_chunks=tuple(additional_chunks),
+            source=source,
+            turn_id=turn_id,
         )
 
     @property
@@ -216,6 +225,7 @@ class EmbeddingMemoryStore:
         query_embedding: list[float],
         limit: int,
         model: str | None = None,
+        excluded_turn_id: str | None = None,
     ) -> list[EmbeddingMemoryMatch]:
         """Return the nearest unexpired memories within one conversation."""
         if limit <= 0 or not query_embedding:
@@ -227,6 +237,7 @@ class EmbeddingMemoryStore:
                 query_embedding,
                 limit,
                 model,
+                excluded_turn_id,
                 datetime.now(UTC),
             )
 
@@ -254,6 +265,7 @@ class EmbeddingMemoryStore:
         query_embedding: list[float],
         limit: int,
         model: str | None,
+        excluded_turn_id: str | None,
         now: datetime,
     ) -> list[EmbeddingMemoryMatch]:
         """Synchronously score memories and remove expired records."""
@@ -262,6 +274,12 @@ class EmbeddingMemoryStore:
         matches: list[EmbeddingMemoryMatch] = []
         for record in records:
             if model is not None and record.model != model:
+                continue
+            if (
+                excluded_turn_id is not None
+                and record.source == EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+                and record.turn_id == excluded_turn_id
+            ):
                 continue
             scored_chunks = [
                 (score, chunk.searchable_text)
