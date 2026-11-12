@@ -33,6 +33,7 @@ from custom_components.extended_openai_conversation.embedding_memory import (
 from custom_components.extended_openai_conversation.entity import (
     ExtendedOpenAIBaseLLMEntity,
     MCPAgentContext,
+    _bound_active_recalled_context,
     _convert_content_to_param,
     _extract_extra_content,
     _extract_mcp_media_content,
@@ -895,6 +896,121 @@ def test_tool_result_content_round_trips_to_tool_message():
     assert messages[0]["role"] == "tool"
     assert messages[0]["tool_call_id"] == "call_1"
     assert json.loads(messages[0]["content"]) == {"result": "sunny"}
+
+
+def test_active_recalled_context_keeps_latest_page_and_releases_older_pages():
+    """Recall pages cannot cumulatively exceed the configured active budget."""
+
+    def recall_result(tool_call_id: str, page: int) -> conversation.ToolResultContent:
+        return _make_tool_result_content(
+            agent_id="conversation.test",
+            tool_call_id=tool_call_id,
+            tool_name="browse_recalled_context",
+            data={
+                "result": {
+                    "memories": [{"excerpt": str(page) * 120}],
+                    "snapshot_id": "snapshot-1",
+                    "current_page": page,
+                    "total_pages": 4,
+                }
+            },
+        )
+
+    contents: list[conversation.Content] = [
+        recall_result("older", 1),
+        conversation.UserContent(content="Recall the relevant detail"),
+        recall_result("current-first", 2),
+        recall_result("current-latest", 3),
+    ]
+    automatic = {
+        "memories": [{"excerpt": "automatic" * 20}],
+        "snapshot_id": "automatic-snapshot",
+        "current_page": 1,
+        "total_pages": 2,
+    }
+
+    bounded_automatic, overrides = _bound_active_recalled_context(
+        contents, automatic, 50
+    )
+
+    assert 3 not in overrides
+    assert set(overrides) == {0, 2}
+    assert overrides[2]["result"] == {
+        "recalled_context_released": True,
+        "snapshot_id": "snapshot-1",
+        "current_page": 2,
+        "total_pages": 4,
+        "message": (
+            "This page was released from active context. Use "
+            "browse_recalled_context to retrieve it again."
+        ),
+    }
+    assert bounded_automatic == {
+        "recalled_context_released": True,
+        "snapshot_id": "automatic-snapshot",
+        "current_page": 1,
+        "total_pages": 2,
+        "message": (
+            "This page was released from active context. Use "
+            "browse_recalled_context to retrieve it again."
+        ),
+    }
+
+    messages = _convert_content_to_param(
+        contents,
+        tool_result_overrides=overrides,
+    )
+    assert json.loads(messages[2]["content"])["result"][
+        "recalled_context_released"
+    ] is True
+    assert "memories" in json.loads(messages[3]["content"])["result"]
+
+
+def test_active_recalled_context_drops_unpageable_automatic_recall():
+    """Automatic recall without a snapshot is omitted when no budget remains."""
+    current = _make_tool_result_content(
+        agent_id="conversation.test",
+        tool_call_id="current",
+        tool_name="context_recall",
+        data={"result": {"memories": [{"excerpt": "x" * 120}]}},
+    )
+
+    bounded_automatic, overrides = _bound_active_recalled_context(
+        [conversation.UserContent(content="Question"), current],
+        {"memories": [{"excerpt": "y" * 120}]},
+        50,
+    )
+
+    assert bounded_automatic is None
+    assert overrides == {}
+
+
+def test_released_automatic_recall_keeps_its_snapshot_pointer():
+    """A paginated automatic recall remains recoverable after release."""
+    messages = [
+        {"role": "system", "content": "System prompt"},
+        {"role": "user", "content": "Current question"},
+    ]
+    released = {
+        "recalled_context_released": True,
+        "snapshot_id": "snapshot-1",
+        "current_page": 1,
+        "total_pages": 3,
+    }
+
+    ExtendedOpenAIBaseLLMEntity._place_embedding_recall(
+        messages,
+        released,
+        "Relevant earlier context:",
+    )
+
+    assert [message["role"] for message in messages] == [
+        "system",
+        "user",
+        "user",
+    ]
+    assert "snapshot-1" in messages[1]["content"]
+    assert messages[2]["content"] == "Current question"
 
 
 def test_format_structured_output_converts_probatio_schema():
