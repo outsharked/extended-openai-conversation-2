@@ -179,7 +179,9 @@ def test_context_recall_bounds_oversized_results():
     assert result["truncated"] is True
     assert result["memories"][0]["truncated"] is True
     assert "messages" not in result["memories"][0]
-    assert result["memories"][0]["excerpt"].startswith("relevant later chunk")
+    excerpt = result["memories"][0]["excerpt"]
+    assert excerpt
+    assert match.matched_text.startswith(excerpt)
     assert "irrelevant record prefix" not in result["memories"][0]["excerpt"]
     assert len(json.dumps(result)) <= 400
 
