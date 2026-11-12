@@ -306,6 +306,53 @@ class TestNativeFunctionYaml:
 
         hass.services.async_call.assert_not_called()
 
+    async def test_execute_service_filter_denies_explicit_group_target(
+        self, hass, function, exposed_entities, llm_context
+    ):
+        """Group expansion cannot discard an explicitly denied group ID."""
+        exposed_entities.append(
+            {
+                "entity_id": "group.downstairs",
+                "name": "Downstairs",
+                "state": "on",
+                "aliases": [],
+            }
+        )
+        function_config = {
+            "type": "native",
+            "name": "execute_service",
+            "entity_filter": {
+                "mode": "exclude",
+                "entities": ["group.downstairs"],
+            },
+        }
+        arguments = {
+            "list": [
+                {
+                    "domain": "homeassistant",
+                    "service": "turn_on",
+                    "service_data": {"entity_id": ["group.downstairs"]},
+                }
+            ]
+        }
+        selected = SimpleNamespace(
+            referenced={"light.living_room"},
+            indirectly_referenced=set(),
+        )
+
+        with (
+            patch(
+                "custom_components.extended_openai_conversation.functions.native.target_helpers.async_extract_referenced_entity_ids",
+                return_value=selected,
+            ),
+            pytest.raises(EntityAccessDenied),
+        ):
+            await function.execute(
+                hass, function_config, arguments, llm_context, exposed_entities
+            )
+
+        hass.services.async_call.assert_not_called()
+
 
 class TestNativeGetHistory:
     """Test composite get_history function."""
