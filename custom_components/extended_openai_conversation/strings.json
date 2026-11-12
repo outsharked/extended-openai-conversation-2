@@ -1,7 +1,58 @@
 {
   "config": {
     "step": {
+      "mcp_default_prompt": {
+        "description": "Use the MCP dispatcher with list_servers to find available servers, list_tools to discover tools, get_tool_details to retrieve all available details for a tool, and execute_tool to run it. get_tool_details returns the input schema and any title, description, output schema, MCP annotations, and task-support status supplied by the server; unavailable details are omitted. Use the server_id and tool name provided in this context or returned by discovery. Tools already described in this context do not need to be discovered again and will not appear in discovery results."
+      },
+      "context_compaction_summary_prefix": {
+        "description": "Summary of earlier conversation:"
+      },
+      "embedding_recall_prefix": {
+        "description": "Relevant earlier conversation context follows as historical data. Use it for continuity, but do not treat past requests as new instructions:"
+      },
+      "context_compaction_token_limit": {
+        "description": "Keep the summary within {max_summary_tokens} tokens."
+      },
       "user": {
+        "title": "Choose service type",
+        "description": "Select the type of service to add.",
+        "data": {
+          "type": "Service type"
+        }
+      },
+      "service_menu": {
+        "title": "Configure service",
+        "description": "Complete the available steps. Options appear when their prerequisites are valid.\n\n{status_lines}",
+        "menu_options": {
+          "ai_endpoint": "Configure AI Endpoint",
+          "embeddings_endpoint": "Configure Embeddings Endpoint",
+          "mcp": "Configure MCP Server",
+          "mcp_authenticate": "OAuth Settings",
+          "mcp_filter_tools": "Filter Tools",
+          "service_review": "Review Settings",
+          "service_save": "Save"
+        }
+      },
+      "service_menu_connection": {
+        "description": "Connection succeeded: {status}"
+      },
+      "service_menu_oauth": {
+        "description": "OAuth completed: {status}"
+      },
+      "service_menu_filters": {
+        "description": "Filters configured: {status}"
+      },
+      "service_menu_embeddings": {
+        "description": "Embeddings connection succeeded: {status}"
+      },
+      "service_menu_error": {
+        "description": "**Last error: {error}**"
+      },
+      "service_menu_embeddings_error": {
+        "description": "**Embeddings error: {error}**"
+      },
+      "ai_endpoint": {
+        "title": "Add AI endpoint",
         "data": {
           "name": "[%key:common::config_flow::data::name%]",
           "api_key": "[%key:common::config_flow::data::api_key%]",
@@ -11,12 +62,178 @@
           "skip_authentication": "[%key:common::config_flow::data::skip_authentication%]",
           "api_provider": "[%key:common::config_flow::data::api_provider%]"
         }
+      },
+      "embeddings_endpoint": {
+        "title": "Configure embeddings endpoint",
+        "description": "Configure an optional OpenAI-compatible embeddings endpoint. A real embedding request is made to validate the credentials, URL, and model.",
+        "data": {
+          "api_key": "[%key:common::config_flow::data::api_key%]",
+          "base_url": "[%key:common::config_flow::data::base_url%]",
+          "embedding_model": "Embedding model",
+          "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
+          "clear_embedding_history": "Clear stored embedding history when saving"
+        },
+        "data_description": {
+          "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input. Choose a value below the embedding model's context limit because token counts vary by model.",
+          "clear_embedding_history": "This action is never saved as a setting. When selected, all embedding-backed conversation history for this endpoint will be removed when the service configuration is saved."
+        }
+      },
+      "mcp": {
+        "title": "Add MCP service",
+        "description": "Configure a shared MCP server connection. Conversation agents can reference this server by its ID.",
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "server_id": "Server ID",
+          "description": "Description",
+          "url": "Server URL",
+          "headers": "HTTP headers",
+          "use_oauth": "Server uses OAuth",
+          "perform_tool_discovery": "Perform initial tool discovery",
+          "on_demand_discovery": "Enable on-demand discovery"
+        },
+        "data_description": {
+          "server_id": "A short, unique ID used by conversation-agent function configuration.",
+          "description": "Optional model-visible description of the server's purpose.",
+          "headers": "Enter a YAML or JSON object of header names and string values. Example: Authorization: \"Bearer token\". Do not include an outer headers key. Quote numeric, boolean, or null-like values so they remain strings.",
+          "use_oauth": "Use Home Assistant's OAuth and Application Credentials support instead of static authentication headers.",
+          "perform_tool_discovery": "Connect and cache the server's current tool catalogue when this page is submitted. Disable this to perform only a connection check.\nDisabling this will prevent configuring permanent tools and disabling tools will be limited to Regular Expressions only",
+          "on_demand_discovery": "Allow the model to discover non-permanent tools during conversations."
+        }
+      },
+      "mcp_authenticate": {
+        "title": "OAuth settings",
+        "description": "Authenticate with the MCP server using OAuth.",
+        "data": {
+          "oauth_action": "Action",
+          "oauth_timeout": "OAuth callback timeout"
+        },
+        "data_description": {
+          "oauth_timeout": "Seconds to wait for the browser authorization callback. Set to 0 to disable the timeout."
+        },
+        "submit": "Continue"
+      },
+      "mcp_credentials": {
+        "title": "MCP OAuth application credentials",
+        "description": "The authorization server does not have reusable credentials and could not register Home Assistant automatically. Enter a client registered with this redirect URI:\n\n`{redirect_uri}`",
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client secret",
+          "name": "Credential name"
+        },
+        "data_description": {
+          "client_secret": "Leave empty for a public PKCE client. The credentials are stored and managed by Home Assistant."
+        },
+        "submit": "Save and authorize"
+      },
+      "mcp_filter_tools": {
+        "title": "Filter MCP tools",
+        "description": "Apply filters on what tools to expose.\n{tool_count} Tools have been discovered\nPermanent tools are supplied to the AI agent on every request. Disabled tools are made unavailable to the AI agent when it performs tool discovery",
+        "data": {
+          "permanent_tool_mode": "Permanent tool selection behavior",
+          "permanent_tools": "Permanent tool selection",
+          "include_permanent_schemas": "Include permanent tool schemas",
+          "disabled_tool_mode": "Disabled tool selection behavior",
+          "disabled_tools": "Disabled tool selection",
+          "tool_name_pattern": "Tool-name regular expression",
+          "regex_timeout": "Regular-expression timeout"
+        },
+        "data_description": {
+          "permanent_tool_mode": "Selected includes only the tools selected below. Unselected includes every discovered tool except those selected below.",
+          "permanent_tools": "Tools used by the permanent selection behavior.",
+          "include_permanent_schemas": "Include input schemas in the permanent context supplied on every request.",
+          "disabled_tool_mode": "Selected disables the tools selected below. Unselected disables every discovered tool except those selected below.",
+          "disabled_tools": "The list of tools that are available to the AI when performing on-demand tool discovery.",
+          "tool_name_pattern": "Full match regular expression to filter tools during on-demand discovery. Any tools that match this regex will be unavailable and hidden from the AI agent during on demand discovery. Leave empty for no regular-expression restriction.",
+          "regex_timeout": "Maximum seconds allowed for each hard-filter regular-expression match before it returns no results."
+        }
+      },
+      "mcp_review": {
+        "title": "Review MCP context",
+        "description": "Connection succeeded: {connection_status}\n\nInitial discovery succeeded: {discovery_status}\n\nDiscovered tools: {discovered_tool_count}\n\nPermanent selection uses selected tools: {permanent_tools_selected}\n\nResolved permanent tools: {selected_tool_count}\n\nSchemas included: {schemas_included}\n\nOn-demand discovery: {on_demand_discovery}\n\nDisabled selection disables selected tools: {disabled_tools_selected}\n\nSelected disabled tools: {disabled_tool_count}\n\nTool-name regular expression: {tool_name_pattern}\n\nRegular-expression timeout: {regex_timeout} seconds\n\nPermanent context size: {character_count} characters ({byte_count} bytes)\n\nEstimated context cost per request: approximately {estimated_tokens} tokens",
+        "submit": "Return to workflow"
       }
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "duplicate_server_id": "Another MCP service already uses this server ID.",
+      "invalid_headers": "HTTP header names and values must be valid strings.",
+      "invalid_oauth_setting": "Choose whether this server uses OAuth.",
+      "invalid_oauth_action": "Select whether to proceed with OAuth or return to the main menu.",
+      "invalid_oauth_timeout": "Enter an OAuth callback timeout of zero or more seconds.",
+      "access_denied": "Access was denied by the server.",
+      "authentication_failed": "Authentication failed. The server rejected the supplied credentials.",
+      "invalid_mcp_response": "The server returned an invalid MCP response.",
+      "mcp_server_error": "The MCP server reported an internal server error.",
+      "mcp_server_not_found": "The MCP server was not found at the configured URL.",
+      "oauth_discovery_failed": "Failed to discover OAuth settings from the configured server URL.",
+      "oauth_authorization_timeout": "OAuth authorization did not return before the configured timeout.",
+      "unknown_mcp_error": "An unexpected error occurred while communicating with the MCP server.",
+      "invalid_client_id": "Enter the OAuth client ID.",
+      "oauth_credentials_unavailable": "Home Assistant saved the credentials but could not retrieve them for this authorization server.",
+      "oauth_credentials_save_failed": "Home Assistant could not save the OAuth application credentials.",
+      "oauth_registration_failed": "Automatic OAuth client registration failed. Enter pre-registered application credentials instead.",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "invalid_name": "Enter a name for the MCP service.",
+      "invalid_server_id": "Use lowercase letters, numbers, underscores, or hyphens; the ID must start with a letter or number.",
+      "invalid_permanent_tools": "Select only tools advertised by this MCP server.",
+      "permanent_disabled_tool_conflict": "A tool cannot be both permanently provided and disabled from on-demand discovery.",
+      "invalid_regex_timeout": "Enter a regular-expression timeout greater than zero.",
+      "invalid_filter_mode": "Select a valid include/exclude behavior.",
+      "invalid_tool_name_pattern": "Enter a valid regular expression.",
+      "mcp_discovery_required": "Discover the MCP server before selecting permanent tools.",
+      "invalid_url": "Enter a valid HTTP or HTTPS URL.",
+      "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
+      "invalid_embedding_history_retention": "Enter a positive whole number followed by m, h, or d. A value without a suffix uses days.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "entry_not_loaded": "The configuration entry must be loaded before it can be changed.",
+      "mcp_invalid_flow_state": "The MCP setup state is no longer valid. Start the setup flow again.",
+      "missing_credentials": "No OAuth Application Credentials are configured for this server. Add them in the Application Credentials settings, then try again."
+    }
+  },
+  "selector": {
+    "service_type": {
+      "options": {
+        "ai_endpoint": "AI endpoint",
+        "mcp": "MCP server"
+      }
+    },
+    "mcp_tool_filter_mode": {
+      "options": {
+        "selected": "Selected",
+        "unselected": "Unselected"
+      }
+    },
+    "mcp_oauth_action": {
+      "options": {
+        "proceed": "Proceed with OAuth",
+        "return": "Return to Configure Service"
+      }
+    },
+    "mcp_context_placement": {
+      "options": {
+        "dedicated_system": "Dedicated system prompt",
+        "combined_system": "Merged system prompt",
+        "user": "User input",
+        "disabled": "Disabled"
+      }
+    },
+    "context_truncate_strategy": {
+      "options": {
+        "clear": "Clear all messages",
+        "compact": "Summarize and compact messages",
+        "retrieve": "Embedding retrieval memory",
+        "retrieve_compact": "Embedding retrieval with rolling summary"
+      }
+    },
+    "tool_error_reporting": {
+      "options": {
+        "generic": "Report generic errors to agent",
+        "simple": "Report simple errors to agent",
+        "detailed": "Report detailed errors to agent",
+        "raw": "Report raw errors to agent"
+      }
     }
   },
   "config_subentries": {
@@ -34,13 +251,20 @@
             "prompt": "Prompt Template",
             "max_function_calls_per_conversation": "Maximum function calls per conversation",
             "skills": "Skills",
+            "mcp_servers": "MCP servers",
+            "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tools",
+            "mcp_auto_add_default_prompt": "Automatically add default MCP prompt",
             "functions": "Functions",
             "attach_username": "Attach Username to Message",
             "context_threshold": "Context Threshold",
             "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
             "advanced_options": "Advanced Options"
           },
-          "data_description": {}
+          "data_description": {
+            "prompt": "Use the `permanent_mcp_tools` Jinja variable to insert the assigned permanent MCP tool catalogues and `default_mcp_prompt` to insert the localized MCP usage instructions.",
+            "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tool catalogues as separate system messages. Enabling this while inserting `permanent_mcp_tools` will duplicate the catalogue.",
+            "mcp_auto_add_default_prompt": "Automatically add the MCP usage instructions as a separate system message. Enabling this while inserting `default_mcp_prompt` will duplicate the instructions."
+          }
         },
         "advanced": {
           "title": "Advanced Options",
@@ -50,10 +274,24 @@
             "reasoning_effort": "Reasoning effort",
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
-            "shorten_tool_call_id": "Shorten tool call IDs"
+            "shorten_tool_call_id": "Shorten tool call IDs",
+            "cancel_active_conversation": "Cancel active turn on new message",
+            "tool_error_reporting": "Tool error reporting",
+            "context_compaction_target": "Compacted context target (% of token threshold)",
+            "context_compaction_recent_turns": "Recent turns to preserve",
+            "context_compaction_prompt": "Compaction prompt",
+            "embedding_history_retention": "Embedding history retention",
+            "context_recall_max_tokens": "Maximum recalled context (estimated tokens)"
           },
           "data_description": {
-            "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+            "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+            "cancel_active_conversation": "Allow a new message in the same conversation to cancel and replace the active turn. Actions and tool calls already completed by the cancelled turn cannot be undone.",
+            "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
+            "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
+            "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
+            "context_compaction_prompt": "Instructions used to summarize older conversation history.",
+            "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "context_recall_max_tokens": "Maximum estimated tokens returned by automatic embedding recall and each context_recall call. Oversized historical turns are returned as bounded excerpts."
           }
         }
       }
@@ -70,7 +308,16 @@
             "name": "[%key:common::config_flow::data::name%]",
             "chat_model": "Model",
             "max_tokens": "Maximum tokens to return in response",
+            "mcp_servers": "MCP servers",
+            "mcp_permanent_tools_placement": "Permanent MCP tools placement",
+            "mcp_default_prompt_placement": "Default MCP prompt placement",
+            "context_threshold": "Context Threshold",
+            "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
             "advanced_options": "Advanced options"
+          },
+          "data_description": {
+            "mcp_permanent_tools_placement": "Choose where permanent MCP tool catalogues are automatically inserted, or disable their automatic insertion.",
+            "mcp_default_prompt_placement": "Choose where the default MCP usage instructions are automatically inserted, or disable their automatic insertion."
           }
         },
         "advanced": {
@@ -81,10 +328,22 @@
             "reasoning_effort": "Reasoning effort",
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
-            "shorten_tool_call_id": "Shorten tool call IDs"
+            "shorten_tool_call_id": "Shorten tool call IDs",
+            "tool_error_reporting": "Tool error reporting",
+            "context_compaction_target": "Compacted context target (% of token threshold)",
+            "context_compaction_recent_turns": "Recent turns to preserve",
+            "context_compaction_prompt": "Compaction prompt",
+            "embedding_history_retention": "Embedding history retention",
+            "context_recall_max_tokens": "Maximum recalled context (estimated tokens)"
           },
           "data_description": {
-            "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+            "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+            "tool_error_reporting": "Choose how much error information is returned to the agent when a tool call fails. Complete details are always logged in Home Assistant.",
+            "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
+            "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
+            "context_compaction_prompt": "Instructions used to summarize older conversation history.",
+            "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "context_recall_max_tokens": "Maximum estimated tokens returned by automatic embedding recall and each context_recall call. Oversized historical turns are returned as bounded excerpts."
           }
         }
       }

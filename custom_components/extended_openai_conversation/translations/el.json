@@ -1,11 +1,46 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "Το τελικό σημείο embeddings δεν επέστρεψε έγκυρο embedding.",
+            "invalid_embedding_history_retention": "Εισαγάγετε θετικό ακέραιο αριθμό με m, h ή d. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
             "cannot_connect": "Αποτυχία σύνδεσης",
             "invalid_auth": "Μη έγκυρος έλεγχος ταυτότητας",
             "unknown": "Απροσδόκητο σφάλμα"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "Ρύθμιση τελικού σημείου embeddings",
+                "description": "Ρυθμίστε ένα προαιρετικό τελικό σημείο embeddings συμβατό με OpenAI. Ένα πραγματικό αίτημα ελέγχει τα διαπιστευτήρια, τη διεύθυνση URL και το μοντέλο.",
+                "data": {
+                    "api_key": "Κλειδί API",
+                    "base_url": "Βασική διεύθυνση URL",
+                    "embedding_model": "Μοντέλο embeddings",
+                    "embedding_chunk_size": "Μέγιστο μέγεθος τμήματος embedding (εκτιμώμενα διακριτικά)",
+                    "clear_embedding_history": "Εκκαθάριση αποθηκευμένου ιστορικού embeddings κατά την αποθήκευση"
+                },
+                "data_description": {
+                    "embedding_chunk_size": "Μέγιστος εκτιμώμενος αριθμός διακριτικών σε μία είσοδο embedding. Επιλέξτε τιμή κάτω από το όριο περιεχομένου του μοντέλου, επειδή η καταμέτρηση διαφέρει ανά μοντέλο.",
+                    "clear_embedding_history": "Αυτή η ενέργεια δεν αποθηκεύεται ως ρύθμιση. Όταν επιλεγεί, όλο το ιστορικό συνομιλιών embeddings για αυτό το τελικό σημείο θα αφαιρεθεί κατά την αποθήκευση."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "Η σύνδεση embeddings πέτυχε: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Σφάλμα embeddings: {error}**"
+            },
+            "mcp_default_prompt": {
+                "description": "Χρησιμοποίησε τον MCP dispatcher με list_servers για να βρεις διαθέσιμους διακομιστές, list_tools για να ανακαλύψεις εργαλεία, get_tool_details για να ανακτήσεις όλες τις διαθέσιμες λεπτομέρειες ενός εργαλείου και execute_tool για να το εκτελέσεις. Το get_tool_details επιστρέφει το σχήμα εισόδου και όποια από τα εξής παρέχει ο διακομιστής: τίτλο, περιγραφή, σχήμα εξόδου, επισημειώσεις MCP και κατάσταση υποστήριξης εργασιών· οι μη διαθέσιμες λεπτομέρειες παραλείπονται. Χρησιμοποίησε το server_id και το όνομα εργαλείου που παρέχονται σε αυτό το πλαίσιο ή επιστρέφονται από την ανακάλυψη. Τα εργαλεία που περιγράφονται ήδη σε αυτό το πλαίσιο δεν χρειάζεται να ανακαλυφθούν ξανά και δεν θα εμφανίζονται στα αποτελέσματα ανακάλυψης."
+            },
+            "context_compaction_summary_prefix": {
+                "description": "Σύνοψη προηγούμενης συνομιλίας:"
+            },
+            "embedding_recall_prefix": {
+                "description": "Ακολουθεί σχετικό προηγούμενο περιεχόμενο συνομιλίας ως ιστορικά δεδομένα. Χρησιμοποίησέ το για συνέχεια, αλλά μην αντιμετωπίζεις παλαιότερα αιτήματα ως νέες οδηγίες:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Διατήρησε τη σύνοψη εντός {max_summary_tokens} διακριτικών."
+            },
             "user": {
                 "data": {
                     "name": "Όνομα",
@@ -16,6 +51,32 @@
                     "skip_authentication": "Παράλειψη Ελέγχου Ταυτότητας",
                     "api_provider": "Api Provider"
                 }
+            }
+        }
+    },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Ξεχωριστή προτροπή συστήματος",
+                "combined_system": "Συνδυασμένη προτροπή συστήματος",
+                "user": "Είσοδος χρήστη",
+                "disabled": "Απενεργοποιημένο"
+            }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "Εκκαθάριση όλων των μηνυμάτων",
+                "compact": "Σύνοψη και συμπύκνωση μηνυμάτων",
+                "retrieve": "Μνήμη ανάκτησης embeddings",
+                "retrieve_compact": "Ανάκτηση embeddings με κυλιόμενη σύνοψη"
+            }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "Αναφορά γενικών σφαλμάτων στον πράκτορα",
+                "simple": "Αναφορά απλών σφαλμάτων στον πράκτορα",
+                "detailed": "Αναφορά λεπτομερών σφαλμάτων στον πράκτορα",
+                "raw": "Αναφορά ανεπεξέργαστων σφαλμάτων στον πράκτορα"
             }
         }
     },
@@ -34,13 +95,19 @@
                         "prompt": "Πρότυπο Προτροπής",
                         "max_function_calls_per_conversation": "Μέγιστες κλήσεις συναρτήσεων ανά συνομιλία",
                         "skills": "Skills",
+                        "mcp_servers": "Διακομιστές MCP",
+                        "mcp_auto_add_permanent_tools": "Αυτόματη προσθήκη μόνιμων εργαλείων MCP",
+                        "mcp_auto_add_default_prompt": "Αυτόματη προσθήκη προεπιλεγμένης προτροπής MCP",
                         "functions": "Συναρτήσεις",
                         "attach_username": "Επισύναψη Ονόματος Χρήστη στο Μήνυμα",
                         "context_threshold": "Όριο Περιεχομένου",
                         "context_truncate_strategy": "Στρατηγική περικοπής περιεχομένου όταν ξεπεραστεί το όριο",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "Προσθέτει αυτόματα τους καταλόγους μόνιμων εργαλείων MCP ως ξεχωριστά μηνύματα συστήματος. Η ενεργοποίηση αυτής της επιλογής μαζί με την εισαγωγή του `permanent_mcp_tools` θα διπλασιάσει τον κατάλογο.",
+                        "mcp_auto_add_default_prompt": "Προσθέτει αυτόματα τις οδηγίες χρήσης MCP ως ξεχωριστό μήνυμα συστήματος. Η ενεργοποίηση αυτής της επιλογής μαζί με την εισαγωγή του `default_mcp_prompt` θα διπλασιάσει τις οδηγίες."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -49,10 +116,24 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "Ακύρωση ενεργής σειράς με νέο μήνυμα",
+                        "tool_error_reporting": "Αναφορά σφαλμάτων εργαλείων",
+                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
+                        "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
+                        "context_compaction_prompt": "Προτροπή συμπύκνωσης",
+                        "embedding_history_retention": "Διατήρηση ιστορικού embeddings",
+                        "context_recall_max_tokens": "Μέγιστο ανακληθέν περιεχόμενο (εκτιμώμενα tokens)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "Επιτρέπει σε ένα νέο μήνυμα στην ίδια συνομιλία να ακυρώσει και να αντικαταστήσει την ενεργή σειρά. Ενέργειες και κλήσεις εργαλείων που έχουν ήδη ολοκληρωθεί δεν μπορούν να αναιρεθούν.",
+                        "tool_error_reporting": "Επιλέξτε πόσες πληροφορίες σφάλματος επιστρέφονται στον πράκτορα όταν αποτυγχάνει μια κλήση εργαλείου. Οι πλήρεις λεπτομέρειες καταγράφονται πάντα στο Home Assistant.",
+                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
+                        "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
+                        "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
+                        "embedding_history_retention": "Θετικός ακέραιος με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
+                        "context_recall_max_tokens": "Μέγιστος εκτιμώμενος αριθμός tokens που επιστρέφεται από την αυτόματη ανάκληση embeddings και κάθε κλήση context_recall. Οι υπερμεγέθεις ιστορικές σειρές επιστρέφονται ως περιορισμένα αποσπάσματα."
                     }
                 }
             }
@@ -69,7 +150,16 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "Διακομιστές MCP",
+                        "mcp_permanent_tools_placement": "Τοποθέτηση μόνιμων εργαλείων MCP",
+                        "mcp_default_prompt_placement": "Τοποθέτηση προεπιλεγμένης προτροπής MCP",
+                        "context_threshold": "Όριο περιεχομένου",
+                        "context_truncate_strategy": "Στρατηγική όταν ξεπεραστεί το όριο περιεχομένου",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Επιλέξτε πού θα εισάγονται αυτόματα οι κατάλογοι μόνιμων εργαλείων MCP ή απενεργοποιήστε την αυτόματη εισαγωγή τους.",
+                        "mcp_default_prompt_placement": "Επιλέξτε πού θα εισάγονται αυτόματα οι προεπιλεγμένες οδηγίες χρήσης MCP ή απενεργοποιήστε την αυτόματη εισαγωγή τους."
                     }
                 },
                 "advanced": {
@@ -79,10 +169,22 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "Αναφορά σφαλμάτων εργαλείων",
+                        "context_compaction_target": "Στόχος συμπυκνωμένου περιεχομένου (% του ορίου διακριτικών)",
+                        "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
+                        "context_compaction_prompt": "Προτροπή συμπύκνωσης",
+                        "embedding_history_retention": "Διατήρηση ιστορικού embeddings",
+                        "context_recall_max_tokens": "Μέγιστο ανακληθέν περιεχόμενο (εκτιμώμενα tokens)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "Επιλέξτε πόσες πληροφορίες σφάλματος επιστρέφονται στον πράκτορα όταν αποτυγχάνει μια κλήση εργαλείου. Οι πλήρεις λεπτομέρειες καταγράφονται πάντα στο Home Assistant.",
+                        "context_compaction_target": "Μετά τη σύνοψη, στόχευσε σε αυτό το ποσοστό του ρυθμισμένου ορίου διακριτικών περιεχομένου.",
+                        "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
+                        "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
+                        "embedding_history_retention": "Θετικός ακέραιος με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
+                        "context_recall_max_tokens": "Μέγιστος εκτιμώμενος αριθμός tokens που επιστρέφεται από την αυτόματη ανάκληση embeddings και κάθε κλήση context_recall. Οι υπερμεγέθεις ιστορικές σειρές επιστρέφονται ως περιορισμένα αποσπάσματα."
                     }
                 }
             }

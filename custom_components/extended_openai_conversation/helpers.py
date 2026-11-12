@@ -12,14 +12,22 @@ from openai import AsyncAzureOpenAI, AsyncClient, AsyncOpenAI, BadRequestError
 
 from homeassistant.components import conversation
 from homeassistant.components.homeassistant.exposed_entities import async_should_expose
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.httpx_client import get_async_client
 from homeassistant.helpers.template import Template
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     ALTERNATE_REQUEST_PARAMS,
+    CONF_SERVICE_TYPE,
+    DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
+    DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    DEFAULT_EMBEDDING_RECALL_PREFIX,
     DEFAULT_MODEL_CONFIG,
+    DEFAULT_SERVICE_TYPE,
+    DOMAIN,
     MODEL_CONFIG_PATTERNS,
     OPENAI_API_HOST,
     OPENAI_DEFAULT_MODEL_CONFIG,
@@ -28,11 +36,78 @@ from .const import (
     REASONING_EFFORT_WITH_TOOLS,
     UNSUPPORTED_PARAM_ERROR_CODES,
 )
+from .mcp_client import DEFAULT_MCP_PROMPT
 
 _LOGGER = logging.getLogger(__name__)
 
 
 AZURE_DOMAIN_PATTERN = r"\.(openai\.azure\.com|azure-api\.net|services\.ai\.azure\.com)"
+MCP_DEFAULT_PROMPT_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.mcp_default_prompt.description"
+)
+CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.context_compaction_summary_prefix.description"
+)
+CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.context_compaction_token_limit.description"
+)
+EMBEDDING_RECALL_PREFIX_TRANSLATION_KEY = (
+    f"component.{DOMAIN}.config.step.embedding_recall_prefix.description"
+)
+
+
+async def async_get_mcp_default_prompt(
+    hass: HomeAssistant, language: str
+) -> str:
+    """Return localized model guidance for the MCP dispatcher."""
+    translations = await async_get_translations(
+        hass,
+        language,
+        "config",
+        integrations={DOMAIN},
+    )
+    return translations.get(MCP_DEFAULT_PROMPT_TRANSLATION_KEY, DEFAULT_MCP_PROMPT)
+
+
+async def async_get_context_compaction_text(
+    hass: HomeAssistant, language: str, max_summary_tokens: int
+) -> tuple[str, str]:
+    """Return localized runtime text used for conversation compaction."""
+    translations = await async_get_translations(
+        hass,
+        language,
+        "config",
+        integrations={DOMAIN},
+    )
+    summary_prefix = translations.get(
+        CONTEXT_COMPACTION_SUMMARY_PREFIX_TRANSLATION_KEY,
+        DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
+    )
+    token_limit = translations.get(
+        CONTEXT_COMPACTION_TOKEN_LIMIT_TRANSLATION_KEY,
+        DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    ).format(max_summary_tokens=max_summary_tokens)
+    return summary_prefix, token_limit
+
+
+async def async_get_embedding_recall_prefix(hass: HomeAssistant, language: str) -> str:
+    """Return localized model guidance for injected embedding memories."""
+    translations = await async_get_translations(
+        hass,
+        language,
+        "config",
+        integrations={DOMAIN}
+    )
+    return translations.get(
+        EMBEDDING_RECALL_PREFIX_TRANSLATION_KEY,
+        DEFAULT_EMBEDDING_RECALL_PREFIX
+    )
+
+
+def get_service_type(entry: ConfigEntry) -> str:
+    """Return an entry's service type, defaulting legacy entries to AI."""
+    service_type: str = entry.data.get(CONF_SERVICE_TYPE, DEFAULT_SERVICE_TYPE)
+    return service_type if isinstance(service_type, str) else DEFAULT_SERVICE_TYPE
 
 
 def get_model_config(model: str, base_url: str | None = None) -> dict[str, bool]:
@@ -166,13 +241,20 @@ async def get_authenticated_client(
     if skip_authentication:
         return client
 
+    await async_check_openai_connection(hass, client)
+    return client
+
+
+async def async_check_openai_connection(
+    hass: HomeAssistant, client: AsyncClient
+) -> None:
+    """Contact the OpenAI-compatible models endpoint."""
     response = await hass.async_add_executor_job(
         partial(client.models.list, timeout=10)
     )
 
     async for _ in response:
         break
-    return client
 
 
 def _remove_unsupported_param(

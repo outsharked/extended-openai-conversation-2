@@ -1,9 +1,14 @@
 """Tests for the conversation platform's setup."""
 
-from unittest.mock import MagicMock
+import asyncio
+from contextlib import contextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from custom_components.extended_openai_conversation.const import (
+    CONF_CANCEL_ACTIVE_CONVERSATION,
+)
 from custom_components.extended_openai_conversation.conversation import (
     ExtendedOpenAIAgentEntity,
     async_setup_entry,
@@ -94,6 +99,106 @@ def test_agent_entity_supports_all_languages():
     assert entity.supported_languages == MATCH_ALL
 
 
+async def test_new_turn_cancels_active_turn_for_same_conversation():
+    """The newest message replaces a stuck turn in the same conversation."""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_CANCEL_ACTIVE_CONVERSATION: True}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+    entity.hass = MagicMock()
+    chat_log = MagicMock()
+    chat_log.content = [MagicMock(role="system")]
+    first_started = asyncio.Event()
+    first_cancelled = asyncio.Event()
+    second_result = MagicMock()
+
+    @contextmanager
+    def fake_session(_hass, conversation_id):
+        yield MagicMock(conversation_id=conversation_id)
+
+    @contextmanager
+    def fake_chat_log(_hass, _session, user_input):
+        chat_log.content.append(MagicMock(role="user", content=user_input.text))
+        yield chat_log
+
+    async def handle_message(user_input, _chat_log):
+        if user_input.text == "first":
+            first_started.set()
+            try:
+                await asyncio.Future()
+            except asyncio.CancelledError:
+                first_cancelled.set()
+                raise
+        return second_result
+
+    first_input = MagicMock(conversation_id="conversation-1", text="first")
+    second_input = MagicMock(conversation_id="conversation-1", text="second")
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation.conversation."
+            "async_get_chat_session",
+            side_effect=fake_session,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.conversation."
+            "async_get_chat_log",
+            side_effect=fake_chat_log,
+        ),
+        patch.object(
+            entity,
+            "_async_handle_message",
+            new=AsyncMock(side_effect=handle_message),
+        ),
+    ):
+        first_task = asyncio.create_task(entity.async_process(first_input))
+        await first_started.wait()
+        result = await entity.async_process(second_input)
+
+    with pytest.raises(asyncio.CancelledError):
+        await first_task
+
+    assert result is second_result
+    assert first_cancelled.is_set()
+    assert [content.content for content in chat_log.content[1:]] == ["second"]
+    assert entity._active_conversation_tasks == {}
+
+
+async def test_new_turn_does_not_cancel_when_disabled():
+    """A new turn does not cancel the active turn when replacement is disabled."""
+    entity = ExtendedOpenAIAgentEntity(
+        MagicMock(), _mock_subentry("conversation", "sub_1")
+    )
+    entity.hass = MagicMock()
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+    first_cancelled = False
+
+    async def process_turn(user_input):
+        nonlocal first_cancelled
+        if user_input.text == "first":
+            first_started.set()
+            try:
+                await release_first.wait()
+            except asyncio.CancelledError:
+                first_cancelled = True
+                raise
+        return user_input.text
+
+    first_input = MagicMock(conversation_id="conversation-1", text="first")
+    second_input = MagicMock(conversation_id="conversation-1", text="second")
+
+    with patch.object(entity, "_async_process_turn", side_effect=process_turn):
+        first_task = asyncio.create_task(entity.async_process(first_input))
+        await first_started.wait()
+        assert await entity.async_process(second_input) == "second"
+        assert not first_task.done()
+        release_first.set()
+        assert await first_task == "first"
+
+    assert first_cancelled is False
+    assert entity._active_conversation_tasks == {}
+
+
 def test_get_function_tools_returns_default_when_unconfigured():
     """With no function_tools option set, the built-in default toolset is used."""
     from custom_components.extended_openai_conversation.const import (
@@ -107,6 +212,61 @@ def test_get_function_tools_returns_default_when_unconfigured():
     tools = entity._get_function_tools()
 
     assert tools == DEFAULT_CONF_FUNCTION_TOOLS
+
+
+def test_get_function_tools_adds_mcp_for_assigned_servers():
+    """Assigned MCP servers add one scoped dispatcher to the agent tools."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_FUNCTION_TOOLS,
+        CONF_MCP_SERVERS,
+    )
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_FUNCTION_TOOLS: "[]",
+        CONF_MCP_SERVERS: ["weather", "home"],
+    }
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    tools = entity._get_function_tools()
+
+    assert len(tools) == 1
+    assert tools[0]["spec"]["name"] == "mcp"
+    assert tools[0]["function"] == {
+        "type": "mcp",
+        "server_ids": ["weather", "home"],
+    }
+
+
+@pytest.mark.parametrize("strategy", ["retrieve", "retrieve_compact"])
+def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
+    """Embedding retrieval exposes scoped context recall to the model."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_CONTEXT_TRUNCATE_STRATEGY,
+        CONF_EMBEDDINGS,
+        CONF_FUNCTION_TOOLS,
+        DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    )
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_FUNCTION_TOOLS: "[]",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy,
+    }
+    entry = MagicMock(entry_id="endpoint-1")
+    entry.data = {CONF_EMBEDDINGS: {}}
+    entity = ExtendedOpenAIAgentEntity(entry, subentry)
+
+    tools = entity._get_function_tools()
+
+    assert len(tools) == 1
+    assert tools[0]["spec"]["name"] == "context_recall"
+    assert tools[0]["function"] == {
+        "type": "context_recall",
+        "entry_id": "endpoint-1",
+        "agent_id": "sub_1",
+            "max_tokens": DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    }
 
 
 def test_get_function_tools_parses_custom_yaml():
@@ -177,3 +337,55 @@ def test_build_system_prompt_renders_template_with_context(hass):
     result = entity._build_system_prompt([], llm_context, user_input)
 
     assert result == "You manage Test Home."
+
+
+def test_build_system_prompt_renders_mcp_template_variables(hass):
+    """MCP template values can be placed directly in the main system prompt."""
+    from custom_components.extended_openai_conversation.const import CONF_PROMPT
+    from custom_components.extended_openai_conversation.skills import SkillManager
+    from homeassistant.helpers.template import TemplateEnvironment
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_PROMPT: "{{ default_mcp_prompt }}\n\n{{ permanent_mcp_tools }}"
+    }
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+    entity.hass = hass
+    entity.skill_manager = MagicMock(spec=SkillManager)
+    entity.skill_manager.get_all_skills.return_value = []
+    hass.data["template.environment"] = TemplateEnvironment(hass)
+
+    result = entity._build_system_prompt(
+        [],
+        MagicMock(device_id=None),
+        MagicMock(),
+        {
+            "default_mcp_prompt": "MCP instructions",
+            "permanent_mcp_tools": '{"server_id":"vault"}',
+        },
+    )
+
+    assert result == 'MCP instructions\n\n{"server_id":"vault"}'
+
+
+def test_build_system_prompt_uses_empty_mcp_template_defaults(hass):
+    """Missing MCP content renders as empty strings rather than template errors."""
+    from custom_components.extended_openai_conversation.const import CONF_PROMPT
+    from custom_components.extended_openai_conversation.skills import SkillManager
+    from homeassistant.helpers.template import TemplateEnvironment
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_PROMPT: "before{{ permanent_mcp_tools }}{{ default_mcp_prompt }}after"
+    }
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+    entity.hass = hass
+    entity.skill_manager = MagicMock(spec=SkillManager)
+    entity.skill_manager.get_all_skills.return_value = []
+    hass.data["template.environment"] = TemplateEnvironment(hass)
+
+    result = entity._build_system_prompt(
+        [], MagicMock(device_id=None), MagicMock()
+    )
+
+    assert result == "beforeafter"

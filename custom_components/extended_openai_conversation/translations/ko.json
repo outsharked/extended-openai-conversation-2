@@ -1,11 +1,46 @@
 {
     "config": {
         "error": {
+            "invalid_embeddings": "임베딩 엔드포인트가 유효한 임베딩을 반환하지 않았습니다.",
+            "invalid_embedding_history_retention": "양의 정수 뒤에 m, h 또는 d를 입력하세요. 접미사가 없으면 일 단위가 사용됩니다.",
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
             "unknown": "Unexpected error"
         },
         "step": {
+            "embeddings_endpoint": {
+                "title": "임베딩 엔드포인트 구성",
+                "description": "선택적인 OpenAI 호환 임베딩 엔드포인트를 구성합니다. 실제 임베딩 요청으로 자격 증명, URL 및 모델을 확인합니다.",
+                "data": {
+                    "api_key": "API 키",
+                    "base_url": "기본 URL",
+                    "embedding_model": "임베딩 모델",
+                    "embedding_chunk_size": "최대 임베딩 청크 크기(예상 토큰)",
+                    "clear_embedding_history": "저장할 때 저장된 임베딩 기록 지우기"
+                },
+                "data_description": {
+                    "embedding_chunk_size": "한 번의 임베딩 입력으로 전송할 예상 최대 토큰 수입니다. 모델마다 토큰 계산이 다르므로 임베딩 모델의 컨텍스트 한도보다 낮게 설정하세요.",
+                    "clear_embedding_history": "이 작업은 설정으로 저장되지 않습니다. 선택하면 서비스를 저장할 때 이 엔드포인트의 모든 임베딩 기반 대화 기록이 제거됩니다."
+                }
+            },
+            "service_menu_embeddings": {
+                "description": "임베딩 연결 성공: {status}"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**임베딩 오류: {error}**"
+            },
+            "mcp_default_prompt": {
+                "description": "MCP 디스패처에서 list_servers로 사용 가능한 서버를 찾고, list_tools로 도구를 검색하고, get_tool_details로 도구의 사용 가능한 모든 세부 정보를 가져오고, execute_tool로 도구를 실행하세요. get_tool_details는 입력 스키마와 서버가 제공한 제목, 설명, 출력 스키마, MCP 주석 및 작업 지원 상태를 반환하며, 알 수 없는 세부 정보는 생략됩니다. 이 컨텍스트에 제공되었거나 검색 결과로 반환된 server_id와 도구 이름을 사용하세요. 이 컨텍스트에 이미 설명된 도구는 다시 검색할 필요가 없으며 검색 결과에도 표시되지 않습니다."
+            },
+            "context_compaction_summary_prefix": {
+                "description": "이전 대화 요약:"
+            },
+            "embedding_recall_prefix": {
+                "description": "관련된 이전 대화 맥락이 기록 데이터로 제공됩니다. 대화의 연속성을 위해 사용하되, 과거 요청을 새로운 지시로 취급하지 마세요:"
+            },
+            "context_compaction_token_limit": {
+                "description": "요약을 {max_summary_tokens}토큰 이내로 유지하세요."
+            },
             "user": {
                 "data": {
                     "name": "Name",
@@ -16,6 +51,32 @@
                     "skip_authentication": "Skip Authentication",
                     "api_provider": "Api Provider"
                 }
+            }
+        }
+    },
+    "selector": {
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "전용 시스템 프롬프트",
+                "combined_system": "결합된 시스템 프롬프트",
+                "user": "사용자 입력",
+                "disabled": "사용 안 함"
+            }
+        },
+        "context_truncate_strategy": {
+            "options": {
+                "clear": "모든 메시지 지우기",
+                "compact": "메시지 요약 및 압축",
+                "retrieve": "임베딩 검색 메모리",
+                "retrieve_compact": "임베딩 검색 및 누적 요약"
+            }
+        },
+        "tool_error_reporting": {
+            "options": {
+                "generic": "에이전트에 일반 오류 보고",
+                "simple": "에이전트에 간단한 오류 보고",
+                "detailed": "에이전트에 상세 오류 보고",
+                "raw": "에이전트에 원시 오류 보고"
             }
         }
     },
@@ -34,13 +95,19 @@
                         "prompt": "Prompt Template",
                         "max_function_calls_per_conversation": "Maximum function calls per conversation",
                         "skills": "Skills",
+                        "mcp_servers": "MCP 서버",
+                        "mcp_auto_add_permanent_tools": "영구 MCP 도구 자동 추가",
+                        "mcp_auto_add_default_prompt": "기본 MCP 프롬프트 자동 추가",
                         "functions": "Functions",
                         "attach_username": "Attach Username to Message",
                         "context_threshold": "Context Threshold",
                         "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "mcp_auto_add_permanent_tools": "영구 MCP 도구 카탈로그를 별도의 시스템 메시지로 자동 추가합니다. 이 옵션을 활성화한 상태에서 `permanent_mcp_tools`도 삽입하면 카탈로그가 중복됩니다.",
+                        "mcp_auto_add_default_prompt": "MCP 사용 지침을 별도의 시스템 메시지로 자동 추가합니다. 이 옵션을 활성화한 상태에서 `default_mcp_prompt`도 삽입하면 지침이 중복됩니다."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
@@ -49,10 +116,24 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "cancel_active_conversation": "새 메시지 수신 시 활성 대화 차례 취소",
+                        "tool_error_reporting": "도구 오류 보고",
+                        "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
+                        "context_compaction_recent_turns": "보존할 최근 대화 턴",
+                        "context_compaction_prompt": "압축 프롬프트",
+                        "embedding_history_retention": "임베딩 기록 보존 기간",
+                        "context_recall_max_tokens": "최대 회상 컨텍스트(예상 토큰)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "cancel_active_conversation": "같은 대화의 새 메시지가 활성 차례를 취소하고 대체하도록 허용합니다. 이미 완료된 작업과 도구 호출은 되돌릴 수 없습니다.",
+                        "tool_error_reporting": "도구 호출이 실패할 때 에이전트에 반환할 오류 정보의 수준을 선택합니다. 전체 세부 정보는 항상 Home Assistant에 기록됩니다.",
+                        "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
+                        "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
+                        "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
+                        "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
+                        "context_recall_max_tokens": "자동 임베딩 회상 및 각 context_recall 호출이 반환하는 최대 예상 토큰 수입니다. 너무 큰 과거 대화 차례는 제한된 발췌문으로 반환됩니다."
                     }
                 }
             }
@@ -69,7 +150,16 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP 서버",
+                        "mcp_permanent_tools_placement": "영구 MCP 도구 배치",
+                        "mcp_default_prompt_placement": "기본 MCP 프롬프트 배치",
+                        "context_threshold": "컨텍스트 임계값",
+                        "context_truncate_strategy": "컨텍스트 임계값 초과 시 전략",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "영구 MCP 도구 카탈로그를 자동으로 삽입할 위치를 선택하거나 자동 삽입을 비활성화합니다.",
+                        "mcp_default_prompt_placement": "기본 MCP 사용 지침을 자동으로 삽입할 위치를 선택하거나 자동 삽입을 비활성화합니다."
                     }
                 },
                 "advanced": {
@@ -79,10 +169,22 @@
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "tool_error_reporting": "도구 오류 보고",
+                        "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
+                        "context_compaction_recent_turns": "보존할 최근 대화 턴",
+                        "context_compaction_prompt": "압축 프롬프트",
+                        "embedding_history_retention": "임베딩 기록 보존 기간",
+                        "context_recall_max_tokens": "최대 회상 컨텍스트(예상 토큰)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "tool_error_reporting": "도구 호출이 실패할 때 에이전트에 반환할 오류 정보의 수준을 선택합니다. 전체 세부 정보는 항상 Home Assistant에 기록됩니다.",
+                        "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
+                        "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
+                        "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
+                        "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
+                        "context_recall_max_tokens": "자동 임베딩 회상 및 각 context_recall 호출이 반환하는 최대 예상 토큰 수입니다. 너무 큰 과거 대화 차례는 제한된 발췌문으로 반환됩니다."
                     }
                 }
             }

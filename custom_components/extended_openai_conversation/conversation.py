@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 from typing import Any, Literal
@@ -27,9 +29,11 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ExtendedOpenAIConfigEntry
 from .const import (
+    CONF_CANCEL_ACTIVE_CONVERSATION,
     CONF_FUNCTION_TOOLS,
     CONF_PROMPT,
     CONF_SKILLS,
+    DEFAULT_CANCEL_ACTIVE_CONVERSATION,
     DEFAULT_CONF_FUNCTION_TOOLS,
     DEFAULT_PROMPT,
     DEFAULT_WORKING_DIRECTORY,
@@ -105,11 +109,51 @@ class ExtendedOpenAIAgentEntity(
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         """Process a sentence."""
+        if not self.subentry.data.get(
+            CONF_CANCEL_ACTIVE_CONVERSATION,
+            DEFAULT_CANCEL_ACTIVE_CONVERSATION,
+        ):
+            return await self._async_process_turn(user_input)
+
+        conversation_id = user_input.conversation_id
+        current_task = asyncio.current_task()
+        if conversation_id is None or current_task is None:
+            return await self._async_process_turn(user_input)
+
+        previous_task = self._active_conversation_tasks.get(conversation_id)
+        self._active_conversation_tasks[conversation_id] = current_task
+        try:
+            if (
+                previous_task is not None
+                and previous_task is not current_task
+                and not previous_task.done()
+            ):
+                previous_task.cancel()
+                await asyncio.gather(previous_task, return_exceptions=True)
+            return await self._async_process_turn(user_input)
+        finally:
+            if self._active_conversation_tasks.get(conversation_id) is current_task:
+                self._active_conversation_tasks.pop(conversation_id, None)
+
+    async def _async_process_turn(
+        self, user_input: ConversationInput
+    ) -> ConversationResult:
+        """Process one turn and discard it cleanly when superseded."""
+        cancelled_error: asyncio.CancelledError | None = None
         with (
             async_get_chat_session(self.hass, user_input.conversation_id) as session,
             async_get_chat_log(self.hass, session, user_input) as chat_log,
         ):
-            return await self._async_handle_message(user_input, chat_log)
+            turn_start = len(chat_log.content) - 1
+            try:
+                return await self._async_handle_message(user_input, chat_log)
+            except asyncio.CancelledError as err:
+                del chat_log.content[turn_start:]
+                cancelled_error = err
+
+        if cancelled_error is not None:
+            raise cancelled_error
+        raise RuntimeError("Conversation turn completed without a result")
 
     async def _async_handle_message(
         self,
@@ -126,9 +170,18 @@ class ExtendedOpenAIAgentEntity(
         # Get function tools
         function_tools = self._get_function_tools()
 
+        language = user_input.language or self.hass.config.language
+        mcp_context = await self._async_get_mcp_agent_context(language)
+
         # Build custom prompt with exposed entities
         system_prompt = self._build_system_prompt(
-            exposed_entities, llm_context, user_input
+            exposed_entities,
+            llm_context,
+            user_input,
+            {
+                "permanent_mcp_tools": mcp_context.permanent_tools,
+                "default_mcp_prompt": mcp_context.default_prompt,
+            },
         )
 
         # Set system prompt in chat log
@@ -142,6 +195,7 @@ class ExtendedOpenAIAgentEntity(
                 function_tools=function_tools,
                 exposed_entities=exposed_entities,
                 llm_context=llm_context,
+                mcp_context=mcp_context,
             )
         except OpenAIError as err:
             _LOGGER.error(err)
@@ -195,6 +249,7 @@ class ExtendedOpenAIAgentEntity(
         exposed_entities: list[dict],
         llm_context: llm.LLMContext,
         user_input: ConversationInput,
+        mcp_template_values: Mapping[str, str] | None = None,
     ) -> str:
         """Build system prompt with exposed entities and skills."""
         raw_prompt: str = self.subentry.data.get(CONF_PROMPT, DEFAULT_PROMPT)
@@ -206,6 +261,9 @@ class ExtendedOpenAIAgentEntity(
                 "current_device_id": llm_context.device_id,
                 "user_input": user_input,
                 "skills": self._get_enabled_skills(),
+                "permanent_mcp_tools": "",
+                "default_mcp_prompt": "",
+                **(mcp_template_values or {}),
             },
             parse_result=False,
         )
@@ -244,7 +302,7 @@ class ExtendedOpenAIAgentEntity(
                                 function_config
                             )
 
-            return function_tools or []
+            return (function_tools or []) + self._get_internal_function_tools()
         except (InvalidFunction, FunctionNotFound) as e:
             raise e
         except Exception as e:
