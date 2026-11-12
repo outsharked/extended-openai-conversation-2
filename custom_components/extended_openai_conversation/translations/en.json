@@ -270,14 +270,16 @@
                         "context_compaction_target": "Compacted context target (% of token threshold)",
                         "context_compaction_recent_turns": "Recent turns to preserve",
                         "context_compaction_prompt": "Compaction prompt",
-                        "embedding_history_retention": "Embedding history retention"
+                        "embedding_history_retention": "Embedding history retention",
+                        "context_recall_max_tokens": "Maximum recalled context (estimated tokens)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
                         "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction. Tool calls and results remain together.",
                         "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
-                        "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30."
+                        "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+                        "context_recall_max_tokens": "Maximum estimated tokens returned by automatic embedding recall and each context_recall call. Oversized historical turns are returned as bounded excerpts."
                     }
                 }
             }
@@ -318,14 +320,16 @@
                         "context_compaction_target": "Compacted context target (% of token threshold)",
                         "context_compaction_recent_turns": "Recent turns to preserve",
                         "context_compaction_prompt": "Compaction prompt",
-                        "embedding_history_retention": "Embedding history retention"
+                        "embedding_history_retention": "Embedding history retention",
+                        "context_recall_max_tokens": "Maximum recalled context (estimated tokens)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
                         "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction. Tool calls and results remain together.",
                         "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
-                        "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30."
+                        "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+                        "context_recall_max_tokens": "Maximum estimated tokens returned by automatic embedding recall and each context_recall call. Oversized historical turns are returned as bounded excerpts."
                     }
                 }
             }

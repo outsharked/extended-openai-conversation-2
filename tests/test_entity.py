@@ -1008,7 +1008,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
     )
 
     recall_message = entity._embedding_recall_message(
-        matches, "Relevant earlier context:"
+        matches, "Relevant earlier context:", 4000
     )
     assert recall_message["role"] == "user"
     assert recall_message["content"].startswith("Relevant earlier context:\n")
@@ -1019,7 +1019,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         {"role": "user", "content": "Current question"},
     ]
     entity._place_embedding_recall(
-        request_messages, matches, "Relevant earlier context:"
+        request_messages, matches, "Relevant earlier context:", 4000
     )
     assert [message["role"] for message in request_messages] == [
         "system",

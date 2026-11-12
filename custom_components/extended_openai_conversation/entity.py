@@ -41,6 +41,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_MAX_TOKENS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EMBEDDING_CHUNK_SIZE,
@@ -69,6 +70,7 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
@@ -103,7 +105,10 @@ from .embedding_memory import (
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
-from .functions.context_recall import build_context_recall_function_tool
+from .functions.context_recall import (
+    build_bounded_recall_result,
+    build_context_recall_function_tool,
+)
 from .functions.mcp import build_mcp_function_tool
 from .helpers import (
     async_create_chat_completion,
@@ -798,6 +803,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             build_context_recall_function_tool(
                 self.entry.entry_id,
                 self.subentry.subentry_id,
+                int(
+                    self.subentry.data.get(
+                        CONF_CONTEXT_RECALL_MAX_TOKENS,
+                        DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+                    )
+                ),
             )
         ]
 
@@ -864,17 +875,13 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             return []
 
     @staticmethod
-    def _embedding_recall_message(matches: list[EmbeddingMemoryMatch], prefix: str) -> ChatCompletionUserMessageParam:
+    def _embedding_recall_message(
+        matches: list[EmbeddingMemoryMatch], prefix: str, max_tokens: int
+    ) -> ChatCompletionUserMessageParam:
         """Render recalled turns as inert historical request context."""
-        payload = [
-            {
-                "created_at": match.record.created_at,
-                "messages": match.record.messages,
-            }
-            for match in sorted(
-                matches, key=lambda item: item.record.created_at
-            )
-        ]
+        payload = build_bounded_recall_result(
+            matches, max_tokens, include_relevance=False
+        )
         return ChatCompletionUserMessageParam(
             role="user",
             content=f"{prefix}\n{json.dumps(payload, ensure_ascii=False, default=str)}",
@@ -886,6 +893,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         messages: list[ChatCompletionMessageParam],
         matches: list[EmbeddingMemoryMatch],
         prefix: str,
+        max_tokens: int,
     ) -> None:
         """Insert temporary recalled context immediately before the latest user."""
         if not matches:
@@ -900,7 +908,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         )
         messages.insert(
             latest_user_index,
-            cls._embedding_recall_message(matches, prefix),
+            cls._embedding_recall_message(matches, prefix, max_tokens),
         )
 
     async def _async_get_mcp_agent_context(
@@ -1013,6 +1021,12 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             if retrieval_enabled
             else ""
         )
+        recall_max_tokens = int(
+            options.get(
+                CONF_CONTEXT_RECALL_MAX_TOKENS,
+                DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+            )
+        )
         recalled_memories = await self._async_recall_embedding_memories(chat_log)
 
         async def _build_request_messages() -> list[ChatCompletionMessageParam]:
@@ -1027,7 +1041,10 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 tool_media_parts,
             )
             self._place_embedding_recall(
-                converted_messages, recalled_memories, recall_prefix
+                converted_messages,
+                recalled_memories,
+                recall_prefix,
+                recall_max_tokens,
             )
             if (
                 permanent_tools_placement is None

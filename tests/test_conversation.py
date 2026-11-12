@@ -140,6 +140,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         CONF_CONTEXT_TRUNCATE_STRATEGY,
         CONF_EMBEDDINGS,
         CONF_FUNCTION_TOOLS,
+        DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     )
 
     subentry = _mock_subentry("conversation", "sub_1")
@@ -159,6 +160,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         "type": "context_recall",
         "entry_id": "endpoint-1",
         "agent_id": "sub_1",
+            "max_tokens": DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     }
 
 

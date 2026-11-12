@@ -112,14 +112,16 @@
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego kontekstu (% limitu tokenów)",
                         "context_compaction_recent_turns": "Ostatnie tury do zachowania",
                         "context_compaction_prompt": "Instrukcja kompaktowania",
-                        "embedding_history_retention": "Przechowywanie historii osadzeń"
+                        "embedding_history_retention": "Przechowywanie historii osadzeń",
+                        "context_recall_max_tokens": "Maksymalny przywołany kontekst (szacowane tokeny)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Po podsumowaniu dąż do tego procentu skonfigurowanego limitu tokenów kontekstu.",
                         "context_compaction_recent_turns": "Liczba pełnych ostatnich tur rozmowy zachowanych bez zmian po kompaktowaniu. Wywołania narzędzi i ich wyniki pozostają razem.",
                         "context_compaction_prompt": "Instrukcje używane do podsumowania starszej historii rozmowy. Transkrypcja i limit tokenów są przekazywane oddzielnie.",
-                        "embedding_history_retention": "Dodatnia liczba całkowita z m dla minut, h dla godzin lub d dla dni. Brak przyrostka oznacza dni."
+                        "embedding_history_retention": "Dodatnia liczba całkowita z m dla minut, h dla godzin lub d dla dni. Brak przyrostka oznacza dni.",
+                        "context_recall_max_tokens": "Maksymalna szacowana liczba tokenów zwracana przez automatyczne przywoływanie osadzeń i każde wywołanie context_recall. Zbyt duże historyczne tury są zwracane jako ograniczone fragmenty."
                     }
                 }
             }
@@ -159,14 +161,16 @@
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego kontekstu (% limitu tokenów)",
                         "context_compaction_recent_turns": "Ostatnie tury do zachowania",
                         "context_compaction_prompt": "Instrukcja kompaktowania",
-                        "embedding_history_retention": "Przechowywanie historii osadzeń"
+                        "embedding_history_retention": "Przechowywanie historii osadzeń",
+                        "context_recall_max_tokens": "Maksymalny przywołany kontekst (szacowane tokeny)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Po podsumowaniu dąż do tego procentu skonfigurowanego limitu tokenów kontekstu.",
                         "context_compaction_recent_turns": "Liczba pełnych ostatnich tur rozmowy zachowanych bez zmian po kompaktowaniu. Wywołania narzędzi i ich wyniki pozostają razem.",
                         "context_compaction_prompt": "Instrukcje używane do podsumowania starszej historii rozmowy. Transkrypcja i limit tokenów są przekazywane oddzielnie.",
-                        "embedding_history_retention": "Dodatnia liczba całkowita z m dla minut, h dla godzin lub d dla dni. Brak przyrostka oznacza dni."
+                        "embedding_history_retention": "Dodatnia liczba całkowita z m dla minut, h dla godzin lub d dla dni. Brak przyrostka oznacza dni.",
+                        "context_recall_max_tokens": "Maksymalna szacowana liczba tokenów zwracana przez automatyczne przywoływanie osadzeń i każde wywołanie context_recall. Zbyt duże historyczne tury są zwracane jako ograniczone fragmenty."
                     }
                 }
             }

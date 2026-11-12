@@ -112,14 +112,16 @@
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
-                        "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs"
+                        "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs",
+                        "context_recall_max_tokens": "Maximaler abgerufener Kontext (geschätzte Tokens)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
-                        "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet."
+                        "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet.",
+                        "context_recall_max_tokens": "Maximale geschätzte Tokenanzahl für den automatischen Embedding-Abruf und jeden context_recall-Aufruf. Zu große historische Gesprächsrunden werden als begrenzte Auszüge zurückgegeben."
                     }
                 }
             }
@@ -159,14 +161,16 @@
                         "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
-                        "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs"
+                        "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs",
+                        "context_recall_max_tokens": "Maximaler abgerufener Kontext (geschätzte Tokens)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
-                        "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet."
+                        "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet.",
+                        "context_recall_max_tokens": "Maximale geschätzte Tokenanzahl für den automatischen Embedding-Abruf und jeden context_recall-Aufruf. Zu große historische Gesprächsrunden werden als begrenzte Auszüge zurückgegeben."
                     }
                 }
             }

@@ -189,6 +189,7 @@ async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
         {"role": "user", "content": "complete original turn"}
     ]
     assert matches[0].score == 1.0
+    assert matches[0].matched_text == "matching second chunk"
 
 
 async def test_clear_endpoint_only_removes_the_requested_endpoint(hass, tmp_path: Path):

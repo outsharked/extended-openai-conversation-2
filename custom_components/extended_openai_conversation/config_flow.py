@@ -75,6 +75,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_MAX_TOKENS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EMBEDDING_CHUNK_SIZE,
@@ -117,6 +118,7 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
@@ -144,6 +146,7 @@ from .const import (
     MCP_CONTEXT_PLACEMENTS,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
+    MIN_CONTEXT_RECALL_MAX_TOKENS,
     MIN_EMBEDDING_CHUNK_SIZE,
     REASONING_EFFORT_OPTIONS,
     SERVICE_TIER_OPTIONS,
@@ -366,6 +369,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_COMPACTION_PROMPT: DEFAULT_CONTEXT_COMPACTION_PROMPT,
         CONF_CONTEXT_COMPACTION_RECENT_TURNS: DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
+        CONF_CONTEXT_RECALL_MAX_TOKENS: DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
         CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -2044,6 +2048,17 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
             schema[
                 vol.Optional(
+                    CONF_CONTEXT_RECALL_MAX_TOKENS,
+                    default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_CONTEXT_RECALL_MAX_TOKENS,
+                    step=1,
+                )
+            )
+            schema[
+                vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,
                     default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
@@ -2449,6 +2464,17 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             ] = TextSelector(TextSelectorConfig(multiline=True))
 
         if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_MAX_TOKENS,
+                    default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_CONTEXT_RECALL_MAX_TOKENS,
+                    step=1,
+                )
+            )
             schema[
                 vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,

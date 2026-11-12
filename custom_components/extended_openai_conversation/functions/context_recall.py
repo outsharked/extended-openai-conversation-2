@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
 import logging
 from typing import Any
 
@@ -14,10 +15,11 @@ from homeassistant.helpers import llm
 from ..const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
+    DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_RECALL_RESULTS,
     MAX_CONTEXT_RECALL_RESULTS,
 )
-from ..embedding_memory import EmbeddingMemoryScope
+from ..embedding_memory import EmbeddingMemoryMatch, EmbeddingMemoryScope
 from ..runtime import OpenAIServiceRuntime
 from .base import Function
 
@@ -25,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def build_context_recall_function_tool(
-    entry_id: str, agent_id: str
+    entry_id: str, agent_id: str, max_tokens: int
 ) -> dict[str, Any]:
     """Build the model-facing conversation recall tool."""
     return {
@@ -35,8 +37,10 @@ def build_context_recall_function_tool(
                 "Semantically search older messages archived from this conversation. "
                 "Use this when relevant earlier details are not present in the active "
                 "conversation context. Results contain the original historical "
-                "messages, timestamps, and relevance scores. This tool can access "
-                "only the current conversation."
+                "messages, timestamps, and relevance scores. Results may contain "
+                "bounded excerpts marked as truncated when full turns exceed the "
+                "configured recall budget. This tool can access only the current "
+                "conversation."
             ),
             "parameters": {
                 "type": "object",
@@ -67,8 +71,78 @@ def build_context_recall_function_tool(
             "type": "context_recall",
             "entry_id": entry_id,
             "agent_id": agent_id,
+            "max_tokens": max_tokens,
         },
     }
+
+
+def _estimated_tokens(value: Any) -> int:
+    """Estimate serialized tokens using the integration's four-character rule."""
+    serialized = json.dumps(value, ensure_ascii=False, default=str)
+    return max(1, (len(serialized) + 3) // 4)
+
+
+def build_bounded_recall_result(
+    matches: list[EmbeddingMemoryMatch],
+    max_tokens: int,
+    *,
+    include_relevance: bool = True,
+) -> dict[str, Any]:
+    """Return the most relevant memories within an estimated token budget."""
+    selected: list[dict[str, Any]] = []
+    truncated = False
+
+    def result() -> dict[str, Any]:
+        memories = sorted(selected, key=lambda item: item["created_at"])
+        return {
+            "memories": memories,
+            "matches_returned": len(memories),
+            "matches_available": len(matches),
+            "truncated": truncated,
+        }
+
+    for match in matches:
+        memory: dict[str, Any] = {
+            "created_at": match.record.created_at,
+            "messages": match.record.messages,
+        }
+        if include_relevance:
+            memory["relevance"] = round(match.score, 6)
+        selected.append(memory)
+        if _estimated_tokens(result()) <= max_tokens:
+            continue
+
+        selected.pop()
+        truncated = True
+        matched_text = match.matched_text or match.record.searchable_text
+        excerpt: dict[str, Any] = {
+            "created_at": match.record.created_at,
+            "excerpt": "",
+            "truncated": True,
+        }
+        if include_relevance:
+            excerpt["relevance"] = round(match.score, 6)
+
+        low = 0
+        high = len(matched_text)
+        while low < high:
+            midpoint = (low + high + 1) // 2
+            excerpt["excerpt"] = matched_text[:midpoint]
+            selected.append(excerpt)
+            fits = _estimated_tokens(result()) <= max_tokens
+            selected.pop()
+            if fits:
+                low = midpoint
+            else:
+                high = midpoint - 1
+        if low:
+            excerpt["excerpt"] = matched_text[:low]
+            selected.append(excerpt)
+        break
+
+    if len(selected) < len(matches):
+        truncated = True
+    return result()
 
 
 def _error(code: str, message: str) -> dict[str, Any]:
@@ -87,6 +161,9 @@ class ContextRecallFunction(Function):
                     vol.Required("entry_id"): str,
                     vol.Required("agent_id"): str,
                     vol.Required("conversation_id"): str,
+                    vol.Optional(
+                        "max_tokens", default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS
+                    ): vol.All(int, vol.Range(min=1)),
                 }
             )
         )
@@ -109,6 +186,9 @@ class ContextRecallFunction(Function):
 
         max_results = arguments.get(
             "max_results", DEFAULT_CONTEXT_RECALL_RESULTS
+        )
+        max_tokens = function_config.get(
+            "max_tokens", DEFAULT_CONTEXT_RECALL_MAX_TOKENS
         )
         if (
             not isinstance(max_results, int)
@@ -142,7 +222,7 @@ class ContextRecallFunction(Function):
         )
         try:
             if not await runtime.embedding_memory.async_has_memories(scope, model):
-                return {"memories": [], "matches_returned": 0}
+                return build_bounded_recall_result([], max_tokens)
             response = await runtime.embedding_client.embeddings.create(
                 model=model,
                 input=query,
@@ -162,15 +242,7 @@ class ContextRecallFunction(Function):
             _LOGGER.exception("Context recall failed")
             return _error("recall_failed", "Conversation recall failed")
 
-        matches.sort(key=lambda match: match.record.created_at)
-        return {
-            "memories": [
-                {
-                    "created_at": match.record.created_at,
-                    "relevance": round(match.score, 6),
-                    "messages": match.record.messages,
-                }
-                for match in matches
-            ],
-            "matches_returned": len(matches),
-        }
+        return build_bounded_recall_result(
+            matches,
+            max_tokens,
+        )

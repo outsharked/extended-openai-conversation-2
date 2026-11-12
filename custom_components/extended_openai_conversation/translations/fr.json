@@ -112,14 +112,16 @@
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
-                        "embedding_history_retention": "Conservation de l’historique d’embeddings"
+                        "embedding_history_retention": "Conservation de l’historique d’embeddings",
+                        "context_recall_max_tokens": "Contexte rappelé maximal (jetons estimés)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
-                        "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés."
+                        "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
+                        "context_recall_max_tokens": "Nombre maximal estimé de jetons renvoyés par le rappel automatique d’embeddings et chaque appel context_recall. Les tours historiques trop volumineux sont renvoyés sous forme d’extraits limités."
                     }
                 }
             }
@@ -159,14 +161,16 @@
                         "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
-                        "embedding_history_retention": "Conservation de l’historique d’embeddings"
+                        "embedding_history_retention": "Conservation de l’historique d’embeddings",
+                        "context_recall_max_tokens": "Contexte rappelé maximal (jetons estimés)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
-                        "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés."
+                        "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
+                        "context_recall_max_tokens": "Nombre maximal estimé de jetons renvoyés par le rappel automatique d’embeddings et chaque appel context_recall. Les tours historiques trop volumineux sont renvoyés sous forme d’extraits limités."
                     }
                 }
             }
