@@ -264,10 +264,8 @@ def _recall_pages(
             chunk.searchable_text for chunk in match.record.chunks
         ]
         if match.matched_text:
-            try:
+            if match.matched_text in transcript_chunks:
                 transcript_chunks.remove(match.matched_text)
-            except ValueError:
-                pass
             transcript_chunks.insert(0, match.matched_text)
         transcript = "".join(transcript_chunks)
         items.extend(_fragment_memory(match, transcript, max_tokens, include_relevance))
