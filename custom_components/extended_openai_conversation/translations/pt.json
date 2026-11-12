@@ -113,7 +113,8 @@
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Instrução de compactação",
                         "embedding_history_retention": "Retenção do histórico de embeddings",
-                        "context_recall_max_tokens": "Contexto recordado máximo (tokens estimados)"
+                        "context_recall_max_tokens": "Contexto recordado ativo máximo (tokens estimados)",
+                        "context_recall_snapshot_ttl_turns": "Duração do instantâneo de recuperação (turnos)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -121,7 +122,8 @@
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
                         "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo são usados dias.",
-                        "context_recall_max_tokens": "Número máximo estimado de tokens devolvidos pela recuperação automática de embeddings e por cada chamada context_recall. Os turnos históricos demasiado grandes são devolvidos como excertos limitados."
+                        "context_recall_max_tokens": "Número total máximo estimado de tokens de contexto derivado de embeddings mantidos em qualquer pedido ao modelo, incluindo recuperação automática, resultados de context_recall e páginas de instantâneos consultadas.",
+                        "context_recall_snapshot_ttl_turns": "Número de turnos de utilizador seguintes durante os quais um instantâneo de recuperação truncado permanece disponível. Consultar o instantâneo com êxito repõe a sua duração."
                     }
                 }
             }
@@ -162,7 +164,8 @@
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Instrução de compactação",
                         "embedding_history_retention": "Retenção do histórico de embeddings",
-                        "context_recall_max_tokens": "Contexto recordado máximo (tokens estimados)"
+                        "context_recall_max_tokens": "Contexto recordado ativo máximo (tokens estimados)",
+                        "context_recall_snapshot_ttl_turns": "Duração do instantâneo de recuperação (turnos)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -170,7 +173,8 @@
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
                         "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo são usados dias.",
-                        "context_recall_max_tokens": "Número máximo estimado de tokens devolvidos pela recuperação automática de embeddings e por cada chamada context_recall. Os turnos históricos demasiado grandes são devolvidos como excertos limitados."
+                        "context_recall_max_tokens": "Número total máximo estimado de tokens de contexto derivado de embeddings mantidos em qualquer pedido ao modelo, incluindo recuperação automática, resultados de context_recall e páginas de instantâneos consultadas.",
+                        "context_recall_snapshot_ttl_turns": "Número de turnos de utilizador seguintes durante os quais um instantâneo de recuperação truncado permanece disponível. Consultar o instantâneo com êxito repõe a sua duração."
                     }
                 }
             }

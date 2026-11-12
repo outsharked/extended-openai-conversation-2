@@ -113,7 +113,8 @@
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
                         "embedding_history_retention": "Conservazione cronologia embedding",
-                        "context_recall_max_tokens": "Contesto richiamato massimo (token stimati)"
+                        "context_recall_max_tokens": "Contesto richiamato attivo massimo (token stimati)",
+                        "context_recall_snapshot_ttl_turns": "Durata dello snapshot di richiamo (turni)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -121,7 +122,8 @@
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
                         "embedding_history_retention": "Numero intero positivo seguito da m per minuti, h per ore o d per giorni. Senza suffisso vengono usati i giorni.",
-                        "context_recall_max_tokens": "Numero massimo stimato di token restituiti dal richiamo automatico degli embedding e da ogni chiamata context_recall. I turni storici troppo grandi vengono restituiti come estratti limitati."
+                        "context_recall_max_tokens": "Numero totale massimo stimato di token del contesto derivato dagli embedding mantenuti in una richiesta al modello, inclusi il richiamo automatico, i risultati context_recall e le pagine di snapshot consultate.",
+                        "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. La consultazione riuscita dello snapshot ne reimposta la durata."
                     }
                 }
             }
@@ -162,7 +164,8 @@
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
                         "embedding_history_retention": "Conservazione cronologia embedding",
-                        "context_recall_max_tokens": "Contesto richiamato massimo (token stimati)"
+                        "context_recall_max_tokens": "Contesto richiamato attivo massimo (token stimati)",
+                        "context_recall_snapshot_ttl_turns": "Durata dello snapshot di richiamo (turni)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -170,7 +173,8 @@
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
                         "embedding_history_retention": "Numero intero positivo seguito da m per minuti, h per ore o d per giorni. Senza suffisso vengono usati i giorni.",
-                        "context_recall_max_tokens": "Numero massimo stimato di token restituiti dal richiamo automatico degli embedding e da ogni chiamata context_recall. I turni storici troppo grandi vengono restituiti come estratti limitati."
+                        "context_recall_max_tokens": "Numero totale massimo stimato di token del contesto derivato dagli embedding mantenuti in una richiesta al modello, inclusi il richiamo automatico, i risultati context_recall e le pagine di snapshot consultate.",
+                        "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. La consultazione riuscita dello snapshot ne reimposta la durata."
                     }
                 }
             }

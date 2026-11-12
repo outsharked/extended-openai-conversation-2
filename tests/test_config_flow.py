@@ -41,6 +41,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
+    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EMBEDDING_CHUNK_SIZE,
@@ -66,6 +67,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
@@ -74,6 +76,7 @@ from custom_components.extended_openai_conversation.const import (
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     MIN_CONTEXT_RECALL_MAX_TOKENS,
+    MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
 )
@@ -2293,6 +2296,18 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     assert schema[recall_key].config["min"] == MIN_CONTEXT_RECALL_MAX_TOKENS
     assert "max" not in schema[recall_key].config
     assert schema[recall_key].config["step"] == 1
+    snapshot_ttl_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+    )
+    assert snapshot_ttl_key.default() == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+    assert (
+        schema[snapshot_ttl_key].config["min"]
+        == MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+    )
+    assert "max" not in schema[snapshot_ttl_key].config
+    assert schema[snapshot_ttl_key].config["step"] == 1
     assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
@@ -2325,6 +2340,7 @@ async def test_agent_advanced_schema_combined_retrieval_and_compaction(
 
     keys = _schema_keys(handler.async_show_form.call_args.kwargs["data_schema"].schema)
     assert CONF_EMBEDDING_HISTORY_RETENTION in keys
+    assert CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS in keys
     assert CONF_CONTEXT_COMPACTION_TARGET in keys
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS in keys
     assert CONF_CONTEXT_COMPACTION_PROMPT in keys

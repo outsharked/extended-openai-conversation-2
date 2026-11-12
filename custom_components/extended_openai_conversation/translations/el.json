@@ -113,7 +113,8 @@
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
                         "embedding_history_retention": "Διατήρηση ιστορικού embeddings",
-                        "context_recall_max_tokens": "Μέγιστο ανακληθέν περιεχόμενο (εκτιμώμενα tokens)"
+                        "context_recall_max_tokens": "Μέγιστο ενεργό ανακληθέν περιεχόμενο (εκτιμώμενα tokens)",
+                        "context_recall_snapshot_ttl_turns": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (γύροι)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -121,7 +122,8 @@
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
                         "embedding_history_retention": "Θετικός ακέραιος με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
-                        "context_recall_max_tokens": "Μέγιστος εκτιμώμενος αριθμός tokens που επιστρέφεται από την αυτόματη ανάκληση embeddings και κάθε κλήση context_recall. Οι υπερμεγέθεις ιστορικές σειρές επιστρέφονται ως περιορισμένα αποσπάσματα."
+                        "context_recall_max_tokens": "Μέγιστος συνολικός εκτιμώμενος αριθμός tokens περιεχομένου από embeddings που διατηρείται σε κάθε αίτημα μοντέλου, συμπεριλαμβανομένης της αυτόματης ανάκλησης, των αποτελεσμάτων context_recall και των σελίδων στιγμιότυπου που προβλήθηκαν.",
+                        "context_recall_snapshot_ttl_turns": "Αριθμός επόμενων γύρων χρήστη για τους οποίους ένα περικομμένο στιγμιότυπο ανάκλησης παραμένει διαθέσιμο. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει τη διάρκεια ζωής του."
                     }
                 }
             }
@@ -162,7 +164,8 @@
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
                         "embedding_history_retention": "Διατήρηση ιστορικού embeddings",
-                        "context_recall_max_tokens": "Μέγιστο ανακληθέν περιεχόμενο (εκτιμώμενα tokens)"
+                        "context_recall_max_tokens": "Μέγιστο ενεργό ανακληθέν περιεχόμενο (εκτιμώμενα tokens)",
+                        "context_recall_snapshot_ttl_turns": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (γύροι)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -170,7 +173,8 @@
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
                         "embedding_history_retention": "Θετικός ακέραιος με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
-                        "context_recall_max_tokens": "Μέγιστος εκτιμώμενος αριθμός tokens που επιστρέφεται από την αυτόματη ανάκληση embeddings και κάθε κλήση context_recall. Οι υπερμεγέθεις ιστορικές σειρές επιστρέφονται ως περιορισμένα αποσπάσματα."
+                        "context_recall_max_tokens": "Μέγιστος συνολικός εκτιμώμενος αριθμός tokens περιεχομένου από embeddings που διατηρείται σε κάθε αίτημα μοντέλου, συμπεριλαμβανομένης της αυτόματης ανάκλησης, των αποτελεσμάτων context_recall και των σελίδων στιγμιότυπου που προβλήθηκαν.",
+                        "context_recall_snapshot_ttl_turns": "Αριθμός επόμενων γύρων χρήστη για τους οποίους ένα περικομμένο στιγμιότυπο ανάκλησης παραμένει διαθέσιμο. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει τη διάρκεια ζωής του."
                     }
                 }
             }

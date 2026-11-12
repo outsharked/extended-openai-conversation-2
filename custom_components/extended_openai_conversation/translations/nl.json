@@ -113,7 +113,8 @@
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
                         "embedding_history_retention": "Bewaartermijn embeddinggeschiedenis",
-                        "context_recall_max_tokens": "Maximale opgehaalde context (geschatte tokens)"
+                        "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
+                        "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -121,7 +122,8 @@
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
                         "embedding_history_retention": "Positief geheel getal gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt.",
-                        "context_recall_max_tokens": "Maximaal geschat aantal tokens dat automatisch ophalen van embeddings en elke context_recall-aanroep teruggeeft. Te grote historische beurten worden als begrensde fragmenten teruggegeven."
+                        "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
+                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in."
                     }
                 }
             }
@@ -162,7 +164,8 @@
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
                         "embedding_history_retention": "Bewaartermijn embeddinggeschiedenis",
-                        "context_recall_max_tokens": "Maximale opgehaalde context (geschatte tokens)"
+                        "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
+                        "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -170,7 +173,8 @@
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
                         "embedding_history_retention": "Positief geheel getal gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt.",
-                        "context_recall_max_tokens": "Maximaal geschat aantal tokens dat automatisch ophalen van embeddings en elke context_recall-aanroep teruggeeft. Te grote historische beurten worden als begrensde fragmenten teruggegeven."
+                        "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
+                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in."
                     }
                 }
             }

@@ -113,7 +113,8 @@
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
                         "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs",
-                        "context_recall_max_tokens": "Maximaler abgerufener Kontext (geschätzte Tokens)"
+                        "context_recall_max_tokens": "Maximaler aktiver abgerufener Kontext (geschätzte Tokens)",
+                        "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -121,7 +122,8 @@
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
                         "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet.",
-                        "context_recall_max_tokens": "Maximale geschätzte Tokenanzahl für den automatischen Embedding-Abruf und jeden context_recall-Aufruf. Zu große historische Gesprächsrunden werden als begrenzte Auszüge zurückgegeben."
+                        "context_recall_max_tokens": "Maximale geschätzte Gesamtzahl an Tokens aus embeddingbasiertem Kontext, die in einer Modellanfrage beibehalten wird, einschließlich automatischem Abruf, context_recall-Ergebnissen und aufgerufenen Snapshot-Seiten.",
+                        "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück."
                     }
                 }
             }
@@ -162,7 +164,8 @@
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
                         "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs",
-                        "context_recall_max_tokens": "Maximaler abgerufener Kontext (geschätzte Tokens)"
+                        "context_recall_max_tokens": "Maximaler aktiver abgerufener Kontext (geschätzte Tokens)",
+                        "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -170,7 +173,8 @@
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
                         "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet.",
-                        "context_recall_max_tokens": "Maximale geschätzte Tokenanzahl für den automatischen Embedding-Abruf und jeden context_recall-Aufruf. Zu große historische Gesprächsrunden werden als begrenzte Auszüge zurückgegeben."
+                        "context_recall_max_tokens": "Maximale geschätzte Gesamtzahl an Tokens aus embeddingbasiertem Kontext, die in einer Modellanfrage beibehalten wird, einschließlich automatischem Abruf, context_recall-Ergebnissen und aufgerufenen Snapshot-Seiten.",
+                        "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück."
                     }
                 }
             }

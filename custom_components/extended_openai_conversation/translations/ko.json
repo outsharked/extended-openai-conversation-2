@@ -113,7 +113,8 @@
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
                         "context_compaction_prompt": "압축 프롬프트",
                         "embedding_history_retention": "임베딩 기록 보존 기간",
-                        "context_recall_max_tokens": "최대 회상 컨텍스트(예상 토큰)"
+                        "context_recall_max_tokens": "최대 활성 회상 컨텍스트(예상 토큰)",
+                        "context_recall_snapshot_ttl_turns": "회상 스냅샷 수명(턴)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -121,7 +122,8 @@
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
                         "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
-                        "context_recall_max_tokens": "자동 임베딩 회상 및 각 context_recall 호출이 반환하는 최대 예상 토큰 수입니다. 너무 큰 과거 대화 차례는 제한된 발췌문으로 반환됩니다."
+                        "context_recall_max_tokens": "자동 회상, context_recall 결과 및 조회한 스냅샷 페이지를 포함하여 모델 요청에 유지되는 임베딩 기반 컨텍스트의 최대 총 예상 토큰 수입니다.",
+                        "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다."
                     }
                 }
             }
@@ -162,7 +164,8 @@
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
                         "context_compaction_prompt": "압축 프롬프트",
                         "embedding_history_retention": "임베딩 기록 보존 기간",
-                        "context_recall_max_tokens": "최대 회상 컨텍스트(예상 토큰)"
+                        "context_recall_max_tokens": "최대 활성 회상 컨텍스트(예상 토큰)",
+                        "context_recall_snapshot_ttl_turns": "회상 스냅샷 수명(턴)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -170,7 +173,8 @@
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
                         "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
-                        "context_recall_max_tokens": "자동 임베딩 회상 및 각 context_recall 호출이 반환하는 최대 예상 토큰 수입니다. 너무 큰 과거 대화 차례는 제한된 발췌문으로 반환됩니다."
+                        "context_recall_max_tokens": "자동 회상, context_recall 결과 및 조회한 스냅샷 페이지를 포함하여 모델 요청에 유지되는 임베딩 기반 컨텍스트의 최대 총 예상 토큰 수입니다.",
+                        "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다."
                     }
                 }
             }
