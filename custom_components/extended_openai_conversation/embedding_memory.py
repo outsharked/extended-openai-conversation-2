@@ -146,6 +146,7 @@ class EmbeddingMemoryMatch:
 
     record: EmbeddingMemoryRecord
     score: float
+    matched_text: str | None = None
 
 
 def _cosine_similarity(first: list[float], second: list[float]) -> float | None:
@@ -262,16 +263,17 @@ class EmbeddingMemoryStore:
         for record in records:
             if model is not None and record.model != model:
                 continue
-            scores = [
-                score
+            scored_chunks = [
+                (score, chunk.searchable_text)
                 for chunk in record.chunks
                 if (
                     score := _cosine_similarity(query_embedding, chunk.embedding)
                 )
                 is not None
             ]
-            if scores:
-                matches.append(EmbeddingMemoryMatch(record, max(scores)))
+            if scored_chunks:
+                score, matched_text = max(scored_chunks, key=lambda item: item[0])
+                matches.append(EmbeddingMemoryMatch(record, score, matched_text))
         matches.sort(key=lambda match: match.score, reverse=True)
         return matches[:limit]
 

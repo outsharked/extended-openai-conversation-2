@@ -241,6 +241,20 @@ Enable **Advanced Options** in the configuration to access these model-specific 
     Controls how long archived original conversation messages remain available for automatic recall and `context_recall`. Examples include `10m`, `5h` and `30d`. A number without a suffix is interpreted as days.
   </Accordion>
 
+  <Accordion title="Maximum Recalled Context">
+    **Type**: Integer (estimated tokens)
+
+    **Default**: `4000`
+
+    **Available when**: Context Truncate Strategy is `retrieve` or `retrieve_compact`
+
+    Limits the context returned by automatic embedding recall and by each
+    `context_recall` tool call. The estimate uses four characters per token.
+    Complete historical turns are returned while they fit; an oversized turn
+    is returned as a bounded excerpt with `truncated: true`, preventing recall
+    results from unexpectedly consuming most of the available context.
+  </Accordion>
+
   <Accordion title="Top P">
     **Type**: Number (0-1, step 0.05)
 
