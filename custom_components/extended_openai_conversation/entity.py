@@ -2038,20 +2038,21 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             chunk for group_chunks in searchable_chunks for chunk in group_chunks
         ]
         embedding_client, memory_store = self._embedding_runtime
-        response = await embedding_client.embeddings.create(
-            model=model,
-            input=embedding_inputs,
-        )
-        vectors_by_index = {
-            item.index: item.embedding for item in response.data
-        }
-        if len(vectors_by_index) != len(embedding_inputs) or any(
-            index not in vectors_by_index or not vectors_by_index[index]
-            for index in range(len(embedding_inputs))
-        ):
-            raise HomeAssistantError(
-                "The embeddings endpoint returned an incomplete response"
+        vectors: list[list[float]] = []
+        for embedding_input in embedding_inputs:
+            response = await embedding_client.embeddings.create(
+                model=model,
+                input=[embedding_input],
             )
+            if (
+                len(response.data) != 1
+                or response.data[0].index != 0
+                or not response.data[0].embedding
+            ):
+                raise HomeAssistantError(
+                    "The embeddings endpoint returned an incomplete response"
+                )
+            vectors.append(response.data[0].embedding)
 
         retention = embedding_history_retention(
             self.subentry.data.get(
@@ -2062,9 +2063,8 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         records: list[EmbeddingMemoryRecord] = []
         chunk_index = 0
         for group, group_chunks in zip(groups, searchable_chunks, strict=True):
-            group_vectors = [
-                vectors_by_index[index]
-                for index in range(chunk_index, chunk_index + len(group_chunks))
+            group_vectors = vectors[
+                chunk_index : chunk_index + len(group_chunks)
             ]
             records.append(
                 EmbeddingMemoryRecord.create(
