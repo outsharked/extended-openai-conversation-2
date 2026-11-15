@@ -1552,7 +1552,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     entity.subentry.data.update(
         {
             CONF_CONTEXT_THRESHOLD: 500,
-            CONF_CONTEXT_COMPACTION_TARGET: 100,
+            CONF_CONTEXT_COMPACTION_TARGET: 400,
             CONF_MAX_TOKENS: 100,
         }
     )
@@ -1610,7 +1610,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     ):
         changed = await entity._compact_message_history(
             chat_log,
-            _RequestTokenUsage(prompt_tokens=1800, total_tokens=1900),
+            _RequestTokenUsage(prompt_tokens=1000, total_tokens=1100),
         )
 
     assert changed is True
@@ -1793,12 +1793,10 @@ async def test_intra_turn_retrieval_archives_old_exchanges_with_turn_metadata():
     current_turn_id = chat_log.content[1].created.isoformat()
     embedding_client = MagicMock()
     embedding_client.embeddings.create = AsyncMock(
-        return_value=SimpleNamespace(
-            data=[
-                SimpleNamespace(index=0, embedding=[1.0, 0.0]),
-                SimpleNamespace(index=1, embedding=[0.0, 1.0]),
-            ]
-        )
+        side_effect=[
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]),
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[0.0, 1.0])])
+        ]
     )
     memory_store = MagicMock()
     memory_store.async_append = AsyncMock()

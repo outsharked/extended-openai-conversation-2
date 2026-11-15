@@ -192,6 +192,15 @@ class _IntraTurnReduction:
     turn_id: str
 
 
+@dataclass(frozen=True, slots=True)
+class _CompactionPlan:
+    """History boundary and summary budget selected for compaction."""
+
+    history_split_index: int
+    recent_turns: int
+    max_summary_tokens: int
+
+
 def _place_mcp_context(
     messages: list[ChatCompletionMessageParam],
     content: str,
@@ -1849,10 +1858,64 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         estimated_history_tokens = _estimate_content_tokens(chat_log.content)
         non_history_tokens = max(0, prompt_tokens - estimated_history_tokens)
         retained_tokens = _estimate_content_tokens(retained_contents)
-        available_tokens = max(1, target_tokens - non_history_tokens - retained_tokens)
+        available_tokens = target_tokens - non_history_tokens - retained_tokens
 
         max_output_tokens = int(options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS))
-        return max(1, min(available_tokens, max_output_tokens))
+        return min(available_tokens, max_output_tokens)
+
+    def _compaction_plan(
+        self,
+        chat_log: conversation.ChatLog,
+        prompt_tokens: int,
+        preserve_current_turn: bool,
+        recent_turns_override: int | None,
+    ) -> _CompactionPlan | None:
+        """Find the largest verbatim tail that leaves a usable summary budget."""
+        requested_recent_turns = max(
+            0,
+            (
+                recent_turns_override
+                if recent_turns_override is not None
+                else int(
+                    self.subentry.data.get(
+                        CONF_CONTEXT_COMPACTION_RECENT_TURNS,
+                        DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
+                    )
+                )
+            ),
+        )
+        messages = chat_log.content
+        for recent_turns in range(requested_recent_turns, -1, -1):
+            history_split_index = self._compaction_history_split_index(
+                messages,
+                preserve_current_turn,
+                recent_turns,
+            )
+            if history_split_index is None or history_split_index <= 1:
+                continue
+
+            retained_contents = [messages[0], *messages[history_split_index:]]
+            max_summary_tokens = self._compaction_max_tokens(
+                chat_log,
+                retained_contents,
+                prompt_tokens,
+            )
+            if max_summary_tokens <= 1:
+                continue
+
+            if recent_turns < requested_recent_turns:
+                _LOGGER.info(
+                    "Compaction target requires reducing the verbatim tail "
+                    "from %s to %s recent turns",
+                    requested_recent_turns,
+                    recent_turns,
+                )
+            return _CompactionPlan(
+                history_split_index=history_split_index,
+                recent_turns=recent_turns,
+                max_summary_tokens=max_summary_tokens,
+            )
+        return None
 
     async def _summarize_compaction_groups(
         self,
@@ -1961,24 +2024,22 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     ) -> bool:
         """Replace older completed turns with a rolling conversation summary."""
         messages = chat_log.content
-        history_split_index = self._compaction_history_split_index(
-            messages, preserve_current_turn, recent_turns_override
+        plan = self._compaction_plan(
+            chat_log,
+            token_usage.prompt_tokens,
+            preserve_current_turn,
+            recent_turns_override,
         )
-        if history_split_index is None or history_split_index <= 1:
-            _LOGGER.info(
-                "Context threshold exceeded, but there is no older history to compact"
-            )
+        if plan is None:
+            _LOGGER.info("Context threshold exceeded, but no older history can be compacted within the configured target")
             return False
 
+        history_split_index = plan.history_split_index
         history_to_summarize = messages[1:history_split_index]
-        retained_contents = [messages[0], *messages[history_split_index:]]
-        max_summary_tokens = self._compaction_max_tokens(
-            chat_log, retained_contents, token_usage.prompt_tokens
-        )
         threshold = int(self.subentry.data.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
         summary_prefix, summary = await self._summarize_compaction_groups(
             _group_compaction_contents(history_to_summarize),
-            max_summary_tokens,
+            plan.max_summary_tokens,
             threshold,
             language,
         )
@@ -2147,14 +2208,17 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     retained_contents,
                     token_usage.prompt_tokens,
                 )
-                threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
-                summary_prefix, summary = await self._summarize_compaction_groups(
-                    [list(group) for group in reduction.summary_groups],
-                    max_summary_tokens,
-                    threshold,
-                    language,
-                )
-                replacement = f"{summary_prefix}\n{summary}"
+                if max_summary_tokens > 1:
+                    threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
+                    summary_prefix, summary = await self._summarize_compaction_groups(
+                        [list(group) for group in reduction.summary_groups],
+                        max_summary_tokens,
+                        threshold,
+                        language,
+                    )
+                    replacement = f"{summary_prefix}\n{summary}"
+                else:
+                    _LOGGER.info("Intra-turn compaction cannot produce a summary within the configured target")
             except Exception:
                 _LOGGER.exception("Intra-turn conversation compaction failed")
 
@@ -2211,9 +2275,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             messages, preserve_current_turn, recent_turns_override
         )
         if history_split_index is None or history_split_index <= 1:
-            _LOGGER.info(
-                "Context threshold exceeded, but there is no older history to archive"
-            )
+            _LOGGER.info("Context threshold exceeded, but there is no older history to archive")
             return False
 
         await self._archive_embedding_groups(
@@ -2224,9 +2286,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
 
         if remove_archived_history:
             del messages[1:history_split_index]
-        _LOGGER.info(
-            "Context threshold exceeded, older conversation history archived"
-        )
+        _LOGGER.info("Context threshold exceeded, older conversation history archived")
         return True
 
     def _remove_compactable_history(
@@ -2253,12 +2313,22 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         language: str | None,
     ) -> bool:
         """Archive verbatim history, then replace that history with a summary."""
+        plan = self._compaction_plan(
+            chat_log,
+            token_usage.prompt_tokens,
+            preserve_current_turn,
+            recent_turns_override,
+        )
+        if plan is None:
+            return False
+
+        planned_recent_turns = plan.recent_turns
         archived = False
         try:
             archived = await self._archive_message_history(
                 chat_log,
                 preserve_current_turn,
-                recent_turns_override,
+                planned_recent_turns,
                 remove_archived_history=False,
             )
         except Exception:
@@ -2269,7 +2339,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 chat_log,
                 token_usage,
                 preserve_current_turn,
-                recent_turns_override,
+                planned_recent_turns,
                 language,
             )
         except Exception:
@@ -2278,7 +2348,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     "Conversation compaction failed; using the archived history for retrieval"
                 )
                 return self._remove_compactable_history(
-                    chat_log, preserve_current_turn, recent_turns_override
+                    chat_log, preserve_current_turn, planned_recent_turns
                 )
             _LOGGER.exception(
                 "Embedding archival and conversation compaction failed, "
