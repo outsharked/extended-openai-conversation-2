@@ -3,6 +3,7 @@
         "error": {
             "invalid_embeddings": "Le point de terminaison d'embeddings n'a pas renvoyé d'embedding valide.",
             "invalid_embedding_history_retention": "Saisissez un entier positif suivi de m, h ou d. Sans suffixe, la valeur est exprimée en jours.",
+            "invalid_context_compaction_target": "Taille maximale du contexte après compactage. Elle doit laisser suffisamment de place dans le seuil de contexte pour la réponse maximale configurée.",
             "cannot_connect": "Échec de la connexion",
             "invalid_auth": "Authentification invalide",
             "unknown": "Erreur inconnue"
@@ -128,7 +129,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
+                        "context_compaction_target": "Cible de l'invite compactée",
                         "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
@@ -138,7 +139,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
+                        "context_compaction_target": "Taille maximale de l'invite active en jetons après compactage. Le résumé et le contexte conservé doivent tenir dans cette cible.",
                         "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
@@ -181,7 +182,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Cible du contexte compacté (% du seuil de jetons)",
+                        "context_compaction_target": "Cible de l'invite compactée",
                         "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
@@ -191,7 +192,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Après la synthèse, viser ce pourcentage du seuil de jetons de contexte configuré.",
+                        "context_compaction_target": "Taille maximale de l'invite active en jetons après compactage. Le résumé et le contexte conservé doivent tenir dans cette cible.",
                         "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",

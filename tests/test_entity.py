@@ -1117,7 +1117,7 @@ def _entity_for_compaction(
     entity.subentry.data = {
         CONF_CONTEXT_THRESHOLD: 1000,
         CONF_CONTEXT_TRUNCATE_STRATEGY: strategy,
-        CONF_CONTEXT_COMPACTION_TARGET: 60,
+        CONF_CONTEXT_COMPACTION_TARGET: 600,
         CONF_CONTEXT_COMPACTION_RECENT_TURNS: 1,
         CONF_MAX_TOKENS: 500,
     }
@@ -1552,7 +1552,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     entity.subentry.data.update(
         {
             CONF_CONTEXT_THRESHOLD: 500,
-            CONF_CONTEXT_COMPACTION_TARGET: 20,
+            CONF_CONTEXT_COMPACTION_TARGET: 100,
             CONF_MAX_TOKENS: 100,
         }
     )
@@ -1632,7 +1632,7 @@ async def test_compaction_reduces_retained_tail_before_summarizing():
     entity.subentry.data.update(
         {
             CONF_CONTEXT_THRESHOLD: 2000,
-            CONF_CONTEXT_COMPACTION_TARGET: 30,
+            CONF_CONTEXT_COMPACTION_TARGET: 600,
             CONF_CONTEXT_COMPACTION_RECENT_TURNS: 2,
             CONF_MAX_TOKENS: 500,
         }

@@ -3,6 +3,7 @@
         "error": {
             "invalid_embeddings": "Der Embeddings-Endpunkt hat kein gültiges Embedding zurückgegeben.",
             "invalid_embedding_history_retention": "Gib eine positive ganze Zahl gefolgt von m, h oder d ein. Ohne Einheit werden Tage verwendet.",
+            "invalid_context_compaction_target": "Maximale Kontextgröße nach der Kompaktierung. Dabei muss innerhalb des Kontext-Schwellenwerts genügend Platz für die konfigurierte maximale Antwort verbleiben.",
             "cannot_connect": "Fehler beim Verbindungsaufbau",
             "invalid_auth": "Authentifizierung fehlgeschlagen",
             "unknown": "Unbekannter Fehler"
@@ -128,7 +129,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
+                        "context_compaction_target": "Zielgröße des kompaktierten Prompts",
                         "context_compaction_intra_turn": "Kontextkomprimierung innerhalb eines Durchgangs aktivieren",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
@@ -138,7 +139,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
+                        "context_compaction_target": "Maximale Größe des aktiven Prompts in Tokens nach der Kompaktierung. Zusammenfassung und beibehaltener Kontext müssen in dieses Ziel passen.",
                         "context_compaction_intra_turn": "Erlaubt der ausgewählten Kontextstrategie, abgeschlossene Werkzeugaufrufe während eines aktiven Durchgangs zu reduzieren, wenn die Anfrage sonst den Kontextgrenzwert überschreiten würde.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
@@ -181,7 +182,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Ziel für kompaktierten Kontext (% des Token-Schwellenwerts)",
+                        "context_compaction_target": "Zielgröße des kompaktierten Prompts",
                         "context_compaction_intra_turn": "Kontextkomprimierung innerhalb eines Durchgangs aktivieren",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
@@ -191,7 +192,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Nach der Zusammenfassung wird dieser Prozentsatz des konfigurierten Kontext-Token-Schwellenwerts angestrebt.",
+                        "context_compaction_target": "Maximale Größe des aktiven Prompts in Tokens nach der Kompaktierung. Zusammenfassung und beibehaltener Kontext müssen in dieses Ziel passen.",
                         "context_compaction_intra_turn": "Erlaubt der ausgewählten Kontextstrategie, abgeschlossene Werkzeugaufrufe während eines aktiven Durchgangs zu reduzieren, wenn die Anfrage sonst den Kontextgrenzwert überschreiten würde.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",

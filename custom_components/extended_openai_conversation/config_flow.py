@@ -448,6 +448,40 @@ def _validate_embedding_history_retention_input(
     return {}
 
 
+def _validate_context_compaction_target_input(
+    strategy: Any,
+    options: Mapping[str, Any],
+    user_input: dict[str, Any],
+) -> dict[str, str]:
+    """Validate the compacted prompt target against the request token budget."""
+    if strategy not in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
+        return {}
+
+    value = user_input.get(CONF_CONTEXT_COMPACTION_TARGET)
+    if isinstance(value, bool):
+        return {
+            CONF_CONTEXT_COMPACTION_TARGET: (
+                "invalid_context_compaction_target"
+            )
+        }
+    try:
+        target = int(value)
+    except (TypeError, ValueError):
+        target = 0
+
+    threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
+    max_tokens = int(options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS))
+    if target != value or target <= 0 or target + max_tokens > threshold:
+        return {
+            CONF_CONTEXT_COMPACTION_TARGET: (
+                "invalid_context_compaction_target"
+            )
+        }
+
+    user_input[CONF_CONTEXT_COMPACTION_TARGET] = target
+    return {}
+
+
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
     """Validate the user input allows us to connect.
 
@@ -1932,12 +1966,17 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         """Handle advanced options step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            strategy = (self._temp_data or {}).get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
             errors = _validate_embedding_history_retention_input(
-                (self._temp_data or {}).get(
-                    CONF_CONTEXT_TRUNCATE_STRATEGY,
-                    DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
-                ),
-                user_input,
+                strategy, user_input
+            )
+            errors.update(
+                _validate_context_compaction_target_input(
+                    strategy, self._temp_data or {}, user_input
+                )
             )
 
             if not errors:
@@ -2054,7 +2093,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = NumberSelector(
                 NumberSelectorConfig(
-                    min=1, max=100, step=1, unit_of_measurement="%"
+                    min=1, step=1, unit_of_measurement="tokens"
                 )
             )
             schema[
@@ -2369,12 +2408,17 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         """Handle advanced options step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            strategy = (self._temp_data or {}).get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
             errors = _validate_embedding_history_retention_input(
-                (self._temp_data or {}).get(
-                    CONF_CONTEXT_TRUNCATE_STRATEGY,
-                    DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
-                ),
-                user_input,
+                strategy, user_input
+            )
+            errors.update(
+                _validate_context_compaction_target_input(
+                    strategy, self._temp_data or {}, user_input
+                )
             )
 
             if not errors:
@@ -2491,7 +2535,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = NumberSelector(
                 NumberSelectorConfig(
-                    min=1, max=100, step=1, unit_of_measurement="%"
+                    min=1, step=1, unit_of_measurement="tokens"
                 )
             )
             schema[

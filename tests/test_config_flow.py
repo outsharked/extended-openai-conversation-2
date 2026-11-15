@@ -51,6 +51,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_FUNCTION_TOOLS,
+    CONF_MAX_TOKENS,
     CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
     CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
@@ -2345,8 +2346,8 @@ async def test_agent_advanced_schema_compaction_options(hass, handler_type, stra
     )
     assert target_key.default() == DEFAULT_CONTEXT_COMPACTION_TARGET
     assert schema[target_key].config["min"] == 1
-    assert schema[target_key].config["max"] == 100
-    assert schema[target_key].config["unit_of_measurement"] == "%"
+    assert "max" not in schema[target_key].config
+    assert schema[target_key].config["unit_of_measurement"] == "tokens"
 
     recent_turns_key = next(
         key
@@ -2461,6 +2462,41 @@ async def test_agent_advanced_schema_combined_retrieval_and_compaction(
     assert CONF_CONTEXT_COMPACTION_TARGET in keys
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS in keys
     assert CONF_CONTEXT_COMPACTION_PROMPT in keys
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_rejects_compaction_target_outside_request_budget(
+    hass, handler_type
+):
+    """The compacted prompt and maximum response must fit the threshold."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_THRESHOLD: 1000,
+        CONF_CONTEXT_TRUNCATE_STRATEGY: "compact",
+        CONF_MAX_TOKENS: 500,
+    }
+    entry = MagicMock()
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {CONF_CONTEXT_COMPACTION_TARGET: 501}
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_CONTEXT_COMPACTION_TARGET: (
+            "invalid_context_compaction_target"
+        )
+    }
 
 
 @pytest.mark.parametrize(

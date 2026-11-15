@@ -3,6 +3,7 @@
         "error": {
             "invalid_embeddings": "O endpoint de embeddings não retornou um embedding válido.",
             "invalid_embedding_history_retention": "Insira um número inteiro positivo seguido de m, h ou d. Sem sufixo, o valor usa dias.",
+            "invalid_context_compaction_target": "Tamanho máximo do contexto após a compactação. Deve deixar espaço suficiente dentro do limite de contexto para a resposta máxima configurada.",
             "cannot_connect": "Não é possível conectar",
             "invalid_auth": "Autenticação inválida",
             "unknown": "Erro desconhecido"
@@ -128,7 +129,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Meta do contexto compactado (% do limite de tokens)",
+                        "context_compaction_target": "Meta do prompt compactado",
                         "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Prompt de compactação",
@@ -138,7 +139,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Após o resumo, use como meta esta porcentagem do limite configurado de tokens de contexto.",
+                        "context_compaction_target": "Tamanho máximo do prompt ativo em tokens após a compactação. O resumo e o contexto mantido devem caber nessa meta.",
                         "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando a solicitação excederia o limite de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções usadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
@@ -181,7 +182,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "Meta do contexto compactado (% do limite de tokens)",
+                        "context_compaction_target": "Meta do prompt compactado",
                         "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Prompt de compactação",
@@ -191,7 +192,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "Após o resumo, use como meta esta porcentagem do limite configurado de tokens de contexto.",
+                        "context_compaction_target": "Tamanho máximo do prompt ativo em tokens após a compactação. O resumo e o contexto mantido devem caber nessa meta.",
                         "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando a solicitação excederia o limite de contexto.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções usadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",

@@ -1836,16 +1836,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     ) -> int:
         """Return the available summary budget for the configured target."""
         options = self.subentry.data
-        threshold = int(
-            options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD)
+        target_tokens = max(
+            1,
+            int(
+                options.get(
+                    CONF_CONTEXT_COMPACTION_TARGET,
+                    DEFAULT_CONTEXT_COMPACTION_TARGET,
+                )
+            ),
         )
-        percentage = int(
-            options.get(
-                CONF_CONTEXT_COMPACTION_TARGET, DEFAULT_CONTEXT_COMPACTION_TARGET
-            )
-        )
-        percentage = max(1, min(100, percentage))
-        target_tokens = max(1, threshold * percentage // 100)
 
         estimated_history_tokens = _estimate_content_tokens(chat_log.content)
         non_history_tokens = max(0, prompt_tokens - estimated_history_tokens)

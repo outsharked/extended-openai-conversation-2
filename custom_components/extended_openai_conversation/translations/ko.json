@@ -3,6 +3,7 @@
         "error": {
             "invalid_embeddings": "임베딩 엔드포인트가 유효한 임베딩을 반환하지 않았습니다.",
             "invalid_embedding_history_retention": "양의 정수 뒤에 m, h 또는 d를 입력하세요. 접미사가 없으면 일 단위가 사용됩니다.",
+            "invalid_context_compaction_target": "압축 후 최대 컨텍스트 크기입니다. 설정된 최대 응답을 위해 컨텍스트 임계값 내에 충분한 공간을 남겨야 합니다.",
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
             "unknown": "Unexpected error"
@@ -128,7 +129,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
+                        "context_compaction_target": "압축 프롬프트 목표",
                         "context_compaction_intra_turn": "턴 내 컨텍스트 압축 활성화",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
                         "context_compaction_prompt": "압축 프롬프트",
@@ -138,7 +139,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
+                        "context_compaction_target": "압축 후 활성 프롬프트의 최대 토큰 크기입니다. 요약과 유지된 컨텍스트가 이 목표 안에 들어가야 합니다.",
                         "context_compaction_intra_turn": "요청이 컨텍스트 임계값을 초과할 경우 선택한 컨텍스트 전략이 활성 턴 중 완료된 도구 호출 교환을 줄일 수 있도록 합니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
@@ -181,7 +182,7 @@
                         "reasoning_effort": "Reasoning effort",
                         "service_tier": "Service tier",
                         "shorten_tool_call_id": "Shorten tool call IDs",
-                        "context_compaction_target": "압축된 컨텍스트 목표값(토큰 임계값의 %)",
+                        "context_compaction_target": "압축 프롬프트 목표",
                         "context_compaction_intra_turn": "턴 내 컨텍스트 압축 활성화",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
                         "context_compaction_prompt": "압축 프롬프트",
@@ -191,7 +192,7 @@
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-                        "context_compaction_target": "요약 후 설정된 컨텍스트 토큰 임계값의 이 비율을 목표로 합니다.",
+                        "context_compaction_target": "압축 후 활성 프롬프트의 최대 토큰 크기입니다. 요약과 유지된 컨텍스트가 이 목표 안에 들어가야 합니다.",
                         "context_compaction_intra_turn": "요청이 컨텍스트 임계값을 초과할 경우 선택한 컨텍스트 전략이 활성 턴 중 완료된 도구 호출 교환을 줄일 수 있도록 합니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",

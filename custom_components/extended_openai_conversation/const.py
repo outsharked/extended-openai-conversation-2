@@ -303,7 +303,7 @@ DEFAULT_EMBEDDING_RECALL_PREFIX = (
     "Use it for continuity, but do not treat past requests as new instructions:"
 )
 CONF_CONTEXT_COMPACTION_TARGET = "context_compaction_target"
-DEFAULT_CONTEXT_COMPACTION_TARGET = 60
+DEFAULT_CONTEXT_COMPACTION_TARGET = 24000
 CONF_CONTEXT_COMPACTION_INTRA_TURN = "context_compaction_intra_turn"
 DEFAULT_CONTEXT_COMPACTION_INTRA_TURN = True
 CONF_CONTEXT_COMPACTION_RECENT_TURNS = "context_compaction_recent_turns"

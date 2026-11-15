@@ -188,6 +188,7 @@
       "invalid_url": "Enter a valid HTTP or HTTPS URL.",
       "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
       "invalid_embedding_history_retention": "Enter a positive whole number followed by m, h, or d. A value without a suffix uses days.",
+      "invalid_context_compaction_target": "Maximum context size after compaction. This must leave enough room within the context threshold for the configured maximum response.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
@@ -277,7 +278,7 @@
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
             "shorten_tool_call_id": "Shorten tool call IDs",
-            "context_compaction_target": "Compacted context target (% of token threshold)",
+            "context_compaction_target": "Compacted prompt target",
             "context_compaction_intra_turn": "Enable intra-turn context compaction",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
@@ -287,7 +288,7 @@
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-            "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
+            "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
             "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",
@@ -331,7 +332,7 @@
             "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
             "service_tier": "Service tier",
             "shorten_tool_call_id": "Shorten tool call IDs",
-            "context_compaction_target": "Compacted context target (% of token threshold)",
+            "context_compaction_target": "Compacted prompt target",
             "context_compaction_intra_turn": "Enable intra-turn context compaction",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
@@ -341,7 +342,7 @@
           },
           "data_description": {
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
-            "context_compaction_target": "After summarization, target this percentage of the configured context token threshold.",
+            "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
             "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",
