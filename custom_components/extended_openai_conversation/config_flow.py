@@ -458,11 +458,9 @@ def _validate_context_compaction_target_input(
         return {}
 
     value = user_input.get(CONF_CONTEXT_COMPACTION_TARGET)
-    if isinstance(value, bool):
+    if value is None or isinstance(value, bool):
         return {
-            CONF_CONTEXT_COMPACTION_TARGET: (
-                "invalid_context_compaction_target"
-            )
+            CONF_CONTEXT_COMPACTION_TARGET: ( "invalid_context_compaction_target")
         }
     try:
         target = int(value)
