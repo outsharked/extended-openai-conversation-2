@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from custom_components.extended_openai_conversation.embedding_memory import (
+    EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryChunk,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
@@ -190,6 +191,45 @@ async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
     ]
     assert matches[0].score == 1.0
     assert matches[0].matched_text == "matching second chunk"
+
+
+async def test_search_can_exclude_intra_turn_memories_from_the_current_turn(hass, tmp_path: Path):
+    """Automatic recall can omit active-turn archives without hiding older data."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    scope = EmbeddingMemoryScope(
+        entry_id="endpoint-1",
+        agent_id="agent-1",
+        conversation_id="conversation-1",
+    )
+    records = [
+        EmbeddingMemoryRecord.create(
+            model="embedding-model",
+            embedding=[1.0, 0.0],
+            searchable_text=text,
+            messages=[{"role": "tool_result", "content": text}],
+            retention=timedelta(days=1),
+            source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
+            turn_id=turn_id,
+        )
+        for text, turn_id in (
+            ("current active turn", "current-turn"),
+            ("earlier active turn", "earlier-turn"),
+        )
+    ]
+    await store.async_append(scope, records)
+
+    matches = await store.async_search(
+        scope,
+        [1.0, 0.0],
+        limit=5,
+        model="embedding-model",
+        excluded_turn_id="current-turn",
+    )
+
+    assert [match.record.searchable_text for match in matches] == [
+        "earlier active turn"
+    ]
 
 
 async def test_clear_endpoint_only_removes_the_requested_endpoint(hass, tmp_path: Path):

@@ -13,6 +13,7 @@ from openai.types.chat import (
 import probatio as vol
 
 from custom_components.extended_openai_conversation.const import (
+    CONF_CONTEXT_COMPACTION_INTRA_TURN,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
@@ -26,6 +27,7 @@ from custom_components.extended_openai_conversation.const import (
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
 )
 from custom_components.extended_openai_conversation.embedding_memory import (
+    EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
@@ -1142,6 +1144,39 @@ def _compaction_chat_log() -> MagicMock:
     return chat_log
 
 
+def _intra_turn_chat_log() -> MagicMock:
+    """Return one active turn containing three completed tool exchanges."""
+    chat_log = MagicMock()
+    chat_log.conversation_id = "conversation-1"
+    chat_log.content = [
+        conversation.SystemContent(content="System prompt"),
+        conversation.UserContent(content="Research this topic"),
+    ]
+    for index in range(1, 4):
+        tool_call_id = f"call-{index}"
+        chat_log.content.extend(
+            [
+                conversation.AssistantContent(
+                    agent_id="conversation.test",
+                    tool_calls=[
+                        llm.ToolInput(
+                            id=tool_call_id,
+                            tool_name="lookup",
+                            tool_args={"page": index},
+                        )
+                    ],
+                ),
+                _make_tool_result_content(
+                    "conversation.test",
+                    tool_call_id,
+                    "lookup",
+                    {"result": f"Tool result {index}"},
+                ),
+            ]
+        )
+    return chat_log
+
+
 async def test_embedding_recall_searches_the_current_agent_conversation():
     """Automatic recall embeds the latest user input in the saved scope."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
@@ -1193,7 +1228,11 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
     assert request["model"] == "embedding-model"
     assert "What temperature do I prefer?" in request["input"]
     memory_store.async_search.assert_awaited_once_with(
-        scope, [1.0, 0.0], 3, "embedding-model"
+        scope,
+        [1.0, 0.0],
+        3,
+        "embedding-model",
+        excluded_turn_id=chat_log.content[-2].created.isoformat(),
     )
 
     recall_result = build_paginated_recall_result(
@@ -1615,6 +1654,126 @@ async def test_compaction_failure_falls_back_to_clear_strategy():
         "What temperature do I prefer?",
         "You prefer 20 C.",
     ]
+
+
+async def test_intra_turn_compaction_preserves_latest_completed_exchange():
+    """Older tool exchanges are summarized while the newest stays verbatim."""
+    entity = _entity_for_compaction()
+    chat_log = _intra_turn_chat_log()
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="Earlier findings"))]
+    )
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(return_value=response),
+        ) as create_completion,
+    ):
+        changed = await entity._reduce_intra_turn_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=100, total_tokens=600),
+        )
+
+    assert changed is True
+    summary_input = create_completion.await_args.kwargs["messages"][1]["content"]
+    assert "Tool result 1" in summary_input
+    assert "Tool result 2" in summary_input
+    assert "Tool result 3" not in summary_input
+    assert len(chat_log.content) == 5
+    assert chat_log.content[1].content == "Research this topic"
+    assert chat_log.content[2].content == (
+        "Summary of earlier conversation:\nEarlier findings"
+    )
+    assert chat_log.content[2].native == {"eoaic_intra_turn_summary": True}
+    assert chat_log.content[3].tool_calls[0].id == "call-3"
+    assert _tool_result_data(chat_log.content[4]) == {"result": "Tool result 3"}
+
+
+async def test_intra_turn_compaction_can_be_disabled():
+    """The advanced toggle leaves an oversized active turn unchanged."""
+    entity = _entity_for_compaction()
+    entity.subentry.data[CONF_CONTEXT_COMPACTION_INTRA_TURN] = False
+    chat_log = _intra_turn_chat_log()
+    original_contents = list(chat_log.content)
+
+    changed = await entity._reduce_intra_turn_history(
+        chat_log,
+        _RequestTokenUsage(prompt_tokens=100, total_tokens=600),
+    )
+
+    assert changed is False
+    assert chat_log.content == original_contents
+
+
+async def test_intra_turn_retrieval_archives_old_exchanges_with_turn_metadata():
+    """Retrieval archives old exchanges and leaves a compact recall reference."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _intra_turn_chat_log()
+    current_turn_id = chat_log.content[1].created.isoformat()
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[
+                SimpleNamespace(index=0, embedding=[1.0, 0.0]),
+                SimpleNamespace(index=1, embedding=[0.0, 1.0]),
+            ]
+        )
+    )
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        changed = await entity._reduce_intra_turn_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=100, total_tokens=600),
+        )
+
+    assert changed is True
+    records = memory_store.async_append.await_args.args[1]
+    assert len(records) == 2
+    assert {record.source for record in records} == {EMBEDDING_MEMORY_SOURCE_INTRA_TURN}
+    assert {record.turn_id for record in records} == {current_turn_id}
+    assert "context_recall" in chat_log.content[2].content
+    assert chat_log.content[3].tool_calls[0].id == "call-3"
+
+
+async def test_intra_turn_retrieval_falls_back_to_compaction():
+    """An embedding outage still permits safe intra-turn reduction."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity._archive_embedding_groups = AsyncMock(
+        side_effect=RuntimeError("embedding failed")
+    )
+    entity._summarize_compaction_groups = AsyncMock(
+        return_value=("Earlier tool context:", "Fallback summary")
+    )
+    chat_log = _intra_turn_chat_log()
+
+    changed = await entity._reduce_intra_turn_history(
+        chat_log,
+        _RequestTokenUsage(prompt_tokens=100, total_tokens=600),
+    )
+
+    assert changed is True
+    assert chat_log.content[2].content == (
+        "Earlier tool context:\nFallback summary"
+    )
+    entity._summarize_compaction_groups.assert_awaited_once()
 
 
 async def test_compaction_rolls_previous_summary_into_next_summary():

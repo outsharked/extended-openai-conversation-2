@@ -894,8 +894,11 @@ def _intra_turn_reduction(contents: list[conversation.Content]) -> _IntraTurnRed
         tool_call_ids = {tool_call.id for tool_call in content.tool_calls}
         result_ids: set[str] = set()
         end = index + 1
-        while end < len(contents) and isinstance(contents[end], conversation.ToolResultContent):
-            result_ids.add(contents[end].tool_call_id)
+        while end < len(contents):
+            result = contents[end]
+            if not isinstance(result, conversation.ToolResultContent):
+                break
+            result_ids.add(result.tool_call_id)
             end += 1
         if tool_call_ids and tool_call_ids <= result_ids:
             exchange_ranges.append((index, end))
@@ -1077,6 +1080,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 list(response.data[0].embedding),
                 DEFAULT_EMBEDDING_RECALL_RESULTS,
                 model,
+                excluded_turn_id=latest_user_content.created.isoformat(),
             )
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception(
@@ -1456,8 +1460,19 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     recent_turns_override=recent_turns_override,
                     language=language,
                 )
+                intra_turn_changed = False
+                if not history_changed:
+                    intra_turn_changed = await self._reduce_intra_turn_history(
+                        chat_log,
+                        _RequestTokenUsage(
+                            prompt_tokens=estimated_prompt_tokens,
+                            total_tokens=estimated_prompt_tokens + int(max_tokens),
+                        ),
+                        language,
+                    )
+                    history_changed = intra_turn_changed
                 if history_changed:
-                    if retrieval_enabled:
+                    if retrieval_enabled and not intra_turn_changed:
                         recalled_memories = (
                             await self._async_recall_embedding_memories(chat_log)
                         )
@@ -2077,6 +2092,112 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             ),
             records,
         )
+
+    async def _reduce_intra_turn_history(
+        self,
+        chat_log: conversation.ChatLog,
+        token_usage: _RequestTokenUsage,
+        language: str | None = None,
+    ) -> bool:
+        """Reduce older completed tool exchanges from the active turn."""
+        options = self.subentry.data
+        if not options.get(
+            CONF_CONTEXT_COMPACTION_INTRA_TURN,
+            DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
+        ):
+            return False
+
+        strategy = options.get(
+            CONF_CONTEXT_TRUNCATE_STRATEGY,
+            DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+        )
+        if strategy == "clear":
+            return False
+
+        reduction = _intra_turn_reduction(chat_log.content)
+        if reduction is None:
+            return False
+
+        archived = False
+        if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+            try:
+                await self._archive_embedding_groups(
+                    chat_log,
+                    [list(group) for group in reduction.archive_groups],
+                    source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
+                    turn_id=reduction.turn_id,
+                )
+                archived = True
+            except Exception:
+                _LOGGER.exception("Intra-turn embedding archival failed. Continuing with conversation compaction")
+
+        replacement: str | None = None
+        should_compact = strategy in (
+            "compact",
+            CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
+        ) or (strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE and not archived)
+        if should_compact:
+            try:
+                retained_contents = [
+                    content
+                    for index, content in enumerate(chat_log.content)
+                    if index not in reduction.remove_indexes
+                ]
+                max_summary_tokens = self._compaction_max_tokens(
+                    chat_log,
+                    retained_contents,
+                    token_usage.prompt_tokens,
+                )
+                threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
+                summary_prefix, summary = await self._summarize_compaction_groups(
+                    [list(group) for group in reduction.summary_groups],
+                    max_summary_tokens,
+                    threshold,
+                    language,
+                )
+                replacement = f"{summary_prefix}\n{summary}"
+            except Exception:
+                _LOGGER.exception("Intra-turn conversation compaction failed")
+
+        if replacement is None:
+            if not archived:
+                return False
+            replacement = json.dumps(
+                {
+                    "archived_tool_context": {
+                        "completed_exchanges": len(reduction.archive_groups),
+                        "available_via": "context_recall",
+                    }
+                },
+                separators=(",", ":"),
+            )
+
+        agent_id = next(
+            (
+                content.agent_id
+                for content in reversed(chat_log.content)
+                if isinstance(content, conversation.AssistantContent)
+            ),
+            self.entity_id or DOMAIN,
+        )
+        retained_contents = [
+            content
+            for index, content in enumerate(chat_log.content)
+            if index not in reduction.remove_indexes
+        ]
+        retained_contents.insert(
+            reduction.insert_at,
+            conversation.AssistantContent(
+                agent_id=agent_id,
+                content=replacement,
+                native={_INTRA_TURN_SUMMARY_NATIVE_KEY: True},
+            ),
+        )
+        chat_log.content[:] = retained_contents
+        _LOGGER.info(
+            "Context threshold exceeded, older completed tool exchanges reduced"
+        )
+        return True
 
     async def _archive_message_history(
         self,
