@@ -1626,6 +1626,43 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     assert chat_log.content[-1].content == "Current response"
 
 
+async def test_compaction_does_not_request_one_token_summary():
+    """An unattainable target does not produce an unusable summary request."""
+    entity = _entity_for_compaction()
+    entity.subentry.data.update(
+        {
+            CONF_CONTEXT_THRESHOLD: 1000,
+            CONF_CONTEXT_COMPACTION_TARGET: 10,
+            CONF_MAX_TOKENS: 500,
+        }
+    )
+    chat_log = _compaction_chat_log()
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="Summary"))]
+    )
+
+    with (
+        patch.object(
+            ExtendedOpenAIBaseLLMEntity,
+            "_client",
+            new_callable=PropertyMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation.entity."
+            "async_create_chat_completion",
+            new=AsyncMock(return_value=response),
+        ) as create_completion,
+    ):
+        changed = await entity._compact_message_history(
+            chat_log,
+            _RequestTokenUsage(prompt_tokens=1000, total_tokens=1500),
+        )
+
+    assert changed is False
+    create_completion.assert_not_awaited()
+
+
 async def test_compaction_failure_falls_back_to_clear_strategy():
     """A failed summary call still leaves a usable latest conversation turn."""
     entity = _entity_for_compaction()
@@ -1927,8 +1964,8 @@ async def test_retrieve_compact_archives_and_summarizes_the_same_history():
     ]
 
 
-async def test_embedding_archival_chunks_one_turn_and_stores_messages_once():
-    """Oversized searchable text uses several vectors for one lossless record."""
+async def test_embedding_archival_batches_chunks_and_stores_messages_once():
+    """Chunked inputs respect the request limit and form one lossless record."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
     entity.entry.data = {
@@ -1941,12 +1978,20 @@ async def test_embedding_archival_chunks_one_turn_and_stores_messages_once():
     chat_log = _compaction_chat_log()
     chat_log.conversation_id = "conversation-1"
     embedding_client = MagicMock()
+    request_number = 0
 
     async def create_embeddings(**kwargs):
+        nonlocal request_number
+        request_number += 1
+        inputs = kwargs["input"]
+        assert sum((len(value) + 3) // 4 for value in inputs) <= 10
         return SimpleNamespace(
             data=[
-                SimpleNamespace(index=index, embedding=[float(index), 1.0])
-                for index, _value in enumerate(kwargs["input"])
+                SimpleNamespace(
+                    index=index,
+                    embedding=[float(request_number), float(index)],
+                )
+                for index, _value in enumerate(inputs)
             ]
         )
 
@@ -1963,12 +2008,23 @@ async def test_embedding_archival_chunks_one_turn_and_stores_messages_once():
         changed = await entity._archive_message_history(chat_log)
 
     assert changed is True
-    embedding_inputs = embedding_client.embeddings.create.await_args.kwargs["input"]
+    requests = embedding_client.embeddings.create.await_args_list
+    assert len(requests) > 1
+    assert all(len(request.kwargs["input"]) == 1 for request in requests)
+    embedding_inputs = [
+        value
+        for request in requests
+        for value in request.kwargs["input"]
+    ]
     assert len(embedding_inputs) > 1
     assert all(len(value) <= 40 for value in embedding_inputs)
     records = memory_store.async_append.await_args.args[1]
     assert len(records) == 1
     assert len(records[0].additional_chunks) == len(embedding_inputs) - 1
+    assert [
+        records[0].embedding[0],
+        *(chunk.embedding[0] for chunk in records[0].additional_chunks),
+    ] == [float(index) for index in range(1, len(embedding_inputs) + 1)]
     assert [message["role"] for message in records[0].messages] == [
         "user",
         "assistant",
