@@ -1626,17 +1626,36 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     assert chat_log.content[-1].content == "Current response"
 
 
-async def test_compaction_does_not_request_one_token_summary():
-    """An unattainable target does not produce an unusable summary request."""
+async def test_compaction_reduces_retained_tail_before_summarizing():
+    """Compaction absorbs older retained turns instead of requesting one token."""
     entity = _entity_for_compaction()
     entity.subentry.data.update(
         {
-            CONF_CONTEXT_THRESHOLD: 1000,
-            CONF_CONTEXT_COMPACTION_TARGET: 10,
+            CONF_CONTEXT_THRESHOLD: 2000,
+            CONF_CONTEXT_COMPACTION_TARGET: 30,
+            CONF_CONTEXT_COMPACTION_RECENT_TURNS: 2,
             CONF_MAX_TOKENS: 500,
         }
     )
-    chat_log = _compaction_chat_log()
+    chat_log = MagicMock()
+    chat_log.content = [
+        conversation.SystemContent(content="System prompt"),
+        conversation.UserContent(content="Old request"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="Old response",
+        ),
+        conversation.UserContent(content="Retained request " + "x" * 2000),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="Retained response",
+        ),
+        conversation.UserContent(content="Current request"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="Current response",
+        ),
+    ]
     response = SimpleNamespace(
         choices=[SimpleNamespace(message=SimpleNamespace(content="Summary"))]
     )
@@ -1656,11 +1675,25 @@ async def test_compaction_does_not_request_one_token_summary():
     ):
         changed = await entity._compact_message_history(
             chat_log,
-            _RequestTokenUsage(prompt_tokens=1000, total_tokens=1500),
+            _RequestTokenUsage(prompt_tokens=800, total_tokens=1300),
         )
 
-    assert changed is False
-    create_completion.assert_not_awaited()
+    assert changed is True
+    request = create_completion.await_args.kwargs
+    max_summary_tokens = request.get(
+        "max_tokens", request.get("max_completion_tokens")
+    )
+    assert max_summary_tokens > 1
+    transcript = request["messages"][1]["content"]
+    assert "Old request" in transcript
+    assert "Retained request" in transcript
+    assert "Current request" not in transcript
+    assert [content.content for content in chat_log.content] == [
+        "System prompt",
+        "Summary of earlier conversation:\nSummary",
+        "Current request",
+        "Current response",
+    ]
 
 
 async def test_compaction_failure_falls_back_to_clear_strategy():
