@@ -38,9 +38,10 @@ class TemplateFunction(Function):
     ) -> Any:
         entity_filter_config = function_config.get(CONF_ENTITY_FILTER)
         entity_ids = arguments.get("entity_id")
+        render_arguments = arguments
         if entity_filter_config is not None and entity_ids is not None:
             if isinstance(entity_ids, str):
-                normalized_entity_ids  = [
+                normalized_entity_ids = [
                     entity_id.strip()
                     for entity_id in entity_ids.split(",")
                     if entity_id.strip()
@@ -52,7 +53,11 @@ class TemplateFunction(Function):
                 raise HomeAssistantError("entity_id must be a string or a list of strings")
 
             EntityFilter.from_config(entity_filter_config).validate(normalized_entity_ids)
+            render_arguments = {
+                **arguments,
+                "entity_id": normalized_entity_ids,
+            }
         return function_config["value_template"].async_render(
-            arguments,
+            render_arguments,
             parse_result=function_config.get("parse_result", False),
         )

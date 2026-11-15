@@ -129,7 +129,7 @@ class TestTemplateFunctionYaml:
         function_config = function.validate_schema(
             {
                 "type": "template",
-                "value_template": "{{ entity_id }}",
+                "value_template": "{{ entity_id | join(',') }}",
                 "entity_filter": {
                     "mode": "include",
                     "entities": ["sensor.temperature", "sensor.humidity"],
@@ -145,7 +145,7 @@ class TestTemplateFunctionYaml:
             exposed_entities,
         )
 
-        assert result == "sensor.temperature, sensor.humidity"
+        assert result == "sensor.temperature,sensor.humidity"
 
     @pytest.mark.parametrize(
         "entity_ids",
