@@ -32,6 +32,9 @@
             "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
             "invalid_reranker": "The reranker endpoint did not return valid results.",
             "invalid_embedding_history_retention": "Enter a positive whole number followed by m, h, or d. A value without a suffix uses days.",
+            "invalid_context_recall_max_results": "Enter a positive whole number.",
+            "invalid_context_recall_rerank_min_score": "Enter a decimal number or leave the field empty.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Enter a positive whole number or leave the field empty.",
             "invalid_context_compaction_target": "Maximum context size after compaction. This must leave enough room within the context threshold for the configured maximum response.",
             "unknown": "Unexpected error"
         },
@@ -301,6 +304,10 @@
                         "context_compaction_prompt": "Compaction prompt",
                         "embedding_history_retention": "Embedding history retention",
                         "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
+                        "context_recall_max_results": "Maximum context recall results",
+                        "context_recall_rerank": "Enable recall reranking",
+                        "context_recall_rerank_min_score": "Minimum reranker relevance score",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum reranker candidate size (estimated tokens)",
                         "context_recall_snapshot_ttl_turns": "Recall snapshot lifetime (turns)"
                     },
                     "data_description": {
@@ -311,6 +318,10 @@
                         "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
                         "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
                         "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
+                        "context_recall_max_results": "Maximum number of memories the model may request from context_recall. The model may request fewer. Defaults to 20.",
+                        "context_recall_rerank": "Rerank embedding-selected recall candidates before returning or automatically injecting them.",
+                        "context_recall_rerank_min_score": "Discard reranked results below this score. Leave empty to accept all results. Score ranges depend on the configured reranker model.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum estimated tokens from each matched embedding chunk sent to the reranker. Leave empty to send the complete matched chunk.",
                         "context_recall_snapshot_ttl_turns": "Number of subsequent user turns for which a truncated recall snapshot remains available. Successfully browsing the snapshot resets its lifetime."
                     }
                 }
@@ -355,6 +366,10 @@
                         "context_compaction_prompt": "Compaction prompt",
                         "embedding_history_retention": "Embedding history retention",
                         "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
+                        "context_recall_max_results": "Maximum context recall results",
+                        "context_recall_rerank": "Enable recall reranking",
+                        "context_recall_rerank_min_score": "Minimum reranker relevance score",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum reranker candidate size (estimated tokens)",
                         "context_recall_snapshot_ttl_turns": "Recall snapshot lifetime (turns)"
                     },
                     "data_description": {
@@ -365,6 +380,10 @@
                         "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
                         "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
                         "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
+                        "context_recall_max_results": "Maximum number of memories the model may request from context_recall. The model may request fewer. Defaults to 20.",
+                        "context_recall_rerank": "Rerank embedding-selected recall candidates before returning or automatically injecting them.",
+                        "context_recall_rerank_min_score": "Discard reranked results below this score. Leave empty to accept all results. Score ranges depend on the configured reranker model.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum estimated tokens from each matched embedding chunk sent to the reranker. Leave empty to send the complete matched chunk.",
                         "context_recall_snapshot_ttl_turns": "Number of subsequent user turns for which a truncated recall snapshot remains available. Successfully browsing the snapshot resets its lifetime."
                     }
                 }

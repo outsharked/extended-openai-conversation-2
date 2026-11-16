@@ -4,6 +4,9 @@
             "invalid_embeddings": "임베딩 엔드포인트가 유효한 임베딩을 반환하지 않았습니다.",
             "invalid_reranker": "리랭커 엔드포인트가 유효한 결과를 반환하지 않았습니다.",
             "invalid_embedding_history_retention": "양의 정수 뒤에 m, h 또는 d를 입력하세요. 접미사가 없으면 일 단위가 사용됩니다.",
+            "invalid_context_recall_max_results": "양의 정수를 입력하세요.",
+            "invalid_context_recall_rerank_min_score": "십진수를 입력하거나 필드를 비워 두세요.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "양의 정수를 입력하거나 필드를 비워 두세요.",
             "invalid_context_compaction_target": "압축 후 최대 컨텍스트 크기입니다. 설정된 최대 응답을 위해 컨텍스트 임계값 내에 충분한 공간을 남겨야 합니다.",
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
@@ -151,6 +154,10 @@
                         "context_compaction_prompt": "압축 프롬프트",
                         "embedding_history_retention": "임베딩 기록 보존 기간",
                         "context_recall_max_tokens": "최대 활성 회상 컨텍스트(예상 토큰)",
+                        "context_recall_max_results": "최대 context_recall 결과",
+                        "context_recall_rerank": "회상 리랭킹 활성화",
+                        "context_recall_rerank_min_score": "최소 리랭커 관련성 점수",
+                        "context_recall_rerank_max_candidate_tokens": "최대 리랭커 후보 크기(예상 토큰)",
                         "context_recall_snapshot_ttl_turns": "회상 스냅샷 수명(턴)"
                     },
                     "data_description": {
@@ -161,6 +168,10 @@
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
                         "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
                         "context_recall_max_tokens": "자동 회상, context_recall 결과 및 조회한 스냅샷 페이지를 포함하여 모델 요청에 유지되는 임베딩 기반 컨텍스트의 최대 총 예상 토큰 수입니다.",
+                        "context_recall_max_results": "모델이 context_recall에서 요청할 수 있는 최대 메모리 수입니다. 더 적게 요청할 수 있습니다. 기본값은 20입니다.",
+                        "context_recall_rerank": "임베딩으로 선택한 회상 후보를 반환하거나 자동 삽입하기 전에 다시 정렬합니다.",
+                        "context_recall_rerank_min_score": "이 점수보다 낮은 결과를 버립니다. 모두 허용하려면 비워 두세요. 점수 범위는 리랭커 모델에 따라 다릅니다.",
+                        "context_recall_rerank_max_candidate_tokens": "리랭커에 전송되는 각 일치 임베딩 청크의 최대 예상 토큰입니다. 전체 청크를 보내려면 비워 두세요.",
                         "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다."
                     }
                 }
@@ -204,6 +215,10 @@
                         "context_compaction_prompt": "압축 프롬프트",
                         "embedding_history_retention": "임베딩 기록 보존 기간",
                         "context_recall_max_tokens": "최대 활성 회상 컨텍스트(예상 토큰)",
+                        "context_recall_max_results": "최대 context_recall 결과",
+                        "context_recall_rerank": "회상 리랭킹 활성화",
+                        "context_recall_rerank_min_score": "최소 리랭커 관련성 점수",
+                        "context_recall_rerank_max_candidate_tokens": "최대 리랭커 후보 크기(예상 토큰)",
                         "context_recall_snapshot_ttl_turns": "회상 스냅샷 수명(턴)"
                     },
                     "data_description": {
@@ -214,6 +229,10 @@
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
                         "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
                         "context_recall_max_tokens": "자동 회상, context_recall 결과 및 조회한 스냅샷 페이지를 포함하여 모델 요청에 유지되는 임베딩 기반 컨텍스트의 최대 총 예상 토큰 수입니다.",
+                        "context_recall_max_results": "모델이 context_recall에서 요청할 수 있는 최대 메모리 수입니다. 더 적게 요청할 수 있습니다. 기본값은 20입니다.",
+                        "context_recall_rerank": "임베딩으로 선택한 회상 후보를 반환하거나 자동 삽입하기 전에 다시 정렬합니다.",
+                        "context_recall_rerank_min_score": "이 점수보다 낮은 결과를 버립니다. 모두 허용하려면 비워 두세요. 점수 범위는 리랭커 모델에 따라 다릅니다.",
+                        "context_recall_rerank_max_candidate_tokens": "리랭커에 전송되는 각 일치 임베딩 청크의 최대 예상 토큰입니다. 전체 청크를 보내려면 비워 두세요.",
                         "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다."
                     }
                 }

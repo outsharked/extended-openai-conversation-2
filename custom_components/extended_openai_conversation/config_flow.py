@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from dataclasses import replace
 import logging
+import math
 import types
 from typing import Any, override
 from urllib.parse import urlparse
@@ -79,7 +80,11 @@ from .const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK,
+    CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -128,7 +133,11 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK,
+    DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -403,6 +412,14 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_COMPACTION_RECENT_TURNS: DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
         CONF_CONTEXT_RECALL_MAX_TOKENS: DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+        CONF_CONTEXT_RECALL_MAX_RESULTS: DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        CONF_CONTEXT_RECALL_RERANK: DEFAULT_CONTEXT_RECALL_RERANK,
+        CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: (
+            DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE
+        ),
+        CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: (
+            DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
+        ),
         CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: (
             DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
         ),
@@ -441,6 +458,11 @@ def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
     return strategies
 
 
+def _entry_has_reranker(entry: ConfigEntry) -> bool:
+    """Return whether an AI endpoint has a configured reranker."""
+    return isinstance(entry.data.get(CONF_RERANKER), Mapping)
+
+
 def _validate_embedding_history_retention_input(
     strategy: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
@@ -460,6 +482,112 @@ def _validate_embedding_history_retention_input(
             )
         }
     return {}
+
+
+def _validate_context_recall_max_results_input(
+    strategy: Any, user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Validate and normalize an agent's context-recall result ceiling."""
+    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        return {}
+
+    max_results = user_input.get(
+        CONF_CONTEXT_RECALL_MAX_RESULTS,
+        DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+    )
+    if (
+        isinstance(max_results, bool)
+        or not isinstance(max_results, int | float)
+        or int(max_results) != max_results
+        or max_results < 1
+    ):
+        return {
+            CONF_CONTEXT_RECALL_MAX_RESULTS: (
+                "invalid_context_recall_max_results"
+            )
+        }
+    user_input[CONF_CONTEXT_RECALL_MAX_RESULTS] = int(max_results)
+    return {}
+
+
+def _validate_context_recall_reranker_input(
+    strategy: Any,
+    has_reranker: bool,
+    user_input: dict[str, Any],
+) -> dict[str, str]:
+    """Validate and normalize per-agent reranker settings."""
+    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES or not has_reranker:
+        return {}
+
+    errors: dict[str, str] = {}
+
+    threshold = str(
+        user_input.get(
+            CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
+            DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
+        )
+    ).strip()
+    if threshold:
+        try:
+            parsed_threshold = float(threshold)
+        except ValueError:
+            parsed_threshold = math.nan
+        if not math.isfinite(parsed_threshold):
+            errors[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] = (
+                "invalid_context_recall_rerank_min_score"
+            )
+        else:
+            user_input[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] = str(
+                parsed_threshold
+            )
+    else:
+        user_input[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] = ""
+
+    max_candidate_tokens = str(
+        user_input.get(
+            CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+            DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+        )
+    ).strip()
+    if max_candidate_tokens:
+        try:
+            parsed_max_candidate_tokens = int(max_candidate_tokens)
+        except ValueError:
+            parsed_max_candidate_tokens = 0
+        if parsed_max_candidate_tokens < 1:
+            errors[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] = (
+                "invalid_context_recall_rerank_max_candidate_tokens"
+            )
+        else:
+            user_input[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] = (
+                str(parsed_max_candidate_tokens)
+            )
+    else:
+        user_input[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] = ""
+
+    return errors
+
+
+def _add_context_recall_reranker_schema(schema: dict[Any, Any]) -> None:
+    """Add per-agent reranker controls to an advanced-options schema."""
+    schema[
+        vol.Optional(
+            CONF_CONTEXT_RECALL_RERANK,
+            default=DEFAULT_CONTEXT_RECALL_RERANK,
+        )
+    ] = BooleanSelector()
+    schema[
+        vol.Optional(
+            CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
+            default=DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
+        )
+    ] = TextSelector()
+    schema[
+        vol.Optional(
+            CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+            default=DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+        )
+    ] = TextSelector()
 
 
 def _validate_context_compaction_target_input(
@@ -2142,6 +2270,16 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 strategy, user_input
             )
             errors.update(
+                _validate_context_recall_max_results_input(strategy, user_input)
+            )
+            errors.update(
+                _validate_context_recall_reranker_input(
+                    strategy,
+                    _entry_has_reranker(self._get_entry()),
+                    user_input,
+                )
+            )
+            errors.update(
                 _validate_context_compaction_target_input(
                     strategy, self._temp_data or {}, user_input
                 )
@@ -2291,6 +2429,12 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             )
             schema[
                 vol.Optional(
+                    CONF_CONTEXT_RECALL_MAX_RESULTS,
+                    default=DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+                )
+            ] = NumberSelector(NumberSelectorConfig(min=1, step=1))
+            schema[
+                vol.Optional(
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                 )
@@ -2306,6 +2450,8 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
             ] = TextSelector()
+            if _entry_has_reranker(self._get_entry()):
+                _add_context_recall_reranker_schema(schema)
 
         return self.async_show_form(
             step_id="advanced",
@@ -2584,6 +2730,16 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 strategy, user_input
             )
             errors.update(
+                _validate_context_recall_max_results_input(strategy, user_input)
+            )
+            errors.update(
+                _validate_context_recall_reranker_input(
+                    strategy,
+                    _entry_has_reranker(self._get_entry()),
+                    user_input,
+                )
+            )
+            errors.update(
                 _validate_context_compaction_target_input(
                     strategy, self._temp_data or {}, user_input
                 )
@@ -2733,6 +2889,12 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             )
             schema[
                 vol.Optional(
+                    CONF_CONTEXT_RECALL_MAX_RESULTS,
+                    default=DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+                )
+            ] = NumberSelector(NumberSelectorConfig(min=1, step=1))
+            schema[
+                vol.Optional(
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                 )
@@ -2748,6 +2910,8 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
             ] = TextSelector()
+            if _entry_has_reranker(self._get_entry()):
+                _add_context_recall_reranker_schema(schema)
 
         return self.async_show_form(
             step_id="advanced",

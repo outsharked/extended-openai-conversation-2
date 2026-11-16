@@ -4,6 +4,9 @@
             "invalid_embeddings": "Le point de terminaison d'embeddings n'a pas renvoyé d'embedding valide.",
             "invalid_reranker": "Le point de terminaison de reclassement n'a pas renvoyé de résultats valides.",
             "invalid_embedding_history_retention": "Saisissez un entier positif suivi de m, h ou d. Sans suffixe, la valeur est exprimée en jours.",
+            "invalid_context_recall_max_results": "Saisissez un entier positif.",
+            "invalid_context_recall_rerank_min_score": "Saisissez un nombre décimal ou laissez le champ vide.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Saisissez un entier positif ou laissez le champ vide.",
             "invalid_context_compaction_target": "Taille maximale du contexte après compactage. Elle doit laisser suffisamment de place dans le seuil de contexte pour la réponse maximale configurée.",
             "cannot_connect": "Échec de la connexion",
             "invalid_auth": "Authentification invalide",
@@ -151,6 +154,10 @@
                         "context_compaction_prompt": "Instruction de compaction",
                         "embedding_history_retention": "Conservation de l’historique d’embeddings",
                         "context_recall_max_tokens": "Contexte rappelé actif maximal (jetons estimés)",
+                        "context_recall_max_results": "Nombre maximal de résultats context_recall",
+                        "context_recall_rerank": "Activer le reclassement du rappel",
+                        "context_recall_rerank_min_score": "Score de pertinence minimal du reclasseur",
+                        "context_recall_rerank_max_candidate_tokens": "Taille maximale d'un candidat de reclassement (jetons estimés)",
                         "context_recall_snapshot_ttl_turns": "Durée de vie de l’instantané de rappel (tours)"
                     },
                     "data_description": {
@@ -161,6 +168,10 @@
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
                         "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
                         "context_recall_max_tokens": "Nombre total maximal estimé de jetons de contexte issu des embeddings conservés dans une requête au modèle, y compris le rappel automatique, les résultats context_recall et les pages d’instantané consultées.",
+                        "context_recall_max_results": "Nombre maximal de souvenirs que le modèle peut demander à context_recall. Il peut en demander moins. La valeur par défaut est 20.",
+                        "context_recall_rerank": "Reclasse les candidats sélectionnés par embeddings avant de les renvoyer ou de les injecter automatiquement.",
+                        "context_recall_rerank_min_score": "Écarte les résultats dont le score est inférieur à cette valeur. Laissez vide pour tout accepter. La plage dépend du modèle de reclassement.",
+                        "context_recall_rerank_max_candidate_tokens": "Nombre maximal estimé de jetons de chaque fragment d'embedding correspondant envoyé au reclasseur. Laissez vide pour envoyer le fragment complet.",
                         "context_recall_snapshot_ttl_turns": "Nombre de tours utilisateur suivants pendant lesquels un instantané de rappel tronqué reste disponible. La consultation réussie de l’instantané réinitialise sa durée de vie."
                     }
                 }
@@ -204,6 +215,10 @@
                         "context_compaction_prompt": "Instruction de compaction",
                         "embedding_history_retention": "Conservation de l’historique d’embeddings",
                         "context_recall_max_tokens": "Contexte rappelé actif maximal (jetons estimés)",
+                        "context_recall_max_results": "Nombre maximal de résultats context_recall",
+                        "context_recall_rerank": "Activer le reclassement du rappel",
+                        "context_recall_rerank_min_score": "Score de pertinence minimal du reclasseur",
+                        "context_recall_rerank_max_candidate_tokens": "Taille maximale d'un candidat de reclassement (jetons estimés)",
                         "context_recall_snapshot_ttl_turns": "Durée de vie de l’instantané de rappel (tours)"
                     },
                     "data_description": {
@@ -214,6 +229,10 @@
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
                         "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
                         "context_recall_max_tokens": "Nombre total maximal estimé de jetons de contexte issu des embeddings conservés dans une requête au modèle, y compris le rappel automatique, les résultats context_recall et les pages d’instantané consultées.",
+                        "context_recall_max_results": "Nombre maximal de souvenirs que le modèle peut demander à context_recall. Il peut en demander moins. La valeur par défaut est 20.",
+                        "context_recall_rerank": "Reclasse les candidats sélectionnés par embeddings avant de les renvoyer ou de les injecter automatiquement.",
+                        "context_recall_rerank_min_score": "Écarte les résultats dont le score est inférieur à cette valeur. Laissez vide pour tout accepter. La plage dépend du modèle de reclassement.",
+                        "context_recall_rerank_max_candidate_tokens": "Nombre maximal estimé de jetons de chaque fragment d'embedding correspondant envoyé au reclasseur. Laissez vide pour envoyer le fragment complet.",
                         "context_recall_snapshot_ttl_turns": "Nombre de tours utilisateur suivants pendant lesquels un instantané de rappel tronqué reste disponible. La consultation réussie de l’instantané réinitialise sa durée de vie."
                     }
                 }

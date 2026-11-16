@@ -4,6 +4,9 @@
             "invalid_embeddings": "Der Embeddings-Endpunkt hat kein gültiges Embedding zurückgegeben.",
             "invalid_reranker": "Der Reranker-Endpunkt hat keine gültigen Ergebnisse zurückgegeben.",
             "invalid_embedding_history_retention": "Gib eine positive ganze Zahl gefolgt von m, h oder d ein. Ohne Einheit werden Tage verwendet.",
+            "invalid_context_recall_max_results": "Gib eine positive ganze Zahl ein.",
+            "invalid_context_recall_rerank_min_score": "Gib eine Dezimalzahl ein oder lasse das Feld leer.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Gib eine positive ganze Zahl ein oder lasse das Feld leer.",
             "invalid_context_compaction_target": "Maximale Kontextgröße nach der Kompaktierung. Dabei muss innerhalb des Kontext-Schwellenwerts genügend Platz für die konfigurierte maximale Antwort verbleiben.",
             "cannot_connect": "Fehler beim Verbindungsaufbau",
             "invalid_auth": "Authentifizierung fehlgeschlagen",
@@ -151,6 +154,10 @@
                         "context_compaction_prompt": "Kompaktierungsanweisung",
                         "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs",
                         "context_recall_max_tokens": "Maximaler aktiver abgerufener Kontext (geschätzte Tokens)",
+                        "context_recall_max_results": "Maximale context_recall-Ergebnisse",
+                        "context_recall_rerank": "Abruf-Neurangordnung aktivieren",
+                        "context_recall_rerank_min_score": "Mindest-Relevanzwert des Rerankers",
+                        "context_recall_rerank_max_candidate_tokens": "Maximale Reranker-Kandidatengröße (geschätzte Tokens)",
                         "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)"
                     },
                     "data_description": {
@@ -161,6 +168,10 @@
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
                         "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet.",
                         "context_recall_max_tokens": "Maximale geschätzte Gesamtzahl an Tokens aus embeddingbasiertem Kontext, die in einer Modellanfrage beibehalten wird, einschließlich automatischem Abruf, context_recall-Ergebnissen und aufgerufenen Snapshot-Seiten.",
+                        "context_recall_max_results": "Maximale Anzahl an Erinnerungen, die das Modell über context_recall anfordern darf. Das Modell kann weniger anfordern. Standardwert ist 20.",
+                        "context_recall_rerank": "Ordnet durch Embeddings ausgewählte Abrufkandidaten neu, bevor sie zurückgegeben oder automatisch eingefügt werden.",
+                        "context_recall_rerank_min_score": "Verwirf neu geordnete Ergebnisse unterhalb dieses Werts. Leer lassen, um alle Ergebnisse zu akzeptieren. Der Wertebereich hängt vom Reranker-Modell ab.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximale geschätzte Tokenzahl jedes passenden Embedding-Chunks, der an den Reranker gesendet wird. Leer lassen, um den vollständigen Chunk zu senden.",
                         "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück."
                     }
                 }
@@ -204,6 +215,10 @@
                         "context_compaction_prompt": "Kompaktierungsanweisung",
                         "embedding_history_retention": "Aufbewahrung des Embedding-Verlaufs",
                         "context_recall_max_tokens": "Maximaler aktiver abgerufener Kontext (geschätzte Tokens)",
+                        "context_recall_max_results": "Maximale context_recall-Ergebnisse",
+                        "context_recall_rerank": "Abruf-Neurangordnung aktivieren",
+                        "context_recall_rerank_min_score": "Mindest-Relevanzwert des Rerankers",
+                        "context_recall_rerank_max_candidate_tokens": "Maximale Reranker-Kandidatengröße (geschätzte Tokens)",
                         "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)"
                     },
                     "data_description": {
@@ -214,6 +229,10 @@
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
                         "embedding_history_retention": "Positive ganze Zahl mit m für Minuten, h für Stunden oder d für Tage. Ohne Einheit werden Tage verwendet.",
                         "context_recall_max_tokens": "Maximale geschätzte Gesamtzahl an Tokens aus embeddingbasiertem Kontext, die in einer Modellanfrage beibehalten wird, einschließlich automatischem Abruf, context_recall-Ergebnissen und aufgerufenen Snapshot-Seiten.",
+                        "context_recall_max_results": "Maximale Anzahl an Erinnerungen, die das Modell über context_recall anfordern darf. Das Modell kann weniger anfordern. Standardwert ist 20.",
+                        "context_recall_rerank": "Ordnet durch Embeddings ausgewählte Abrufkandidaten neu, bevor sie zurückgegeben oder automatisch eingefügt werden.",
+                        "context_recall_rerank_min_score": "Verwirf neu geordnete Ergebnisse unterhalb dieses Werts. Leer lassen, um alle Ergebnisse zu akzeptieren. Der Wertebereich hängt vom Reranker-Modell ab.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximale geschätzte Tokenzahl jedes passenden Embedding-Chunks, der an den Reranker gesendet wird. Leer lassen, um den vollständigen Chunk zu senden.",
                         "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück."
                     }
                 }

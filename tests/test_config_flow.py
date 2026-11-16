@@ -44,7 +44,11 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK,
+    CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -77,7 +81,11 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK,
+    DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -2585,6 +2593,79 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
+    assert CONF_CONTEXT_RECALL_RERANK not in _schema_keys(schema)
+    assert CONF_CONTEXT_RECALL_RERANK_MIN_SCORE not in _schema_keys(schema)
+    max_results_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_MAX_RESULTS
+    )
+    assert max_results_key.default() == DEFAULT_CONTEXT_RECALL_MAX_RESULTS
+    assert schema[max_results_key].config["min"] == 1
+    assert "max" not in schema[max_results_key].config
+    assert (
+        CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
+        not in _schema_keys(schema)
+    )
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_schema_exposes_configured_reranker(
+    hass, handler_type
+):
+    """Both agent types expose reranker controls for retrieval strategies."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}, CONF_RERANKER: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    rerank_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_RERANK
+    )
+    assert rerank_key.default() is DEFAULT_CONTEXT_RECALL_RERANK
+    assert isinstance(schema[rerank_key], BooleanSelector)
+    threshold_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key)
+        == CONF_CONTEXT_RECALL_RERANK_MIN_SCORE
+    )
+    assert threshold_key.default() == DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE
+    assert isinstance(schema[threshold_key], TextSelector)
+    max_results_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_MAX_RESULTS
+    )
+    assert max_results_key.default() == DEFAULT_CONTEXT_RECALL_MAX_RESULTS
+    assert schema[max_results_key].config["min"] == 1
+    assert "max" not in schema[max_results_key].config
+    candidate_tokens_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key)
+        == CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
+    )
+    assert candidate_tokens_key.default() == (
+        DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
+    )
+    assert isinstance(schema[candidate_tokens_key], TextSelector)
 
 
 @pytest.mark.parametrize(
@@ -2732,4 +2813,83 @@ async def test_agent_advanced_rejects_invalid_retrieval_retention(
         CONF_EMBEDDING_HISTORY_RETENTION: (
             "invalid_embedding_history_retention"
         )
+    }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_normalizes_reranker_options(hass, handler_type):
+    """Both agent flows normalize valid unbounded reranker controls."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}, CONF_RERANKER: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler._get_reconfigure_subentry = MagicMock()
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
+            CONF_CONTEXT_RECALL_RERANK: True,
+            CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: " -2.50 ",
+            CONF_CONTEXT_RECALL_MAX_RESULTS: 75,
+            CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: " 2048 ",
+        }
+    )
+
+    assert result == {"type": "abort"}
+    data = handler.async_update_and_abort.call_args.kwargs["data"]
+    assert data[CONF_CONTEXT_RECALL_RERANK] is True
+    assert data[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] == "-2.5"
+    assert data[CONF_CONTEXT_RECALL_MAX_RESULTS] == 75
+    assert data[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] == "2048"
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_rejects_invalid_reranker_options(
+    hass, handler_type
+):
+    """Both agent flows reject invalid reranker control values."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}, CONF_RERANKER: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
+            CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: "nan",
+            CONF_CONTEXT_RECALL_MAX_RESULTS: 0,
+            CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: "1.5",
+        }
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_CONTEXT_RECALL_MAX_RESULTS: "invalid_context_recall_max_results",
+        CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: (
+            "invalid_context_recall_rerank_min_score"
+        ),
+        CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: (
+            "invalid_context_recall_rerank_max_candidate_tokens"
+        ),
     }

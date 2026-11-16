@@ -4,6 +4,9 @@
             "invalid_embeddings": "O endpoint de embeddings não devolveu um embedding válido.",
             "invalid_reranker": "O endpoint de reordenação não devolveu resultados válidos.",
             "invalid_embedding_history_retention": "Introduza um número inteiro positivo seguido de m, h ou d. Sem sufixo são usados dias.",
+            "invalid_context_recall_max_results": "Introduza um número inteiro positivo.",
+            "invalid_context_recall_rerank_min_score": "Introduza um número decimal ou deixe o campo vazio.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Introduza um número inteiro positivo ou deixe o campo vazio.",
             "invalid_context_compaction_target": "Tamanho máximo do contexto após a compactação. Deve deixar espaço suficiente dentro do limite de contexto para a resposta máxima configurada.",
             "cannot_connect": "Não é possível ligar",
             "invalid_auth": "Autenticação inválida",
@@ -151,6 +154,10 @@
                         "context_compaction_prompt": "Instrução de compactação",
                         "embedding_history_retention": "Retenção do histórico de embeddings",
                         "context_recall_max_tokens": "Contexto recordado ativo máximo (tokens estimados)",
+                        "context_recall_max_results": "Máximo de resultados de context_recall",
+                        "context_recall_rerank": "Ativar reordenação da recuperação",
+                        "context_recall_rerank_min_score": "Pontuação mínima de relevância do reordenador",
+                        "context_recall_rerank_max_candidate_tokens": "Tamanho máximo do candidato do reordenador (tokens estimados)",
                         "context_recall_snapshot_ttl_turns": "Duração do instantâneo de recuperação (turnos)"
                     },
                     "data_description": {
@@ -161,6 +168,10 @@
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
                         "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo são usados dias.",
                         "context_recall_max_tokens": "Número total máximo estimado de tokens de contexto derivado de embeddings mantidos em qualquer pedido ao modelo, incluindo recuperação automática, resultados de context_recall e páginas de instantâneos consultadas.",
+                        "context_recall_max_results": "Número máximo de memórias que o modelo pode pedir ao context_recall. O modelo pode pedir menos. O valor predefinido é 20.",
+                        "context_recall_rerank": "Reordena os candidatos selecionados por embeddings antes de os devolver ou inserir automaticamente.",
+                        "context_recall_rerank_min_score": "Descarta resultados abaixo desta pontuação. Deixe vazio para aceitar todos. O intervalo depende do modelo de reordenação.",
+                        "context_recall_rerank_max_candidate_tokens": "Máximo estimado de tokens de cada bloco de embedding correspondente enviado ao reordenador. Deixe vazio para enviar o bloco completo.",
                         "context_recall_snapshot_ttl_turns": "Número de turnos de utilizador seguintes durante os quais um instantâneo de recuperação truncado permanece disponível. Consultar o instantâneo com êxito repõe a sua duração."
                     }
                 }
@@ -204,6 +215,10 @@
                         "context_compaction_prompt": "Instrução de compactação",
                         "embedding_history_retention": "Retenção do histórico de embeddings",
                         "context_recall_max_tokens": "Contexto recordado ativo máximo (tokens estimados)",
+                        "context_recall_max_results": "Máximo de resultados de context_recall",
+                        "context_recall_rerank": "Ativar reordenação da recuperação",
+                        "context_recall_rerank_min_score": "Pontuação mínima de relevância do reordenador",
+                        "context_recall_rerank_max_candidate_tokens": "Tamanho máximo do candidato do reordenador (tokens estimados)",
                         "context_recall_snapshot_ttl_turns": "Duração do instantâneo de recuperação (turnos)"
                     },
                     "data_description": {
@@ -214,6 +229,10 @@
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
                         "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo são usados dias.",
                         "context_recall_max_tokens": "Número total máximo estimado de tokens de contexto derivado de embeddings mantidos em qualquer pedido ao modelo, incluindo recuperação automática, resultados de context_recall e páginas de instantâneos consultadas.",
+                        "context_recall_max_results": "Número máximo de memórias que o modelo pode pedir ao context_recall. O modelo pode pedir menos. O valor predefinido é 20.",
+                        "context_recall_rerank": "Reordena os candidatos selecionados por embeddings antes de os devolver ou inserir automaticamente.",
+                        "context_recall_rerank_min_score": "Descarta resultados abaixo desta pontuação. Deixe vazio para aceitar todos. O intervalo depende do modelo de reordenação.",
+                        "context_recall_rerank_max_candidate_tokens": "Máximo estimado de tokens de cada bloco de embedding correspondente enviado ao reordenador. Deixe vazio para enviar o bloco completo.",
                         "context_recall_snapshot_ttl_turns": "Número de turnos de utilizador seguintes durante os quais um instantâneo de recuperação truncado permanece disponível. Consultar o instantâneo com êxito repõe a sua duração."
                     }
                 }

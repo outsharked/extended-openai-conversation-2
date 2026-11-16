@@ -4,6 +4,9 @@
             "invalid_embeddings": "Het embeddings-eindpunt heeft geen geldige embedding teruggegeven.",
             "invalid_reranker": "Het reranker-eindpunt heeft geen geldige resultaten teruggegeven.",
             "invalid_embedding_history_retention": "Voer een positief geheel getal in gevolgd door m, h of d. Zonder achtervoegsel worden dagen gebruikt.",
+            "invalid_context_recall_max_results": "Voer een positief geheel getal in.",
+            "invalid_context_recall_rerank_min_score": "Voer een decimaal getal in of laat het veld leeg.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Voer een positief geheel getal in of laat het veld leeg.",
             "invalid_context_compaction_target": "Maximale contextgrootte na compactie. Dit moet binnen de contextdrempel voldoende ruimte overlaten voor het ingestelde maximale antwoord.",
             "cannot_connect": "Verbinden mislukt",
             "invalid_auth": "Ongeldige authenticatie",
@@ -151,6 +154,10 @@
                         "context_compaction_prompt": "Compactieprompt",
                         "embedding_history_retention": "Bewaartermijn embeddinggeschiedenis",
                         "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
+                        "context_recall_max_results": "Maximaal aantal context_recall-resultaten",
+                        "context_recall_rerank": "Herordening van herinneringen inschakelen",
+                        "context_recall_rerank_min_score": "Minimale relevantiescore van reranker",
+                        "context_recall_rerank_max_candidate_tokens": "Maximale grootte reranker-kandidaat (geschatte tokens)",
                         "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)"
                     },
                     "data_description": {
@@ -161,6 +168,10 @@
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
                         "embedding_history_retention": "Positief geheel getal gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt.",
                         "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
+                        "context_recall_max_results": "Maximaal aantal herinneringen dat het model via context_recall mag opvragen. Het model mag er minder opvragen. Standaard 20.",
+                        "context_recall_rerank": "Rangschikt door embeddings geselecteerde kandidaten opnieuw voordat ze worden teruggegeven of automatisch ingevoegd.",
+                        "context_recall_rerank_min_score": "Verwijder resultaten onder deze score. Laat leeg om alles te accepteren. Het scorebereik hangt af van het reranker-model.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximaal geschat aantal tokens van elk overeenkomend embeddingfragment dat naar de reranker wordt gestuurd. Laat leeg voor het volledige fragment.",
                         "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in."
                     }
                 }
@@ -204,6 +215,10 @@
                         "context_compaction_prompt": "Compactieprompt",
                         "embedding_history_retention": "Bewaartermijn embeddinggeschiedenis",
                         "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
+                        "context_recall_max_results": "Maximaal aantal context_recall-resultaten",
+                        "context_recall_rerank": "Herordening van herinneringen inschakelen",
+                        "context_recall_rerank_min_score": "Minimale relevantiescore van reranker",
+                        "context_recall_rerank_max_candidate_tokens": "Maximale grootte reranker-kandidaat (geschatte tokens)",
                         "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)"
                     },
                     "data_description": {
@@ -214,6 +229,10 @@
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
                         "embedding_history_retention": "Positief geheel getal gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt.",
                         "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
+                        "context_recall_max_results": "Maximaal aantal herinneringen dat het model via context_recall mag opvragen. Het model mag er minder opvragen. Standaard 20.",
+                        "context_recall_rerank": "Rangschikt door embeddings geselecteerde kandidaten opnieuw voordat ze worden teruggegeven of automatisch ingevoegd.",
+                        "context_recall_rerank_min_score": "Verwijder resultaten onder deze score. Laat leeg om alles te accepteren. Het scorebereik hangt af van het reranker-model.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximaal geschat aantal tokens van elk overeenkomend embeddingfragment dat naar de reranker wordt gestuurd. Laat leeg voor het volledige fragment.",
                         "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in."
                     }
                 }

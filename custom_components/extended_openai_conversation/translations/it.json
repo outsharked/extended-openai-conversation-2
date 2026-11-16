@@ -4,6 +4,9 @@
             "invalid_embeddings": "L'endpoint degli embedding non ha restituito un embedding valido.",
             "invalid_reranker": "L'endpoint di riordinamento non ha restituito risultati validi.",
             "invalid_embedding_history_retention": "Inserisci un numero intero positivo seguito da m, h o d. Senza suffisso vengono usati i giorni.",
+            "invalid_context_recall_max_results": "Inserisci un numero intero positivo.",
+            "invalid_context_recall_rerank_min_score": "Inserisci un numero decimale o lascia vuoto il campo.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Inserisci un numero intero positivo o lascia vuoto il campo.",
             "invalid_context_compaction_target": "Dimensione massima del contesto dopo la compattazione. Deve lasciare spazio sufficiente entro la soglia di contesto per la risposta massima configurata.",
             "cannot_connect": "Connessione non riuscita",
             "invalid_auth": "Autenticazione non valida",
@@ -151,6 +154,10 @@
                         "context_compaction_prompt": "Prompt di compattazione",
                         "embedding_history_retention": "Conservazione cronologia embedding",
                         "context_recall_max_tokens": "Contesto richiamato attivo massimo (token stimati)",
+                        "context_recall_max_results": "Risultati context_recall massimi",
+                        "context_recall_rerank": "Abilita riordinamento del richiamo",
+                        "context_recall_rerank_min_score": "Punteggio minimo di pertinenza del riordinatore",
+                        "context_recall_rerank_max_candidate_tokens": "Dimensione massima candidato di riordinamento (token stimati)",
                         "context_recall_snapshot_ttl_turns": "Durata dello snapshot di richiamo (turni)"
                     },
                     "data_description": {
@@ -161,6 +168,10 @@
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
                         "embedding_history_retention": "Numero intero positivo seguito da m per minuti, h per ore o d per giorni. Senza suffisso vengono usati i giorni.",
                         "context_recall_max_tokens": "Numero totale massimo stimato di token del contesto derivato dagli embedding mantenuti in una richiesta al modello, inclusi il richiamo automatico, i risultati context_recall e le pagine di snapshot consultate.",
+                        "context_recall_max_results": "Numero massimo di memorie che il modello può richiedere da context_recall. Il modello può richiederne meno. Valore predefinito 20.",
+                        "context_recall_rerank": "Riordina i candidati selezionati dagli embedding prima di restituirli o inserirli automaticamente.",
+                        "context_recall_rerank_min_score": "Scarta i risultati sotto questo punteggio. Lascia vuoto per accettarli tutti. L'intervallo dipende dal modello di riordinamento.",
+                        "context_recall_rerank_max_candidate_tokens": "Token stimati massimi di ogni blocco embedding corrispondente inviato al riordinatore. Lascia vuoto per inviare il blocco completo.",
                         "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. La consultazione riuscita dello snapshot ne reimposta la durata."
                     }
                 }
@@ -204,6 +215,10 @@
                         "context_compaction_prompt": "Prompt di compattazione",
                         "embedding_history_retention": "Conservazione cronologia embedding",
                         "context_recall_max_tokens": "Contesto richiamato attivo massimo (token stimati)",
+                        "context_recall_max_results": "Risultati context_recall massimi",
+                        "context_recall_rerank": "Abilita riordinamento del richiamo",
+                        "context_recall_rerank_min_score": "Punteggio minimo di pertinenza del riordinatore",
+                        "context_recall_rerank_max_candidate_tokens": "Dimensione massima candidato di riordinamento (token stimati)",
                         "context_recall_snapshot_ttl_turns": "Durata dello snapshot di richiamo (turni)"
                     },
                     "data_description": {
@@ -214,6 +229,10 @@
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
                         "embedding_history_retention": "Numero intero positivo seguito da m per minuti, h per ore o d per giorni. Senza suffisso vengono usati i giorni.",
                         "context_recall_max_tokens": "Numero totale massimo stimato di token del contesto derivato dagli embedding mantenuti in una richiesta al modello, inclusi il richiamo automatico, i risultati context_recall e le pagine di snapshot consultate.",
+                        "context_recall_max_results": "Numero massimo di memorie che il modello può richiedere da context_recall. Il modello può richiederne meno. Valore predefinito 20.",
+                        "context_recall_rerank": "Riordina i candidati selezionati dagli embedding prima di restituirli o inserirli automaticamente.",
+                        "context_recall_rerank_min_score": "Scarta i risultati sotto questo punteggio. Lascia vuoto per accettarli tutti. L'intervallo dipende dal modello di riordinamento.",
+                        "context_recall_rerank_max_candidate_tokens": "Token stimati massimi di ogni blocco embedding corrispondente inviato al riordinatore. Lascia vuoto per inviare il blocco completo.",
                         "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. La consultazione riuscita dello snapshot ne reimposta la durata."
                     }
                 }
