@@ -1232,7 +1232,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
     )
     request = embedding_client.embeddings.create.await_args.kwargs
     assert request["model"] == "embedding-model"
-    assert "What temperature do I prefer?" in request["input"]
+    assert "What temperature do I prefer?" in request["input"][0]
     memory_store.async_search.assert_awaited_once_with(
         scope,
         [1.0, 0.0],
@@ -1240,6 +1240,64 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         "embedding-model",
         excluded_turn_id=chat_log.content[-2].created.isoformat(),
     )
+
+
+async def test_embedding_recall_splits_oversized_query_and_merges_matches():
+    """Automatic recall searches every accepted query chunk without duplicates."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {
+            CONF_EMBEDDINGS_MODEL: "embedding-model",
+            CONF_EMBEDDING_CHUNK_SIZE: 4000,
+        }
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        side_effect=[
+            RuntimeError(
+                "request (29314 tokens) exceeds the available context size"
+            ),
+            SimpleNamespace(
+                data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+            ),
+            SimpleNamespace(
+                data=[SimpleNamespace(index=0, embedding=[0.0, 1.0])]
+            ),
+        ]
+    )
+    record = EmbeddingMemoryRecord(
+        record_id="record-1",
+        created_at="2026-01-01T00:00:00+00:00",
+        expires_at="2027-01-01T00:00:00+00:00",
+        model="embedding-model",
+        embedding=[1.0, 0.0],
+        searchable_text="Earlier preference",
+        messages=[{"role": "user", "content": "I prefer 20 C"}],
+    )
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(
+        side_effect=[
+            [EmbeddingMemoryMatch(record, 0.6, "first match")],
+            [EmbeddingMemoryMatch(record, 0.9, "better match")],
+        ]
+    )
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        matches = await entity._async_recall_embedding_memories(chat_log)
+
+    assert embedding_client.embeddings.create.await_count == 3
+    assert memory_store.async_search.await_count == 2
+    assert matches == [EmbeddingMemoryMatch(record, 0.9, "better match")]
 
     recall_result = build_paginated_recall_result(
         matches, 4000, include_relevance=False
@@ -1337,7 +1395,7 @@ async def test_embedding_recall_reranks_agent_candidate_pool():
         "embedding-model",
         excluded_turn_id=chat_log.content[-2].created.isoformat(),
     )
-    query = embedding_client.embeddings.create.await_args.kwargs["input"]
+    query = embedding_client.embeddings.create.await_args.kwargs["input"][0]
     reranker_client.async_rerank.assert_awaited_once_with(
         query,
         ["memory 0", "memory 1", "memory 2", "memory 3"],
@@ -2206,6 +2264,50 @@ async def test_embedding_archival_batches_chunks_and_stores_messages_once():
         "user",
         "assistant",
     ]
+
+
+async def test_embedding_archival_adapts_to_endpoint_context_limit():
+    """Archival subdivides a rejected estimate and retains all searchable text."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {
+            CONF_EMBEDDINGS_MODEL: "embedding-model",
+            CONF_EMBEDDING_CHUNK_SIZE: 4000,
+        }
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        side_effect=[
+            RuntimeError(
+                "request (8453 tokens) exceeds the available context size"
+            ),
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[1.0])]),
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[2.0])]),
+        ]
+    )
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        changed = await entity._archive_message_history(chat_log)
+
+    assert changed is True
+    assert embedding_client.embeddings.create.await_count == 3
+    records = memory_store.async_append.await_args.args[1]
+    assert len(records) == 1
+    assert len(records[0].additional_chunks) == 1
+    assert "".join(chunk.searchable_text for chunk in records[0].chunks).startswith(
+        '[{"role": "user", "content": "My preferred temperature is 20 C"}'
+    )
 
 
 async def test_retrieve_compact_uses_archive_when_summarization_fails():

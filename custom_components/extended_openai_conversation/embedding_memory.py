@@ -17,6 +17,8 @@ import shutil
 from typing import Any
 from uuid import uuid4
 
+from openai import AsyncClient
+
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
@@ -156,6 +158,81 @@ class EmbeddingMemoryMatch:
     record: EmbeddingMemoryRecord
     score: float
     matched_text: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddedTextChunk:
+    """Text accepted by the embeddings endpoint and its resulting vector."""
+
+    text: str
+    embedding: list[float]
+
+
+def _embedding_context_limit_error(err: Exception) -> bool:
+    """Return whether an embeddings request exceeded the endpoint context."""
+    message = str(err).casefold()
+    return (
+        "context" in message
+        and ("exceed" in message or "too large" in message or "too long" in message)
+        and ("token" in message or "length" in message or "size" in message)
+    )
+
+
+def _split_embedding_chunk(text: str) -> tuple[str, str]:
+    """Split an rejected embedding input without dropping any text."""
+    midpoint = len(text) // 2
+    split_at = max(text.rfind(separator, 0, midpoint + 1) for separator in ("\n", "\t", " "))
+    if split_at < midpoint // 2:
+        split_at = midpoint
+    else:
+        split_at += 1
+    return text[:split_at], text[split_at:]
+
+
+async def async_embed_text_chunks(
+    client: AsyncClient,
+    model: str,
+    text: str,
+    max_estimated_tokens: int,
+) -> list[EmbeddedTextChunk]:
+    """Embed text losslessly, subdividing inputs rejected as too large."""
+    pending = chunk_embedding_text(text, max_estimated_tokens)
+    embedded: list[EmbeddedTextChunk] = []
+    while pending:
+        chunk = pending.pop(0)
+        try:
+            response = await client.embeddings.create(model=model, input=[chunk])
+        except Exception as err:
+            if not _embedding_context_limit_error(err) or len(chunk) < 2:
+                raise
+            first, second = _split_embedding_chunk(chunk)
+            pending[0:0] = [first, second]
+            continue
+        if (
+            len(response.data) != 1
+            or response.data[0].index != 0
+            or not response.data[0].embedding
+        ):
+            raise ValueError("The embeddings endpoint returned an incomplete response")
+        embedded.append(
+            EmbeddedTextChunk(chunk, list(response.data[0].embedding))
+        )
+    return embedded
+
+
+def merge_embedding_matches(
+    match_groups: Iterable[Iterable[EmbeddingMemoryMatch]], limit: int
+) -> list[EmbeddingMemoryMatch]:
+    """Deduplicate multi-vector search results using each record's best score."""
+    matches_by_record: dict[str, EmbeddingMemoryMatch] = {}
+    for group in match_groups:
+        for match in group:
+            previous = matches_by_record.get(match.record.record_id)
+            if previous is None or match.score > previous.score:
+                matches_by_record[match.record.record_id] = match
+    return sorted(
+        matches_by_record.values(), key=lambda match: match.score, reverse=True
+    )[:limit]
 
 
 def _cosine_similarity(first: list[float], second: list[float]) -> float | None:

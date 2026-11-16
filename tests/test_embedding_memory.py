@@ -3,6 +3,8 @@
 from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 from custom_components.extended_openai_conversation.embedding_memory import (
     EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
@@ -10,6 +12,7 @@ from custom_components.extended_openai_conversation.embedding_memory import (
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
     EmbeddingMemoryStore,
+    async_embed_text_chunks,
     chunk_embedding_text,
     embedding_history_retention,
     normalize_embedding_history_retention,
@@ -25,6 +28,32 @@ def test_embedding_chunks_preserve_text_and_respect_estimated_limit():
     assert len(chunks) > 1
     assert "".join(chunks) == text
     assert all(len(chunk) <= 12 for chunk in chunks)
+
+
+async def test_embedding_chunks_adapt_to_endpoint_context_rejection():
+    """A tokenizer-specific context rejection losslessly subdivides the input."""
+    client = MagicMock()
+    request_number = 0
+
+    async def create_embedding(**kwargs):
+        nonlocal request_number
+        request_number += 1
+        if request_number == 1:
+            raise RuntimeError(
+                "request (8453 tokens) exceeds the available context size"
+            )
+        return SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[float(request_number)])]
+        )
+
+    client.embeddings.create = AsyncMock(side_effect=create_embedding)
+    text = "dense-json-content-" * 2
+
+    chunks = await async_embed_text_chunks(client, "embedding-model", text, 100)
+
+    assert "".join(chunk.text for chunk in chunks) == text
+    assert len(chunks) == 2
+    assert [chunk.embedding for chunk in chunks] == [[2.0], [3.0]]
 
 
 def _configure_path(hass, tmp_path: Path) -> None:

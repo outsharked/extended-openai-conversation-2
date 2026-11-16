@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import llm
 
 from ..const import (
+    CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
@@ -20,8 +21,14 @@ from ..const import (
     DEFAULT_CONTEXT_RECALL_RERANK,
     DEFAULT_CONTEXT_RECALL_RESULTS,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+    DEFAULT_EMBEDDING_CHUNK_SIZE,
 )
-from ..embedding_memory import EmbeddingMemoryMatch, EmbeddingMemoryScope
+from ..embedding_memory import (
+    EmbeddingMemoryMatch,
+    EmbeddingMemoryScope,
+    async_embed_text_chunks,
+    merge_embedding_matches,
+)
 from ..recall_snapshot import RecallSnapshotScope, RecallSnapshotStore
 from ..reranker import async_rerank_embedding_matches
 from ..runtime import OpenAIServiceRuntime
@@ -433,6 +440,11 @@ class ContextRecallFunction(Function):
         model = embeddings.get(CONF_EMBEDDINGS_MODEL)
         if not isinstance(model, str) or not model:
             return _error("recall_unavailable", "Conversation recall is unavailable")
+        chunk_size = embeddings.get(
+            CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
+        )
+        if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
+            return _error("recall_unavailable", "Conversation recall is unavailable")
 
         scope = EmbeddingMemoryScope(
             entry_id=function_config["entry_id"],
@@ -442,23 +454,23 @@ class ContextRecallFunction(Function):
         try:
             if not await runtime.embedding_memory.async_has_memories(scope, model):
                 return build_paginated_recall_result([], max_tokens)
-            response = await runtime.embedding_client.embeddings.create(
-                model=model,
-                input=query,
+            embedded_query = await async_embed_text_chunks(
+                runtime.embedding_client, model, query, chunk_size
             )
-            if not response.data or not response.data[0].embedding:
-                return _error(
-                    "recall_failed",
-                    "The embeddings endpoint returned no recall vector",
-                )
             rerank = bool(function_config.get("rerank", False))
             reranker_client = runtime.reranker_client if rerank else None
             candidate_limit = max_results_cap if reranker_client is not None else max_results
-            matches = await runtime.embedding_memory.async_search(
-                scope,
-                list(response.data[0].embedding),
+            matches = merge_embedding_matches(
+                [
+                    await runtime.embedding_memory.async_search(
+                        scope,
+                        chunk.embedding,
+                        candidate_limit,
+                        model,
+                    )
+                    for chunk in embedded_query
+                ],
                 candidate_limit,
-                model,
             )
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Context recall failed")
@@ -466,15 +478,21 @@ class ContextRecallFunction(Function):
 
         if reranker_client is not None:
             try:
-                matches = await async_rerank_embedding_matches(
-                    reranker_client,
-                    query,
-                    matches,
-                    max_results=max_results,
-                    min_score=function_config.get("rerank_min_score"),
-                    max_candidate_tokens=function_config.get(
-                        "rerank_max_candidate_tokens"
-                    ),
+                matches = merge_embedding_matches(
+                    [
+                        await async_rerank_embedding_matches(
+                            reranker_client,
+                            chunk.text,
+                            matches,
+                            max_results=max_results,
+                            min_score=function_config.get("rerank_min_score"),
+                            max_candidate_tokens=function_config.get(
+                                "rerank_max_candidate_tokens"
+                            ),
+                        )
+                        for chunk in embedded_query
+                    ],
+                    max_results,
                 )
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception(

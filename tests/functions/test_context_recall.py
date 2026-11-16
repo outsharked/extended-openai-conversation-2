@@ -139,7 +139,7 @@ async def test_context_recall_returns_original_messages_chronologically(hass):
     )
     embedding_client.embeddings.create.assert_awaited_once_with(
         model="embedding-model",
-        input="What temperature did I settle on?",
+        input=["What temperature did I settle on?"],
     )
     memory_store.async_search.assert_awaited_once_with(
         scope, [1.0, 0.0], 2, "embedding-model"

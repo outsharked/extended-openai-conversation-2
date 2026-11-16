@@ -116,8 +116,9 @@ from .embedding_memory import (
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
     EmbeddingMemoryStore,
-    chunk_embedding_text,
+    async_embed_text_chunks,
     embedding_history_retention,
+    merge_embedding_matches,
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
@@ -1132,15 +1133,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             )
             if not await memory_store.async_has_memories(scope, model):
                 return []
-            query = _compaction_transcript([latest_user_content])
-            response = await embedding_client.embeddings.create(
-                model=model,
-                input=query,
+            chunk_size = embeddings.get(
+                CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
             )
-            if not response.data or not response.data[0].embedding:
-                raise HomeAssistantError(
-                    "The embeddings endpoint returned no recall vector"
-                )
+            if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
+                raise HomeAssistantError("The embedding chunk size is invalid")
+            query = _compaction_transcript([latest_user_content])
+            embedded_query = await async_embed_text_chunks(
+                embedding_client, model, query, chunk_size
+            )
             reranker_client, min_score, max_candidate_tokens = (
                 self._context_recall_reranker()
             )
@@ -1155,23 +1156,35 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 if reranker_client is not None
                 else result_limit
             )
-            matches = await memory_store.async_search(
-                scope,
-                list(response.data[0].embedding),
+            matches = merge_embedding_matches(
+                [
+                    await memory_store.async_search(
+                        scope,
+                        chunk.embedding,
+                        candidate_limit,
+                        model,
+                        excluded_turn_id=latest_user_content.created.isoformat(),
+                    )
+                    for chunk in embedded_query
+                ],
                 candidate_limit,
-                model,
-                excluded_turn_id=latest_user_content.created.isoformat(),
             )
             if reranker_client is None:
                 return matches
             try:
-                return await async_rerank_embedding_matches(
-                    reranker_client,
-                    query,
-                    matches,
-                    max_results=result_limit,
-                    min_score=min_score,
-                    max_candidate_tokens=max_candidate_tokens,
+                return merge_embedding_matches(
+                    [
+                        await async_rerank_embedding_matches(
+                            reranker_client,
+                            chunk.text,
+                            matches,
+                            max_results=result_limit,
+                            min_score=min_score,
+                            max_candidate_tokens=max_candidate_tokens,
+                        )
+                        for chunk in embedded_query
+                    ],
+                    result_limit,
                 )
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Embedding memory reranking failed. Using embedding order")
@@ -2173,29 +2186,16 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
             raise HomeAssistantError("The embedding chunk size is invalid")
 
-        searchable_chunks = [
-            chunk_embedding_text(_compaction_transcript(group), chunk_size)
+        embedding_client, memory_store = self._embedding_runtime
+        embedded_groups = [
+            await async_embed_text_chunks(
+                embedding_client,
+                model,
+                _compaction_transcript(group),
+                chunk_size,
+            )
             for group in groups
         ]
-        embedding_inputs = [
-            chunk for group_chunks in searchable_chunks for chunk in group_chunks
-        ]
-        embedding_client, memory_store = self._embedding_runtime
-        vectors: list[list[float]] = []
-        for embedding_input in embedding_inputs:
-            response = await embedding_client.embeddings.create(
-                model=model,
-                input=[embedding_input],
-            )
-            if (
-                len(response.data) != 1
-                or response.data[0].index != 0
-                or not response.data[0].embedding
-            ):
-                raise HomeAssistantError(
-                    "The embeddings endpoint returned an incomplete response"
-                )
-            vectors.append(response.data[0].embedding)
 
         retention = embedding_history_retention(
             self.subentry.data.get(
@@ -2204,29 +2204,22 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             )
         )
         records: list[EmbeddingMemoryRecord] = []
-        chunk_index = 0
-        for group, group_chunks in zip(groups, searchable_chunks, strict=True):
-            group_vectors = vectors[
-                chunk_index : chunk_index + len(group_chunks)
-            ]
+        for group, embedded_chunks in zip(groups, embedded_groups, strict=True):
             records.append(
                 EmbeddingMemoryRecord.create(
                     model=model,
-                    embedding=group_vectors[0],
-                    searchable_text=group_chunks[0],
+                    embedding=embedded_chunks[0].embedding,
+                    searchable_text=embedded_chunks[0].text,
                     messages=[content.as_dict() for content in group],
                     retention=retention,
                     source=source,
                     turn_id=turn_id,
                     additional_chunks=(
-                        EmbeddingMemoryChunk(embedding, searchable_text)
-                        for embedding, searchable_text in zip(
-                            group_vectors[1:], group_chunks[1:], strict=True
-                        )
+                        EmbeddingMemoryChunk(chunk.embedding, chunk.text)
+                        for chunk in embedded_chunks[1:]
                     ),
                 )
             )
-            chunk_index += len(group_chunks)
         await memory_store.async_append(
             EmbeddingMemoryScope(
                 entry_id=self.entry.entry_id,
