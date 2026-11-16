@@ -143,7 +143,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         CONF_CONTEXT_TRUNCATE_STRATEGY,
         CONF_EMBEDDINGS,
         CONF_FUNCTION_TOOLS,
-            DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
         DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     )
@@ -166,9 +166,10 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         "entry_id": "endpoint-1",
         "agent_id": "sub_1",
         "max_tokens": DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
-            "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        "close_match_tolerance": None,
         "snapshot_ttl_turns": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-            "rerank": False,
+        "rerank": False,
     }
     assert tools[1]["spec"]["name"] == "browse_recalled_context"
     assert tools[1]["function"] == {

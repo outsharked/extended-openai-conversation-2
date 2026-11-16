@@ -17,6 +17,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_RERANK,
     CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
@@ -1219,9 +1220,12 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches = await entity._async_recall_embedding_memories(chat_log)
+        matches, close_matches = await entity._async_recall_embedding_memories(
+            chat_log
+        )
 
     assert matches == [match]
+    assert close_matches == []
     scope = EmbeddingMemoryScope(
         entry_id="endpoint-1",
         agent_id="agent-1",
@@ -1293,11 +1297,14 @@ async def test_embedding_recall_splits_oversized_query_and_merges_matches():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches = await entity._async_recall_embedding_memories(chat_log)
+        matches, close_matches = await entity._async_recall_embedding_memories(
+            chat_log
+        )
 
     assert embedding_client.embeddings.create.await_count == 3
     assert memory_store.async_search.await_count == 2
     assert matches == [EmbeddingMemoryMatch(record, 0.9, "better match")]
+    assert close_matches == []
 
     recall_result = build_paginated_recall_result(
         matches, 4000, include_relevance=False
@@ -1380,10 +1387,13 @@ async def test_embedding_recall_reranks_agent_candidate_pool():
         reranker_client=reranker_client,
     )
 
-    reranked = await entity._async_recall_embedding_memories(chat_log)
+    reranked, close_matches = await entity._async_recall_embedding_memories(
+        chat_log
+    )
 
     assert [match.record.record_id for match in reranked] == ["record-3"]
     assert reranked[0].score == 0.99
+    assert close_matches == []
     memory_store.async_search.assert_awaited_once_with(
         EmbeddingMemoryScope(
             entry_id="endpoint-1",
@@ -1462,13 +1472,71 @@ async def test_embedding_recall_reranker_failure_uses_embedding_order():
         reranker_client=reranker_client,
     )
 
-    recalled = await entity._async_recall_embedding_memories(chat_log)
+    recalled, close_matches = await entity._async_recall_embedding_memories(
+        chat_log
+    )
 
     assert [match.record.record_id for match in recalled] == [
         "record-0",
         "record-1",
         "record-2",
     ]
+    assert close_matches == []
+
+
+async def test_embedding_recall_retains_close_excluded_matches():
+    """Automatic recall reports candidates close to its lowest selected score."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    entity.subentry.data.update(
+        {
+            CONF_CONTEXT_RECALL_MAX_RESULTS: 5,
+            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE: "0.05",
+        }
+    )
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    matches = [
+        EmbeddingMemoryMatch(
+            record=EmbeddingMemoryRecord(
+                record_id=f"record-{index}",
+                created_at=f"2026-01-0{index + 1}T00:00:00+00:00",
+                expires_at="2027-01-01T00:00:00+00:00",
+                model="embedding-model",
+                embedding=[1.0, 0.0],
+                searchable_text=f"memory {index}",
+                messages=[{"role": "user", "content": f"memory {index}"}],
+            ),
+            score=score,
+        )
+        for index, score in enumerate((0.9, 0.8, 0.7, 0.66, 0.5))
+    ]
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(return_value=matches)
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        selected, close = await entity._async_recall_embedding_memories(chat_log)
+
+    assert selected == matches[:3]
+    assert close == matches[3:4]
+    memory_store.async_search.assert_awaited_once()
+    assert memory_store.async_search.await_args.args[2] == 5
 
 
 async def test_embedding_recall_avoids_api_call_without_archived_history():
@@ -1492,9 +1560,12 @@ async def test_embedding_recall_avoids_api_call_without_archived_history():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches = await entity._async_recall_embedding_memories(chat_log)
+        matches, close_matches = await entity._async_recall_embedding_memories(
+            chat_log
+        )
 
     assert matches == []
+    assert close_matches == []
     embedding_client.embeddings.create.assert_not_awaited()
     memory_store.async_search.assert_not_called()
 
@@ -1523,9 +1594,12 @@ async def test_embedding_recall_failure_is_non_destructive():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches = await entity._async_recall_embedding_memories(chat_log)
+        matches, close_matches = await entity._async_recall_embedding_memories(
+            chat_log
+        )
 
     assert matches == []
+    assert close_matches == []
     assert chat_log.content == original_contents
 
 

@@ -44,6 +44,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
     CONF_CONTEXT_RECALL_RERANK,
@@ -81,6 +82,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK,
@@ -2603,6 +2605,17 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     assert max_results_key.default() == DEFAULT_CONTEXT_RECALL_MAX_RESULTS
     assert schema[max_results_key].config["min"] == 1
     assert "max" not in schema[max_results_key].config
+    close_tolerance_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key)
+        == CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
+    )
+    assert (
+        close_tolerance_key.default()
+        == DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
+    )
+    assert isinstance(schema[close_tolerance_key], TextSelector)
     assert (
         CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
         not in _schema_keys(schema)
@@ -2841,6 +2854,7 @@ async def test_agent_advanced_normalizes_reranker_options(hass, handler_type):
             CONF_CONTEXT_RECALL_RERANK: True,
             CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: " -2.50 ",
             CONF_CONTEXT_RECALL_MAX_RESULTS: 75,
+            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE: " 0.125 ",
             CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: " 2048 ",
         }
     )
@@ -2850,7 +2864,42 @@ async def test_agent_advanced_normalizes_reranker_options(hass, handler_type):
     assert data[CONF_CONTEXT_RECALL_RERANK] is True
     assert data[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] == "-2.5"
     assert data[CONF_CONTEXT_RECALL_MAX_RESULTS] == 75
+    assert data[CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE] == "0.125"
     assert data[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] == "2048"
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_blank_close_match_tolerance_disables_it(
+    hass, handler_type
+):
+    """Both agent flows retain a blank close-match tolerance as disabled."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler._get_reconfigure_subentry = MagicMock()
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
+            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE: "   ",
+        }
+    )
+
+    assert result == {"type": "abort"}
+    assert handler.async_update_and_abort.call_args.kwargs["data"][
+        CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
+    ] == ""
 
 
 @pytest.mark.parametrize(
@@ -2879,6 +2928,7 @@ async def test_agent_advanced_rejects_invalid_reranker_options(
             CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
             CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: "nan",
             CONF_CONTEXT_RECALL_MAX_RESULTS: 0,
+            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE: "0",
             CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: "1.5",
         }
     )
@@ -2886,6 +2936,9 @@ async def test_agent_advanced_rejects_invalid_reranker_options(
     assert result == {"type": "form"}
     assert handler.async_show_form.call_args.kwargs["errors"] == {
         CONF_CONTEXT_RECALL_MAX_RESULTS: "invalid_context_recall_max_results",
+        CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE: (
+            "invalid_context_recall_close_match_tolerance"
+        ),
         CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: (
             "invalid_context_recall_rerank_min_score"
         ),

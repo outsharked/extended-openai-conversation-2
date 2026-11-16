@@ -28,6 +28,7 @@ from ..embedding_memory import (
     EmbeddingMemoryScope,
     async_embed_text_chunks,
     merge_embedding_matches,
+    split_close_embedding_matches,
 )
 from ..recall_snapshot import RecallSnapshotScope, RecallSnapshotStore
 from ..reranker import async_rerank_embedding_matches
@@ -44,6 +45,7 @@ def build_context_recall_function_tool(
     snapshot_ttl_turns: int,
     max_results: int = DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     *,
+    close_match_tolerance: float | None = None,
     rerank: bool = DEFAULT_CONTEXT_RECALL_RERANK,
     rerank_min_score: float | None = None,
     rerank_max_candidate_tokens: int | None = None,
@@ -56,6 +58,7 @@ def build_context_recall_function_tool(
         "agent_id": agent_id,
         "max_tokens": max_tokens,
         "max_results": max_results,
+        "close_match_tolerance": close_match_tolerance,
         "snapshot_ttl_turns": snapshot_ttl_turns,
         "rerank": rerank,
     }
@@ -170,6 +173,7 @@ def _recall_page_result(
     total_pages: int,
     snapshot_id: str | None = None,
     ttl_turns_remaining: int | None = None,
+    close_matches: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one model-facing recall page."""
     result: dict[str, Any] = {
@@ -184,10 +188,16 @@ def _recall_page_result(
         result["snapshot_id"] = snapshot_id
     if ttl_turns_remaining is not None:
         result["ttl_turns_remaining"] = ttl_turns_remaining
+    if close_matches is not None:
+        result["close_matches"] = close_matches
     return result
 
 
-def _memory_item(match: EmbeddingMemoryMatch, include_relevance: bool) -> dict[str, Any]:
+def _memory_item(
+    match: EmbeddingMemoryMatch,
+    include_relevance: bool,
+    close_match: bool,
+) -> dict[str, Any]:
     """Return a complete archived memory item."""
     memory: dict[str, Any] = {
         "record_id": match.record.record_id,
@@ -196,6 +206,8 @@ def _memory_item(match: EmbeddingMemoryMatch, include_relevance: bool) -> dict[s
     }
     if include_relevance:
         memory["relevance"] = round(match.score, 6)
+    if close_match:
+        memory["close_match"] = True
     return memory
 
 
@@ -204,6 +216,7 @@ def _fragment_memory(
     text: str,
     max_tokens: int,
     include_relevance: bool,
+    close_match: bool,
 ) -> list[dict[str, Any]]:
     """Split one oversized archived turn into bounded transcript fragments."""
     fragments: list[dict[str, Any]] = []
@@ -219,6 +232,8 @@ def _fragment_memory(
         }
         if include_relevance:
             fragment["relevance"] = round(match.score, 6)
+        if close_match:
+            fragment["close_match"] = True
 
         low = 0
         high = len(remaining)
@@ -258,6 +273,7 @@ def _fragment_memory(
                 "truncated": True,
                 "fragment_index": 1,
                 "fragment_count": 1,
+                **({"close_match": True} if close_match else {}),
             }
         )
     fragment_count = len(fragments)
@@ -272,11 +288,12 @@ def _recall_pages(
     max_tokens: int,
     *,
     include_relevance: bool = True,
+    close_match: bool = False,
 ) -> list[list[dict[str, Any]]]:
     """Split selected memories into pages bounded by estimated tokens."""
     items: list[dict[str, Any]] = []
     for match in sorted(matches, key=lambda item: item.record.created_at):
-        memory = _memory_item(match, include_relevance)
+        memory = _memory_item(match, include_relevance, close_match)
         candidate = _recall_page_result(
             [memory],
             len(matches),
@@ -296,7 +313,11 @@ def _recall_pages(
                 transcript_chunks.remove(match.matched_text)
             transcript_chunks.insert(0, match.matched_text)
         transcript = "".join(transcript_chunks)
-        items.extend(_fragment_memory(match, transcript, max_tokens, include_relevance))
+        items.extend(
+            _fragment_memory(
+                match, transcript, max_tokens, include_relevance, close_match
+            )
+        )
 
     pages: list[list[dict[str, Any]]] = [[]]
     for item in items:
@@ -319,35 +340,66 @@ def build_paginated_recall_result(
     matches: list[EmbeddingMemoryMatch],
     max_tokens: int,
     *,
+    close_matches: list[EmbeddingMemoryMatch] | None = None,
     snapshot_store: RecallSnapshotStore | None = None,
     snapshot_scope: RecallSnapshotScope | None = None,
     snapshot_ttl_turns: int = DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     include_relevance: bool = True,
 ) -> dict[str, Any]:
     """Return the first bounded page and snapshot later pages when available."""
-    pages = _recall_pages(
+    selected_pages = _recall_pages(
         matches,
         max_tokens,
         include_relevance=include_relevance,
     )
+    close_matches = close_matches or []
+    close_pages = (
+        _recall_pages(
+            close_matches,
+            max_tokens,
+            include_relevance=include_relevance,
+            close_match=True,
+        )
+        if close_matches
+        else []
+    )
+    pages = [*selected_pages, *close_pages]
     total_pages = len(pages)
+    matches_available = len(matches) + len(close_matches)
     snapshot_id: str | None = None
     if total_pages > 1 and snapshot_store is not None and snapshot_scope is not None:
         snapshot_id = snapshot_store.create(
             snapshot_scope,
             pages,
-            len(matches),
+            matches_available,
             snapshot_ttl_turns,
         )
+    close_match_summary = (
+        {
+            "count": len(close_matches),
+            "highest_relevance": round(max(match.score for match in close_matches), 6),
+            "lowest_relevance": round(min(match.score for match in close_matches), 6),
+            "first_page": len(selected_pages) + 1,
+            "last_page": total_pages,
+            "message": (
+                "Similarly ranked historical records are available on the "
+                "indicated snapshot pages. Use browse_recalled_context to "
+                "inspect their contents and timestamps."
+            ),
+        }
+        if close_matches
+        else None
+    )
     return _recall_page_result(
         pages[0],
-        len(matches),
+        matches_available,
         current_page=1,
         total_pages=total_pages,
         snapshot_id=snapshot_id,
         ttl_turns_remaining=(
             snapshot_ttl_turns if snapshot_id is not None else None
         ),
+        close_matches=close_match_summary,
     )
 
 
@@ -373,6 +425,13 @@ class ContextRecallFunction(Function):
                     vol.Optional(
                         "max_results", default=DEFAULT_CONTEXT_RECALL_MAX_RESULTS
                     ): vol.All(int, vol.Range(min=1)),
+                    vol.Optional("close_match_tolerance", default=None): vol.Any(
+                        None,
+                        vol.All(
+                            vol.Coerce(float),
+                            vol.Range(min=0, min_included=False),
+                        ),
+                    ),
                     vol.Optional(
                         "snapshot_ttl_turns",
                         default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
@@ -413,6 +472,7 @@ class ContextRecallFunction(Function):
         max_results_cap = function_config.get(
             "max_results", DEFAULT_CONTEXT_RECALL_MAX_RESULTS
         )
+        close_match_tolerance = function_config.get("close_match_tolerance")
         snapshot_ttl_turns = function_config.get(
             "snapshot_ttl_turns", DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
         )
@@ -459,7 +519,11 @@ class ContextRecallFunction(Function):
             )
             rerank = bool(function_config.get("rerank", False))
             reranker_client = runtime.reranker_client if rerank else None
-            candidate_limit = max_results_cap if reranker_client is not None else max_results
+            candidate_limit = (
+                max_results_cap
+                if reranker_client is not None or close_match_tolerance is not None
+                else max_results
+            )
             matches = merge_embedding_matches(
                 [
                     await runtime.embedding_memory.async_search(
@@ -477,6 +541,11 @@ class ContextRecallFunction(Function):
             return _error("recall_failed", "Conversation recall failed")
 
         if reranker_client is not None:
+            reranker_result_limit = (
+                candidate_limit
+                if close_match_tolerance is not None
+                else max_results
+            )
             try:
                 matches = merge_embedding_matches(
                     [
@@ -484,7 +553,7 @@ class ContextRecallFunction(Function):
                             reranker_client,
                             chunk.text,
                             matches,
-                            max_results=max_results,
+                            max_results=reranker_result_limit,
                             min_score=function_config.get("rerank_min_score"),
                             max_candidate_tokens=function_config.get(
                                 "rerank_max_candidate_tokens"
@@ -492,17 +561,21 @@ class ContextRecallFunction(Function):
                         )
                         for chunk in embedded_query
                     ],
-                    max_results,
+                    reranker_result_limit,
                 )
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception(
                     "Context recall reranking failed; using embedding order"
                 )
-                matches = matches[:max_results]
+
+        matches, close_matches = split_close_embedding_matches(
+            matches, max_results, close_match_tolerance
+        )
 
         return build_paginated_recall_result(
             matches,
             max_tokens,
+            close_matches=close_matches,
             snapshot_store=runtime.recall_snapshots,
             snapshot_scope=RecallSnapshotScope(
                 agent_id=function_config["agent_id"],

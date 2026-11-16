@@ -60,6 +60,7 @@ def test_context_recall_tool_keeps_scope_out_of_model_arguments():
         "agent_id": "agent-1",
         "max_tokens": 4000,
         "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        "close_match_tolerance": None,
         "snapshot_ttl_turns": 3,
         "rerank": False,
     }
@@ -347,6 +348,62 @@ def test_context_recall_bounds_oversized_results():
     assert match.matched_text.startswith(excerpt)
     assert "irrelevant record prefix" not in result["memories"][0]["excerpt"]
     assert len(json.dumps(result)) <= 400
+
+
+async def test_close_recall_matches_are_exposed_through_snapshot(hass):
+    """Close excluded candidates are advertised and browsable as marked records."""
+    selected = EmbeddingMemoryMatch(
+        _record("selected", "2026-01-01T00:00:00+00:00", "Selected memory"),
+        0.9,
+    )
+    close = EmbeddingMemoryMatch(
+        _record("close", "2026-01-02T00:00:00+00:00", "Close memory"),
+        0.88,
+    )
+    runtime = OpenAIServiceRuntime(client=MagicMock())
+    scope = RecallSnapshotScope("agent-1", "conversation-1")
+
+    result = build_paginated_recall_result(
+        [selected],
+        4000,
+        close_matches=[close],
+        snapshot_store=runtime.recall_snapshots,
+        snapshot_scope=scope,
+        snapshot_ttl_turns=3,
+    )
+
+    assert result["matches_available"] == 2
+    assert result["close_matches"] == {
+        "count": 1,
+        "highest_relevance": 0.88,
+        "lowest_relevance": 0.88,
+        "first_page": 2,
+        "last_page": 2,
+        "message": (
+            "Similarly ranked historical records are available on the "
+            "indicated snapshot pages. Use browse_recalled_context to "
+            "inspect their contents and timestamps."
+        ),
+    }
+    assert result["snapshot_id"]
+    entry = MagicMock(runtime_data=runtime)
+    hass.config_entries.async_get_entry.return_value = entry
+
+    close_page = await BrowseRecalledContextFunction().execute(
+        hass,
+        {
+            "type": "browse_recalled_context",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+            "conversation_id": "conversation-1",
+        },
+        {"snapshot_id": result["snapshot_id"], "page": 2},
+        None,
+        [],
+    )
+
+    assert close_page["memories"][0]["record_id"] == "close"
+    assert close_page["memories"][0]["close_match"] is True
 
 
 async def test_context_recall_snapshots_later_pages_for_scoped_browsing(hass):

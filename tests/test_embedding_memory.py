@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 from custom_components.extended_openai_conversation.embedding_memory import (
     EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryChunk,
+    EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
     EmbeddingMemoryStore,
@@ -16,6 +17,7 @@ from custom_components.extended_openai_conversation.embedding_memory import (
     chunk_embedding_text,
     embedding_history_retention,
     normalize_embedding_history_retention,
+    split_close_embedding_matches,
 )
 
 
@@ -28,6 +30,29 @@ def test_embedding_chunks_preserve_text_and_respect_estimated_limit():
     assert len(chunks) > 1
     assert "".join(chunks) == text
     assert all(len(chunk) <= 12 for chunk in chunks)
+
+
+def test_close_embedding_matches_use_lowest_selected_score_as_cutoff():
+    """Excluded results inside the configured score tolerance remain available."""
+    records = [
+        EmbeddingMemoryRecord.create(
+            model="embedding-model",
+            embedding=[1.0],
+            searchable_text=f"memory {index}",
+            messages=[{"role": "user", "content": f"memory {index}"}],
+            retention=timedelta(days=1),
+        )
+        for index in range(4)
+    ]
+    matches = [
+        EmbeddingMemoryMatch(record, score)
+        for record, score in zip(records, (0.9, 0.8, 0.76, 0.6), strict=True)
+    ]
+
+    selected, close = split_close_embedding_matches(matches, 2, 0.05)
+
+    assert selected == matches[:2]
+    assert close == matches[2:3]
 
 
 async def test_embedding_chunks_adapt_to_endpoint_context_rejection():

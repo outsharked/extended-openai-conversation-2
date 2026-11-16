@@ -42,6 +42,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
     CONF_CONTEXT_RECALL_RERANK,
@@ -78,6 +79,7 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK,
@@ -119,6 +121,7 @@ from .embedding_memory import (
     async_embed_text_chunks,
     embedding_history_retention,
     merge_embedding_matches,
+    split_close_embedding_matches,
 )
 from .exceptions import FunctionNotFound, ParseArgumentsFailed, TokenLengthExceededError
 from .functions import get_function
@@ -1043,6 +1046,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         reranker_client, min_score, max_candidate_tokens = (
             self._context_recall_reranker()
         )
+        configured_close_match_tolerance = self.subentry.data.get(
+            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
+            DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
+        )
+        close_match_tolerance = (
+            float(configured_close_match_tolerance)
+            if configured_close_match_tolerance
+            else None
+        )
         return [
             build_context_recall_function_tool(
                 self.entry.entry_id,
@@ -1060,6 +1072,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     )
                 ),
                 max_results,
+                close_match_tolerance=close_match_tolerance,
                 rerank=reranker_client is not None,
                 rerank_min_score=min_score,
                 rerank_max_candidate_tokens=max_candidate_tokens,
@@ -1108,17 +1121,19 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         )
         return runtime.reranker_client, min_score, max_candidate_tokens
 
-    async def _async_recall_embedding_memories(self, chat_log: conversation.ChatLog) -> list[EmbeddingMemoryMatch]:
+    async def _async_recall_embedding_memories(
+        self, chat_log: conversation.ChatLog
+    ) -> tuple[list[EmbeddingMemoryMatch], list[EmbeddingMemoryMatch]]:
         """Return relevant archived turns for the latest user input."""
         if self.subentry.data.get(
             CONF_CONTEXT_TRUNCATE_STRATEGY,
             DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
         ) not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
-            return []
+            return [], []
 
         conversation_id = chat_log.conversation_id
         if not isinstance(conversation_id, str) or not conversation_id:
-            return []
+            return [], []
         latest_user_content = next(
             (
                 content
@@ -1128,14 +1143,14 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             None,
         )
         if latest_user_content is None:
-            return []
+            return [], []
 
         embeddings = self.entry.data.get(CONF_EMBEDDINGS)
         if not isinstance(embeddings, Mapping):
-            return []
+            return [], []
         model = embeddings.get(CONF_EMBEDDINGS_MODEL)
         if not isinstance(model, str) or not model:
-            return []
+            return [], []
 
         try:
             embedding_client, memory_store = self._embedding_runtime
@@ -1145,7 +1160,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 conversation_id=conversation_id,
             )
             if not await memory_store.async_has_memories(scope, model):
-                return []
+                return [], []
             chunk_size = embeddings.get(
                 CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
             )
@@ -1159,6 +1174,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 self._context_recall_reranker()
             )
             result_limit = DEFAULT_EMBEDDING_RECALL_RESULTS
+            configured_close_match_tolerance = self.subentry.data.get(
+                CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
+                DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
+            )
+            close_match_tolerance = (
+                float(configured_close_match_tolerance)
+                if configured_close_match_tolerance
+                else None
+            )
             candidate_limit = (
                 int(
                     self.subentry.data.get(
@@ -1166,7 +1190,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
                     )
                 )
-                if reranker_client is not None
+                if reranker_client is not None or close_match_tolerance is not None
                 else result_limit
             )
             matches = merge_embedding_matches(
@@ -1183,28 +1207,40 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 candidate_limit,
             )
             if reranker_client is None:
-                return matches
+                return split_close_embedding_matches(
+                    matches, result_limit, close_match_tolerance
+                )
+            reranker_result_limit = (
+                candidate_limit
+                if close_match_tolerance is not None
+                else result_limit
+            )
             try:
-                return merge_embedding_matches(
+                reranked = merge_embedding_matches(
                     [
                         await async_rerank_embedding_matches(
                             reranker_client,
                             chunk.text,
                             matches,
-                            max_results=result_limit,
+                            max_results=reranker_result_limit,
                             min_score=min_score,
                             max_candidate_tokens=max_candidate_tokens,
                         )
                         for chunk in embedded_query
                     ],
-                    result_limit,
+                    reranker_result_limit,
+                )
+                return split_close_embedding_matches(
+                    reranked, result_limit, close_match_tolerance
                 )
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Embedding memory reranking failed. Using embedding order")
-                return matches[:result_limit]
+                return split_close_embedding_matches(
+                    matches, result_limit, close_match_tolerance
+                )
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Embedding memory retrieval failed. Continuing without recalled context")
-            return []
+            return [], []
 
     @staticmethod
     def _embedding_recall_message(recall_result: dict[str, Any], prefix: str) -> ChatCompletionUserMessageParam:
@@ -1377,7 +1413,9 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         if isinstance(runtime, OpenAIServiceRuntime):
             runtime.recall_snapshots.advance_turn(self.subentry.subentry_id)
 
-        recalled_memories = await self._async_recall_embedding_memories(chat_log)
+        recalled_memories, close_recalled_memories = (
+            await self._async_recall_embedding_memories(chat_log)
+        )
         recall_result: dict[str, Any] | None = None
         automatic_snapshot_id: str | None = None
 
@@ -1399,6 +1437,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             recall_result = build_paginated_recall_result(
                 recalled_memories,
                 recall_max_tokens,
+                close_matches=close_recalled_memories,
                 snapshot_store=(
                     runtime.recall_snapshots
                     if isinstance(runtime, OpenAIServiceRuntime)
@@ -1591,7 +1630,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                     history_changed = intra_turn_changed
                 if history_changed:
                     if retrieval_enabled and not intra_turn_changed:
-                        recalled_memories = (
+                        recalled_memories, close_recalled_memories = (
                             await self._async_recall_embedding_memories(chat_log)
                         )
                         _refresh_recall_result()

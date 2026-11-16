@@ -235,6 +235,24 @@ def merge_embedding_matches(
     )[:limit]
 
 
+def split_close_embedding_matches(
+    matches: list[EmbeddingMemoryMatch],
+    result_limit: int,
+    tolerance: float | None,
+) -> tuple[list[EmbeddingMemoryMatch], list[EmbeddingMemoryMatch]]:
+    """Split ranked matches into primary results and close excluded candidates."""
+    selected = matches[:result_limit]
+    if tolerance is None or not selected:
+        return selected, []
+    cutoff = selected[-1].score
+    close_matches = [
+        match
+        for match in matches[result_limit:]
+        if cutoff - match.score <= tolerance
+    ]
+    return selected, close_matches
+
+
 def _cosine_similarity(first: list[float], second: list[float]) -> float | None:
     """Return cosine similarity, or None for incompatible zero vectors."""
     if not first or len(first) != len(second):

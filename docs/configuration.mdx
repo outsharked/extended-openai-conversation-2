@@ -255,6 +255,24 @@ Enable **Advanced Options** in the configuration to access these model-specific 
     results from unexpectedly consuming most of the available context.
   </Accordion>
 
+  <Accordion title="Recall Close-Match Tolerance">
+    **Type**: Optional decimal number greater than 0
+
+    **Default**: Empty (disabled)
+
+    **Available when**: Context Truncate Strategy is `retrieve` or `retrieve_compact`
+
+    Reports memories that were not selected but scored within this distance of
+    the lowest selected result. The initial recall response shows that close
+    matches exist, including their score range and snapshot page range. Their
+    full contents and timestamps remain outside the active prompt and can be
+    inspected by the agent through the existing `browse_recalled_context` snapshot pages. 
+    When reranking is enabled, this setting compares reranker scores, otherwise it compares
+    embedding cosine-similarity scores. Because score ranges vary by model,
+    tune this value for the configured embeddings or reranker endpoint. Leave
+    the field empty to disable close-match reporting.
+  </Accordion>
+
   <Accordion title="Top P">
     **Type**: Number (0-1, step 0.05)
 
