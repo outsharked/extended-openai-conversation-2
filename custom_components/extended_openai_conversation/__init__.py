@@ -15,6 +15,7 @@ from homeassistant.const import CONF_API_KEY, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -23,6 +24,9 @@ from .const import (
     CONF_BASE_URL,
     CONF_EMBEDDINGS,
     CONF_ORGANIZATION,
+    CONF_RERANKER,
+    CONF_RERANKER_MODEL,
+    CONF_RERANKER_URL,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_API_PROVIDER,
     DEFAULT_SKIP_AUTHENTICATION,
@@ -33,6 +37,7 @@ from .embedding_memory import EmbeddingMemoryStore
 from .helpers import get_authenticated_client, get_service_type
 from .mcp_client import MCPClient, MCPServerConfig
 from .mcp_oauth import async_get_mcp_oauth_auth
+from .reranker import RerankerClient
 from .runtime import OpenAIServiceRuntime
 from .services import async_setup_services
 from .template import async_setup_templates, async_unload_templates
@@ -103,6 +108,7 @@ async def async_setup_entry(
 
     embedding_client: AsyncClient | None = None
     embedding_memory: EmbeddingMemoryStore | None = None
+    reranker_client: RerankerClient | None = None
     embeddings = entry.data.get(CONF_EMBEDDINGS)
     if isinstance(embeddings, Mapping):
         embedding_client = await get_authenticated_client(
@@ -122,10 +128,20 @@ async def async_setup_entry(
                 "Unable to clean expired embedding memory; setup will continue"
             )
 
+    reranker = entry.data.get(CONF_RERANKER)
+    if isinstance(reranker, Mapping):
+        reranker_client = RerankerClient(
+            async_get_clientsession(hass),
+            endpoint_url=reranker[CONF_RERANKER_URL],
+            api_key=reranker[CONF_API_KEY],
+            model=reranker[CONF_RERANKER_MODEL],
+        )
+
     entry.runtime_data = OpenAIServiceRuntime(
         client=client,
         embedding_client=embedding_client,
         embedding_memory=embedding_memory,
+        reranker_client=reranker_client,
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

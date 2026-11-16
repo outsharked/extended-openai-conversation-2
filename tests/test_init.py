@@ -9,6 +9,9 @@ from custom_components.extended_openai_conversation import (
     async_unload_entry,
 )
 from custom_components.extended_openai_conversation.const import (
+    CONF_RERANKER,
+    CONF_RERANKER_MODEL,
+    CONF_RERANKER_URL,
     CONF_SERVICE_TYPE,
     SERVICE_TYPE_MCP,
 )
@@ -20,7 +23,8 @@ from custom_components.extended_openai_conversation.mcp_client import (
     CONF_MCP_USE_OAUTH,
     MCPClient,
 )
-from homeassistant.const import CONF_TOKEN
+from custom_components.extended_openai_conversation.reranker import RerankerClient
+from homeassistant.const import CONF_API_KEY, CONF_TOKEN
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 
@@ -225,3 +229,44 @@ async def test_mcp_entry_unloads_without_ai_platforms(hass):
 
     entry.runtime_data.aclose.assert_awaited_once_with()
     hass.config_entries.async_unload_platforms.assert_not_called()
+
+
+async def test_ai_entry_creates_configured_reranker_client(hass):
+    """AI endpoint setup retains an isolated reranker runtime client."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_API_KEY: "chat-key",
+        CONF_RERANKER: {
+            CONF_API_KEY: "reranker-key",
+            CONF_RERANKER_URL: "https://reranker.example.com/v1/rerank",
+            CONF_RERANKER_MODEL: "reranker-model",
+        },
+    }
+    entry.add_update_listener.return_value = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+    session = MagicMock()
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation."
+            "get_authenticated_client",
+            new=AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation."
+            "async_get_clientsession",
+            return_value=session,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation."
+            "async_setup_templates",
+            new=AsyncMock(),
+        ),
+    ):
+        assert await async_setup_entry(hass, entry)
+
+    assert isinstance(entry.runtime_data.reranker_client, RerankerClient)
+    assert entry.runtime_data.reranker_client.endpoint_url == (
+        "https://reranker.example.com/v1/rerank"
+    )
+    assert entry.runtime_data.reranker_client.model == "reranker-model"

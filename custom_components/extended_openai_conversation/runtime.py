@@ -6,6 +6,7 @@ from openai import AsyncClient
 
 from .embedding_memory import EmbeddingMemoryStore
 from .recall_snapshot import RecallSnapshotStore
+from .reranker import RerankerClient
 
 
 @dataclass(slots=True)
@@ -15,4 +16,5 @@ class OpenAIServiceRuntime:
     client: AsyncClient
     embedding_client: AsyncClient | None = None
     embedding_memory: EmbeddingMemoryStore | None = None
+    reranker_client: RerankerClient | None = None
     recall_snapshots: RecallSnapshotStore = field(default_factory=RecallSnapshotStore)

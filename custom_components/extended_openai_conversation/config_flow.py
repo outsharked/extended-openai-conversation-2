@@ -10,9 +10,7 @@ import logging
 import math
 import types
 from typing import Any, override
-from urllib.parse import urlparse
 
-from aiohttp import ClientError
 import httpx2 as httpx
 from openai._exceptions import APIConnectionError, APIStatusError, AuthenticationError
 import probatio as vol
@@ -235,6 +233,11 @@ from .mcp_oauth import (
     async_get_mcp_oauth_auth,
     oauth_application_context_from_data,
     static_oauth_auth,
+)
+from .reranker import (
+    RerankerAuthenticationError as _RerankerAuthenticationError,
+    RerankerClient,
+    RerankerConnectionError as _RerankerConnectionError,
 )
 from .skills import SkillManager
 
@@ -699,73 +702,27 @@ async def validate_embeddings_input(
         raise HomeAssistantError("The embeddings endpoint returned no vector.")
 
 
-class _RerankerAuthenticationError(HomeAssistantError):
-    """Raised when the reranker rejects its credentials."""
-
-
-class _RerankerConnectionError(HomeAssistantError):
-    """Raised when the reranker endpoint cannot be reached."""
-
-
 async def validate_reranker_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
     """Validate a reranker endpoint with a real reranking request."""
     endpoint_url = data[CONF_RERANKER_URL].strip()
-    parsed_url = urlparse(endpoint_url)
-    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
-        raise HomeAssistantError("A valid reranker endpoint URL is required.")
-    data[CONF_RERANKER_URL] = endpoint_url
-
     model = data[CONF_RERANKER_MODEL].strip()
-    if not model:
-        raise HomeAssistantError("A reranker model is required.")
-    data[CONF_RERANKER_MODEL] = model
-
     try:
-        async with async_get_clientsession(hass).post(
-            endpoint_url,
-            headers={"Authorization": f"Bearer {data[CONF_API_KEY]}"},
-            json={
-                "model": model,
-                "query": "EOAIC2 reranker connection test",
-                "documents": [
-                    "Unrelated content",
-                    "EOAIC2 reranker connection test",
-                ],
-                "top_n": 2,
-            },
-        ) as response:
-            if response.status in {401, 403}:
-                raise _RerankerAuthenticationError(
-                    "The reranker endpoint rejected the credentials."
-                )
-            if response.status == 404 or response.status >= 500:
-                raise _RerankerConnectionError(
-                    f"The reranker endpoint returned HTTP {response.status}."
-                )
-            if response.status >= 400:
-                raise HomeAssistantError(
-                    f"The reranker endpoint rejected the validation request "
-                    f"with HTTP {response.status}."
-                )
-            try:
-                result = await response.json(content_type=None)
-            except ValueError as err:
-                raise HomeAssistantError(
-                    "The reranker endpoint returned invalid JSON."
-                ) from err
-    except (_RerankerAuthenticationError, _RerankerConnectionError):
-        raise
-    except (ClientError, TimeoutError) as err:
-        raise _RerankerConnectionError(
-            "Unable to connect to the reranker endpoint."
-        ) from err
+        client = RerankerClient(
+            async_get_clientsession(hass),
+            endpoint_url=endpoint_url,
+            api_key=data[CONF_API_KEY],
+            model=model,
+        )
+    except ValueError as err:
+        raise HomeAssistantError(str(err)) from err
 
-    if (
-        not isinstance(result, Mapping)
-        or not isinstance(result.get("results"), list)
-        or not result["results"]
-    ):
-        raise HomeAssistantError("The reranker endpoint returned no results.")
+    data[CONF_RERANKER_URL] = endpoint_url
+    data[CONF_RERANKER_MODEL] = model
+    await client.async_rerank(
+        "EOAIC2 reranker connection test",
+        ["Unrelated content", "EOAIC2 reranker connection test"],
+        max_results=2,
+    )
 
 
 class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
