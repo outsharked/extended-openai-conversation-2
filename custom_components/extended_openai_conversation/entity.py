@@ -42,7 +42,11 @@ from .const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK,
+    CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -74,7 +78,11 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_SUMMARY_PREFIX,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
     DEFAULT_CONTEXT_COMPACTION_TOKEN_LIMIT,
+    DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK,
+    DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -129,6 +137,7 @@ from .helpers import (
 from .mcp_client import MCPContextRenderer
 from .mcp_service_manager import MCPServiceManager
 from .recall_snapshot import RecallSnapshotScope
+from .reranker import RerankerClient, async_rerank_embedding_matches
 from .runtime import OpenAIServiceRuntime
 
 if TYPE_CHECKING:
@@ -1011,6 +1020,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             or not isinstance(self.entry.data.get(CONF_EMBEDDINGS), Mapping)
         ):
             return []
+        max_results = int(
+            self.subentry.data.get(
+                CONF_CONTEXT_RECALL_MAX_RESULTS,
+                DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+            )
+        )
+        reranker_client, min_score, max_candidate_tokens = (
+            self._context_recall_reranker()
+        )
         return [
             build_context_recall_function_tool(
                 self.entry.entry_id,
@@ -1027,6 +1045,10 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     )
                 ),
+                max_results,
+                rerank=reranker_client is not None,
+                rerank_min_score=min_score,
+                rerank_max_candidate_tokens=max_candidate_tokens,
             ),
             build_browse_recalled_context_function_tool(
                 self.entry.entry_id,
@@ -1037,6 +1059,40 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
     def _get_internal_function_tools(self) -> list[dict[str, Any]]:
         """Return integration-managed tools enabled for this agent."""
         return (self._get_mcp_function_tools() + self._get_context_recall_function_tools())
+
+    def _context_recall_reranker(self) -> tuple[RerankerClient | None, float | None, int | None]:
+        """Return this agent's enabled reranker and normalized controls."""
+        runtime = self.entry.runtime_data
+        if (
+            not self.subentry.data.get(
+                CONF_CONTEXT_RECALL_RERANK,
+                DEFAULT_CONTEXT_RECALL_RERANK,
+            )
+            or not isinstance(runtime, OpenAIServiceRuntime)
+            or runtime.reranker_client is None
+        ):
+            return None, None, None
+
+        min_score_value = self.subentry.data.get(
+            CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
+            DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
+        )
+        max_candidate_tokens_value = self.subentry.data.get(
+            CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+            DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+        )
+        min_score = (
+            float(min_score_value)
+            if isinstance(min_score_value, str) and min_score_value
+            else None
+        )
+        max_candidate_tokens = (
+            int(max_candidate_tokens_value)
+            if isinstance(max_candidate_tokens_value, str)
+            and max_candidate_tokens_value
+            else None
+        )
+        return runtime.reranker_client, min_score, max_candidate_tokens
 
     async def _async_recall_embedding_memories(self, chat_log: conversation.ChatLog) -> list[EmbeddingMemoryMatch]:
         """Return relevant archived turns for the latest user input."""
@@ -1076,25 +1132,52 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             )
             if not await memory_store.async_has_memories(scope, model):
                 return []
+            query = _compaction_transcript([latest_user_content])
             response = await embedding_client.embeddings.create(
                 model=model,
-                input=_compaction_transcript([latest_user_content]),
+                input=query,
             )
             if not response.data or not response.data[0].embedding:
                 raise HomeAssistantError(
                     "The embeddings endpoint returned no recall vector"
                 )
-            return await memory_store.async_search(
+            reranker_client, min_score, max_candidate_tokens = (
+                self._context_recall_reranker()
+            )
+            result_limit = DEFAULT_EMBEDDING_RECALL_RESULTS
+            candidate_limit = (
+                int(
+                    self.subentry.data.get(
+                        CONF_CONTEXT_RECALL_MAX_RESULTS,
+                        DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+                    )
+                )
+                if reranker_client is not None
+                else result_limit
+            )
+            matches = await memory_store.async_search(
                 scope,
                 list(response.data[0].embedding),
-                DEFAULT_EMBEDDING_RECALL_RESULTS,
+                candidate_limit,
                 model,
                 excluded_turn_id=latest_user_content.created.isoformat(),
             )
+            if reranker_client is None:
+                return matches
+            try:
+                return await async_rerank_embedding_matches(
+                    reranker_client,
+                    query,
+                    matches,
+                    max_results=result_limit,
+                    min_score=min_score,
+                    max_candidate_tokens=max_candidate_tokens,
+                )
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Embedding memory reranking failed. Using embedding order")
+                return matches[:result_limit]
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception(
-                "Embedding memory retrieval failed; continuing without recalled context"
-            )
+            _LOGGER.exception("Embedding memory retrieval failed. Continuing without recalled context")
             return []
 
     @staticmethod

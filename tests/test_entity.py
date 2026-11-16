@@ -17,6 +17,10 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_RECALL_MAX_RESULTS,
+    CONF_CONTEXT_RECALL_RERANK,
+    CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
+    CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EMBEDDING_CHUNK_SIZE,
@@ -57,6 +61,8 @@ from custom_components.extended_openai_conversation.mcp_client import (
     MCPServiceConfig,
     MCPTool,
 )
+from custom_components.extended_openai_conversation.reranker import RerankerResult
+from custom_components.extended_openai_conversation.runtime import OpenAIServiceRuntime
 from homeassistant.components import conversation
 from homeassistant.helpers import llm
 
@@ -1259,6 +1265,146 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
     ]
     assert "I prefer 20 C" in request_messages[1]["content"]
     assert request_messages[2]["content"] == "Current question"
+
+
+async def test_embedding_recall_reranks_agent_candidate_pool():
+    """Automatic recall reranks the configured pool before injecting results."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    entity.subentry.data.update(
+        {
+            CONF_CONTEXT_RECALL_MAX_RESULTS: 4,
+            CONF_CONTEXT_RECALL_RERANK: True,
+            CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: "0.4",
+            CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: "100",
+        }
+    )
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    matches = [
+        EmbeddingMemoryMatch(
+            record=EmbeddingMemoryRecord(
+                record_id=f"record-{index}",
+                created_at=f"2026-01-0{index + 1}T00:00:00+00:00",
+                expires_at="2027-01-01T00:00:00+00:00",
+                model="embedding-model",
+                embedding=[1.0, 0.0],
+                searchable_text=f"memory {index}",
+                messages=[{"role": "user", "content": f"memory {index}"}],
+            ),
+            score=1.0 - index / 10,
+        )
+        for index in range(4)
+    ]
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(return_value=matches)
+    reranker_client = MagicMock()
+    reranker_client.async_rerank = AsyncMock(
+        return_value=[
+            RerankerResult(index=3, score=0.99, document="memory 3")
+        ]
+    )
+    entity.entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(),
+        embedding_client=embedding_client,
+        embedding_memory=memory_store,
+        reranker_client=reranker_client,
+    )
+
+    reranked = await entity._async_recall_embedding_memories(chat_log)
+
+    assert [match.record.record_id for match in reranked] == ["record-3"]
+    assert reranked[0].score == 0.99
+    memory_store.async_search.assert_awaited_once_with(
+        EmbeddingMemoryScope(
+            entry_id="endpoint-1",
+            agent_id="agent-1",
+            conversation_id="conversation-1",
+        ),
+        [1.0, 0.0],
+        4,
+        "embedding-model",
+        excluded_turn_id=chat_log.content[-2].created.isoformat(),
+    )
+    query = embedding_client.embeddings.create.await_args.kwargs["input"]
+    reranker_client.async_rerank.assert_awaited_once_with(
+        query,
+        ["memory 0", "memory 1", "memory 2", "memory 3"],
+        max_results=3,
+        min_score=0.4,
+        max_candidate_tokens=100,
+    )
+
+
+async def test_embedding_recall_reranker_failure_uses_embedding_order():
+    """Automatic recall retains embedding results when reranking fails."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    entity.subentry.data.update(
+        {
+            CONF_CONTEXT_RECALL_MAX_RESULTS: 4,
+            CONF_CONTEXT_RECALL_RERANK: True,
+        }
+    )
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    matches = [
+        EmbeddingMemoryMatch(
+            record=EmbeddingMemoryRecord(
+                record_id=f"record-{index}",
+                created_at=f"2026-01-0{index + 1}T00:00:00+00:00",
+                expires_at="2027-01-01T00:00:00+00:00",
+                model="embedding-model",
+                embedding=[1.0, 0.0],
+                searchable_text=f"memory {index}",
+                messages=[{"role": "user", "content": f"memory {index}"}],
+            ),
+            score=1.0 - index / 10,
+        )
+        for index in range(4)
+    ]
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(return_value=matches)
+    reranker_client = MagicMock()
+    reranker_client.async_rerank = AsyncMock(
+        side_effect=RuntimeError("reranker unavailable")
+    )
+    entity.entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(),
+        embedding_client=embedding_client,
+        embedding_memory=memory_store,
+        reranker_client=reranker_client,
+    )
+
+    recalled = await entity._async_recall_embedding_memories(chat_log)
+
+    assert [match.record.record_id for match in recalled] == [
+        "record-0",
+        "record-1",
+        "record-2",
+    ]
 
 
 async def test_embedding_recall_avoids_api_call_without_archived_history():

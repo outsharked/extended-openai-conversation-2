@@ -12,6 +12,8 @@ from aiohttp import ClientError, ClientSession
 
 from homeassistant.exceptions import HomeAssistantError
 
+from .embedding_memory import EmbeddingMemoryMatch
+
 _ESTIMATED_CHARACTERS_PER_TOKEN = 4
 
 
@@ -186,3 +188,33 @@ class RerankerClient:
 
         results.sort(key=lambda result: result.score, reverse=True)
         return results
+
+
+async def async_rerank_embedding_matches(
+    client: RerankerClient,
+    query: str,
+    matches: Sequence[EmbeddingMemoryMatch],
+    *,
+    max_results: int,
+    min_score: float | None = None,
+    max_candidate_tokens: int | None = None,
+) -> list[EmbeddingMemoryMatch]:
+    """Rerank embedding matches using their best-matching stored chunks."""
+    if not matches:
+        return []
+
+    results = await client.async_rerank(
+        query,
+        [match.matched_text or match.record.searchable_text for match in matches],
+        max_results=max_results,
+        min_score=min_score,
+        max_candidate_tokens=max_candidate_tokens,
+    )
+    return [
+        EmbeddingMemoryMatch(
+            record=matches[result.index].record,
+            score=result.score,
+            matched_text=matches[result.index].matched_text,
+        )
+        for result in results
+    ]

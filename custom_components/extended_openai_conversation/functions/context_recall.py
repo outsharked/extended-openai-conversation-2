@@ -15,13 +15,15 @@ from homeassistant.helpers import llm
 from ..const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
+    DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_RERANK,
     DEFAULT_CONTEXT_RECALL_RESULTS,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-    MAX_CONTEXT_RECALL_RESULTS,
 )
 from ..embedding_memory import EmbeddingMemoryMatch, EmbeddingMemoryScope
 from ..recall_snapshot import RecallSnapshotScope, RecallSnapshotStore
+from ..reranker import async_rerank_embedding_matches
 from ..runtime import OpenAIServiceRuntime
 from .base import Function
 
@@ -29,9 +31,33 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def build_context_recall_function_tool(
-    entry_id: str, agent_id: str, max_tokens: int, snapshot_ttl_turns: int
+    entry_id: str,
+    agent_id: str,
+    max_tokens: int,
+    snapshot_ttl_turns: int,
+    max_results: int = DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+    *,
+    rerank: bool = DEFAULT_CONTEXT_RECALL_RERANK,
+    rerank_min_score: float | None = None,
+    rerank_max_candidate_tokens: int | None = None,
 ) -> dict[str, Any]:
     """Build the model-facing conversation recall tool."""
+    default_results = min(DEFAULT_CONTEXT_RECALL_RESULTS, max_results)
+    function_config: dict[str, Any] = {
+        "type": "context_recall",
+        "entry_id": entry_id,
+        "agent_id": agent_id,
+        "max_tokens": max_tokens,
+        "max_results": max_results,
+        "snapshot_ttl_turns": snapshot_ttl_turns,
+        "rerank": rerank,
+    }
+    if rerank_min_score is not None:
+        function_config["rerank_min_score"] = rerank_min_score
+    if rerank_max_candidate_tokens is not None:
+        function_config["rerank_max_candidate_tokens"] = (
+            rerank_max_candidate_tokens
+        )
     return {
         "spec": {
             "name": "context_recall",
@@ -60,23 +86,18 @@ def build_context_recall_function_tool(
                     "max_results": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": MAX_CONTEXT_RECALL_RESULTS,
+                        "maximum": max_results,
                         "description": (
-                            "Maximum historical turns to return, from 1 through 20. "
-                            "Defaults to 5."
+                            "Maximum historical turns to return, from 1 through "
+                            f"{max_results}. Defaults to {default_results}."
                         ),
+                        "default": default_results,
                     },
                 },
                 "required": ["query"],
             },
         },
-        "function": {
-            "type": "context_recall",
-            "entry_id": entry_id,
-            "agent_id": agent_id,
-            "max_tokens": max_tokens,
-            "snapshot_ttl_turns": snapshot_ttl_turns,
-        },
+        "function": function_config,
     }
 
 
@@ -343,9 +364,19 @@ class ContextRecallFunction(Function):
                         "max_tokens", default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS
                     ): vol.All(int, vol.Range(min=1)),
                     vol.Optional(
+                        "max_results", default=DEFAULT_CONTEXT_RECALL_MAX_RESULTS
+                    ): vol.All(int, vol.Range(min=1)),
+                    vol.Optional(
                         "snapshot_ttl_turns",
                         default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     ): vol.All(int, vol.Range(min=1)),
+                    vol.Optional(
+                        "rerank", default=DEFAULT_CONTEXT_RECALL_RERANK
+                    ): bool,
+                    vol.Optional("rerank_min_score"): float,
+                    vol.Optional("rerank_max_candidate_tokens"): vol.All(
+                        int, vol.Range(min=1)
+                    ),
                 }
             )
         )
@@ -372,17 +403,20 @@ class ContextRecallFunction(Function):
         max_tokens = function_config.get(
             "max_tokens", DEFAULT_CONTEXT_RECALL_MAX_TOKENS
         )
+        max_results_cap = function_config.get(
+            "max_results", DEFAULT_CONTEXT_RECALL_MAX_RESULTS
+        )
         snapshot_ttl_turns = function_config.get(
             "snapshot_ttl_turns", DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
         )
         if (
             not isinstance(max_results, int)
             or isinstance(max_results, bool)
-            or not 1 <= max_results <= MAX_CONTEXT_RECALL_RESULTS
+            or not 1 <= max_results <= max_results_cap
         ):
             return _error(
                 "invalid_max_results",
-                "max_results must be an integer from 1 through 20",
+                f"max_results must be an integer from 1 through {max_results_cap}",
             )
 
         entry = hass.config_entries.async_get_entry(function_config["entry_id"])
@@ -417,15 +451,36 @@ class ContextRecallFunction(Function):
                     "recall_failed",
                     "The embeddings endpoint returned no recall vector",
                 )
+            rerank = bool(function_config.get("rerank", False))
+            reranker_client = runtime.reranker_client if rerank else None
+            candidate_limit = max_results_cap if reranker_client is not None else max_results
             matches = await runtime.embedding_memory.async_search(
                 scope,
                 list(response.data[0].embedding),
-                max_results,
+                candidate_limit,
                 model,
             )
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Context recall failed")
             return _error("recall_failed", "Conversation recall failed")
+
+        if reranker_client is not None:
+            try:
+                matches = await async_rerank_embedding_matches(
+                    reranker_client,
+                    query,
+                    matches,
+                    max_results=max_results,
+                    min_score=function_config.get("rerank_min_score"),
+                    max_candidate_tokens=function_config.get(
+                        "rerank_max_candidate_tokens"
+                    ),
+                )
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception(
+                    "Context recall reranking failed; using embedding order"
+                )
+                matches = matches[:max_results]
 
         return build_paginated_recall_result(
             matches,

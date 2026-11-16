@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
+    DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
 )
 from custom_components.extended_openai_conversation.embedding_memory import (
     EmbeddingMemoryMatch,
@@ -24,6 +25,7 @@ from custom_components.extended_openai_conversation.recall_snapshot import (
     RecallSnapshotScope,
     RecallSnapshotStore,
 )
+from custom_components.extended_openai_conversation.reranker import RerankerResult
 from custom_components.extended_openai_conversation.runtime import OpenAIServiceRuntime
 
 
@@ -57,7 +59,16 @@ def test_context_recall_tool_keeps_scope_out_of_model_arguments():
         "entry_id": "endpoint-1",
         "agent_id": "agent-1",
         "max_tokens": 4000,
+        "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
         "snapshot_ttl_turns": 3,
+        "rerank": False,
+    }
+    assert tool["spec"]["parameters"]["properties"]["max_results"] == {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        "description": "Maximum historical turns to return, from 1 through 20. Defaults to 5.",
+        "default": 5,
     }
 
 
@@ -158,6 +169,151 @@ async def test_context_recall_returns_original_messages_chronologically(hass):
         "current_page": 1,
         "total_pages": 1,
     }
+
+
+async def test_context_recall_reranks_configured_candidate_pool(hass):
+    """Manual recall reranks the configured pool before applying its requested limit."""
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    matches = [
+        EmbeddingMemoryMatch(
+            _record(
+                f"record-{index}",
+                f"2026-01-0{index + 1}T00:00:00+00:00",
+                text,
+            ),
+            score,
+        )
+        for index, (text, score) in enumerate(
+            (("first", 0.9), ("second", 0.8), ("best after reranking", 0.7))
+        )
+    ]
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(return_value=matches)
+    reranker_client = MagicMock()
+    reranker_client.async_rerank = AsyncMock(
+        return_value=[
+            RerankerResult(
+                index=2,
+                score=0.99,
+                document="best after reranking",
+            )
+        ]
+    )
+    entry = MagicMock()
+    entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(),
+        embedding_client=embedding_client,
+        embedding_memory=memory_store,
+        reranker_client=reranker_client,
+    )
+    hass.config_entries.async_get_entry.return_value = entry
+
+    result = await ContextRecallFunction().execute(
+        hass,
+        {
+            "type": "context_recall",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+            "conversation_id": "conversation-1",
+            "max_results": 10,
+            "rerank": True,
+            "rerank_min_score": 0.5,
+            "rerank_max_candidate_tokens": 100,
+        },
+        {"query": "earlier details", "max_results": 1},
+        None,
+        [],
+    )
+
+    memory_store.async_search.assert_awaited_once_with(
+        EmbeddingMemoryScope(
+            entry_id="endpoint-1",
+            agent_id="agent-1",
+            conversation_id="conversation-1",
+        ),
+        [1.0, 0.0],
+        10,
+        "embedding-model",
+    )
+    reranker_client.async_rerank.assert_awaited_once_with(
+        "earlier details",
+        ["first", "second", "best after reranking"],
+        max_results=1,
+        min_score=0.5,
+        max_candidate_tokens=100,
+    )
+    assert result["matches_returned"] == 1
+    assert result["memories"][0]["record_id"] == "record-2"
+    assert result["memories"][0]["relevance"] == 0.99
+
+
+async def test_context_recall_reranker_failure_uses_embedding_order(hass):
+    """A reranker outage falls back to the requested embedding-ranked results."""
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
+        )
+    )
+    matches = [
+        EmbeddingMemoryMatch(
+            _record(
+                f"record-{index}",
+                f"2026-01-0{index + 1}T00:00:00+00:00",
+                f"memory {index}",
+            ),
+            1.0 - index / 10,
+        )
+        for index in range(3)
+    ]
+    memory_store = MagicMock()
+    memory_store.async_has_memories = AsyncMock(return_value=True)
+    memory_store.async_search = AsyncMock(return_value=matches)
+    reranker_client = MagicMock()
+    reranker_client.async_rerank = AsyncMock(
+        side_effect=RuntimeError("reranker unavailable")
+    )
+    entry = MagicMock()
+    entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(),
+        embedding_client=embedding_client,
+        embedding_memory=memory_store,
+        reranker_client=reranker_client,
+    )
+    hass.config_entries.async_get_entry.return_value = entry
+
+    result = await ContextRecallFunction().execute(
+        hass,
+        {
+            "type": "context_recall",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+            "conversation_id": "conversation-1",
+            "max_results": 10,
+            "rerank": True,
+        },
+        {"query": "earlier details", "max_results": 2},
+        None,
+        [],
+    )
+
+    assert result["matches_returned"] == 2
+    assert [memory["record_id"] for memory in result["memories"]] == [
+        "record-0",
+        "record-1",
+    ]
 
 
 def test_context_recall_bounds_oversized_results():
