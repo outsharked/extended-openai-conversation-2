@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "Punkt końcowy osadzania nie zwrócił prawidłowego osadzenia.",
+            "invalid_reranker": "Punkt końcowy ponownego rankingu nie zwrócił prawidłowych wyników.",
             "invalid_embedding_history_retention": "Wprowadź dodatnią liczbę całkowitą z m, h lub d. Brak przyrostka oznacza dni.",
             "invalid_context_compaction_target": "Maksymalny rozmiar kontekstu po kompaktowaniu. Musi pozostawić w limicie kontekstu wystarczająco dużo miejsca na skonfigurowaną maksymalną odpowiedź.",
             "cannot_connect": "Nie udało się połączyć",
@@ -24,11 +25,26 @@
                     "clear_embedding_history": "Ta czynność nie jest zapisywana jako ustawienie. Po jej wybraniu cała historia rozmów oparta na osadzeniach dla tego punktu końcowego zostanie usunięta podczas zapisu."
                 }
             },
+            "reranker_endpoint": {
+                "title": "Skonfiguruj punkt końcowy ponownego rankingu",
+                "description": "Skonfiguruj opcjonalny punkt końcowy ponownego rankingu. Wprowadź pełny adres URL żądania; żadna ścieżka nie jest dodawana. Rzeczywiste żądanie sprawdza dane uwierzytelniające, adres URL i model.",
+                "data": {
+                    "api_key": "Klucz API",
+                    "reranker_url": "Adres URL punktu ponownego rankingu",
+                    "reranker_model": "Model ponownego rankingu"
+                }
+            },
             "service_menu_embeddings": {
                 "description": "Połączenie osadzania powiodło się: {status}"
             },
             "service_menu_embeddings_error": {
                 "description": "**Błąd osadzania: {error}**"
+            },
+            "service_menu_reranker": {
+                "description": "Połączenie ponownego rankingu powiodło się: {status}"
+            },
+            "service_menu_reranker_error": {
+                "description": "**Błąd ponownego rankingu: {error}**"
             },
             "mcp_default_prompt": {
                 "description": "Użyj dyspozytora MCP: list_servers służy do znajdowania dostępnych serwerów, list_tools do odkrywania narzędzi, get_tool_details do pobierania wszystkich dostępnych szczegółów narzędzia, a execute_tool do jego uruchamiania. get_tool_details zwraca schemat wejściowy oraz tytuł, opis, schemat wyjściowy, adnotacje MCP i stan obsługi zadań, jeśli serwer je udostępnia; niedostępne szczegóły są pomijane. Użyj wartości server_id i nazwy narzędzia podanych w tym kontekście lub zwróconych przez wyszukiwanie. Narzędzi już opisanych w tym kontekście nie trzeba ponownie odkrywać i nie pojawią się one w wynikach wykrywania."

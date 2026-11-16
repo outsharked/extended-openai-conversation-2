@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "A beágyazási végpont nem adott vissza érvényes beágyazást.",
+            "invalid_reranker": "Az újrarangsoroló végpont nem adott vissza érvényes eredményeket.",
             "invalid_embedding_history_retention": "Adjon meg pozitív egész számot m, h vagy d utótaggal. Utótag nélkül napokat használunk.",
             "invalid_context_compaction_target": "A kontextus maximális mérete a tömörítés után. A kontextusküszöbön belül elegendő helyet kell hagynia a beállított maximális válasz számára.",
             "cannot_connect": "Nem sikerült csatlakozni",
@@ -24,11 +25,26 @@
                     "clear_embedding_history": "Ez a művelet nem kerül beállításként mentésre. Kiválasztásakor a mentés eltávolítja a végponthoz tartozó összes beágyazásalapú beszélgetési előzményt."
                 }
             },
+            "reranker_endpoint": {
+                "title": "Újrarangsoroló végpont beállítása",
+                "description": "Állítson be egy opcionális újrarangsoroló végpontot. Adja meg a teljes kérési URL-t; a rendszer nem fűz hozzá elérési utat. Egy valódi kérés ellenőrzi a hitelesítő adatokat, az URL-t és a modellt.",
+                "data": {
+                    "api_key": "API-kulcs",
+                    "reranker_url": "Újrarangsoroló végpont URL-je",
+                    "reranker_model": "Újrarangsoroló modell"
+                }
+            },
             "service_menu_embeddings": {
                 "description": "A beágyazási kapcsolat sikeres: {status}"
             },
             "service_menu_embeddings_error": {
                 "description": "**Beágyazási hiba: {error}**"
+            },
+            "service_menu_reranker": {
+                "description": "Az újrarangsoroló kapcsolat sikeres: {status}"
+            },
+            "service_menu_reranker_error": {
+                "description": "**Újrarangsorolási hiba: {error}**"
             },
             "mcp_default_prompt": {
                 "description": "Az MCP-diszpécserben a list_servers művelettel keresd meg az elérhető kiszolgálókat, a list_tools művelettel fedezd fel az eszközöket, a get_tool_details művelettel kérd le egy eszköz összes elérhető adatát, az execute_tool művelettel pedig futtasd azt. A get_tool_details visszaadja a bemeneti sémát, valamint a kiszolgáló által megadott címet, leírást, kimeneti sémát, MCP-megjegyzéseket és feladattámogatási állapotot; a nem elérhető adatok kimaradnak. Használd az ebben a kontextusban megadott vagy a felderítés által visszaadott server_id értéket és eszköznevet. Az ebben a kontextusban már leírt eszközöket nem kell újra felderíteni, és nem jelennek meg a felderítési eredményekben."

@@ -30,6 +30,7 @@
             "mcp_discovery_required": "Discover the MCP server before selecting permanent tools.",
             "invalid_url": "Enter a valid HTTP or HTTPS URL.",
             "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
+            "invalid_reranker": "The reranker endpoint did not return valid results.",
             "invalid_embedding_history_retention": "Enter a positive whole number followed by m, h, or d. A value without a suffix uses days.",
             "invalid_context_compaction_target": "Maximum context size after compaction. This must leave enough room within the context threshold for the configured maximum response.",
             "unknown": "Unexpected error"
@@ -65,6 +66,7 @@
                 "menu_options": {
                     "ai_endpoint": "Configure AI Endpoint",
                     "embeddings_endpoint": "Configure Embeddings Endpoint",
+                    "reranker_endpoint": "Configure Reranker Endpoint",
                     "mcp": "Configure MCP Server",
                     "mcp_authenticate": "OAuth Settings",
                     "mcp_filter_tools": "Filter Tools",
@@ -84,11 +86,17 @@
             "service_menu_embeddings": {
                 "description": "Embeddings connection succeeded: {status}"
             },
+            "service_menu_reranker": {
+                "description": "Reranker connection succeeded: {status}"
+            },
             "service_menu_error": {
                 "description": "**Last error: {error}**"
             },
             "service_menu_embeddings_error": {
                 "description": "**Embeddings error: {error}**"
+            },
+            "service_menu_reranker_error": {
+                "description": "**Reranker error: {error}**"
             },
             "ai_endpoint": {
                 "title": "Add AI endpoint",
@@ -119,6 +127,15 @@
                 "data_description": {
                     "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input. Choose a value below the embedding model's context limit because token counts vary by model.",
                     "clear_embedding_history": "This action is never saved as a setting. When selected, all embedding-backed conversation history for this endpoint will be removed when the service configuration is saved."
+                }
+            },
+            "reranker_endpoint": {
+                "title": "Configure reranker endpoint",
+                "description": "Configure an optional reranker endpoint. Enter the complete request URL; no path is appended. A real reranking request validates the credentials, URL, and model.",
+                "data": {
+                    "api_key": "API Key",
+                    "reranker_url": "Reranker endpoint URL",
+                    "reranker_model": "Reranker model"
                 }
             },
             "mcp": {

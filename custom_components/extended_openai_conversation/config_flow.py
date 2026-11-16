@@ -9,7 +9,9 @@ from dataclasses import replace
 import logging
 import types
 from typing import Any, override
+from urllib.parse import urlparse
 
+from aiohttp import ClientError
 import httpx2 as httpx
 from openai._exceptions import APIConnectionError, APIStatusError, AuthenticationError
 import probatio as vol
@@ -41,6 +43,7 @@ from homeassistant.exceptions import (
     HomeAssistantError,
     UnknownImplementationError,
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.config_entry_oauth2_flow import (
     AbstractOAuth2FlowHandler,
     async_get_config_entry_implementation,
@@ -99,6 +102,9 @@ from .const import (
     CONF_ORGANIZATION,
     CONF_PROMPT,
     CONF_REASONING_EFFORT,
+    CONF_RERANKER,
+    CONF_RERANKER_MODEL,
+    CONF_RERANKER_URL,
     CONF_SERVICE_TIER,
     CONF_SERVICE_TYPE,
     CONF_SHORTEN_TOOL_CALL_ID,
@@ -369,6 +375,14 @@ STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA = vol.Schema(
     }
 )
 
+STEP_RERANKER_ENDPOINT_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_API_KEY): str,
+        vol.Required(CONF_RERANKER_URL): str,
+        vol.Required(CONF_RERANKER_MODEL): str,
+    }
+)
+
 DEFAULT_CONF_FUNCTION_TOOLS_STR = yaml.dump(
     DEFAULT_CONF_FUNCTION_TOOLS, sort_keys=False
 )
@@ -557,6 +571,75 @@ async def validate_embeddings_input(
         raise HomeAssistantError("The embeddings endpoint returned no vector.")
 
 
+class _RerankerAuthenticationError(HomeAssistantError):
+    """Raised when the reranker rejects its credentials."""
+
+
+class _RerankerConnectionError(HomeAssistantError):
+    """Raised when the reranker endpoint cannot be reached."""
+
+
+async def validate_reranker_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
+    """Validate a reranker endpoint with a real reranking request."""
+    endpoint_url = data[CONF_RERANKER_URL].strip()
+    parsed_url = urlparse(endpoint_url)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        raise HomeAssistantError("A valid reranker endpoint URL is required.")
+    data[CONF_RERANKER_URL] = endpoint_url
+
+    model = data[CONF_RERANKER_MODEL].strip()
+    if not model:
+        raise HomeAssistantError("A reranker model is required.")
+    data[CONF_RERANKER_MODEL] = model
+
+    try:
+        async with async_get_clientsession(hass).post(
+            endpoint_url,
+            headers={"Authorization": f"Bearer {data[CONF_API_KEY]}"},
+            json={
+                "model": model,
+                "query": "EOAIC2 reranker connection test",
+                "documents": [
+                    "Unrelated content",
+                    "EOAIC2 reranker connection test",
+                ],
+                "top_n": 2,
+            },
+        ) as response:
+            if response.status in {401, 403}:
+                raise _RerankerAuthenticationError(
+                    "The reranker endpoint rejected the credentials."
+                )
+            if response.status == 404 or response.status >= 500:
+                raise _RerankerConnectionError(
+                    f"The reranker endpoint returned HTTP {response.status}."
+                )
+            if response.status >= 400:
+                raise HomeAssistantError(
+                    f"The reranker endpoint rejected the validation request "
+                    f"with HTTP {response.status}."
+                )
+            try:
+                result = await response.json(content_type=None)
+            except ValueError as err:
+                raise HomeAssistantError(
+                    "The reranker endpoint returned invalid JSON."
+                ) from err
+    except (_RerankerAuthenticationError, _RerankerConnectionError):
+        raise
+    except (ClientError, TimeoutError) as err:
+        raise _RerankerConnectionError(
+            "Unable to connect to the reranker endpoint."
+        ) from err
+
+    if (
+        not isinstance(result, Mapping)
+        or not isinstance(result.get("results"), list)
+        or not result["results"]
+    ):
+        raise HomeAssistantError("The reranker endpoint returned no results.")
+
+
 class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
     """Handle a config flow for OpenAI Conversation."""
 
@@ -590,6 +673,10 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         self._embeddings_endpoint_draft: dict[str, Any] | None = None
         self._embeddings_connection_status: bool | None = None
         self._embeddings_error_reason: str | None = None
+        self._reranker_endpoint_data: dict[str, Any] | None = None
+        self._reranker_endpoint_draft: dict[str, Any] | None = None
+        self._reranker_connection_status: bool | None = None
+        self._reranker_error_reason: str | None = None
         self._clear_embedding_history_requested = False
         self._reconfigure_entry: ConfigEntry | None = None
 
@@ -629,6 +716,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             options.append("ai_endpoint")
             if self._ai_endpoint_data is not None:
                 options.append("embeddings_endpoint")
+            if self._embeddings_endpoint_data is not None:
+                options.append("reranker_endpoint")
 
         service_configuration = self._service_configuration()
 
@@ -654,6 +743,9 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             embeddings_status=(
                 self._embeddings_connection_status if not is_mcp else None
             ),
+            reranker_status=(
+                self._reranker_connection_status if not is_mcp else None
+            ),
         )
 
         return self.async_show_menu(
@@ -670,6 +762,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         oauth_status: bool | None,
         filters_status: bool | None,
         embeddings_status: bool | None = None,
+        reranker_status: bool | None = None,
     ) -> str:
         """Build only the localized status rows relevant to this service."""
         translations = await async_get_translations(
@@ -694,6 +787,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             lines.append(status_line("filters", filters_status))
         if embeddings_status is not None:
             lines.append(status_line("embeddings", embeddings_status))
+        if reranker_status is not None:
+            lines.append(status_line("reranker", reranker_status))
         error_reason = self._mcp_error_reason if is_mcp else self._ai_error_reason
         if error_reason is not None:
             error_key = f"component.{DOMAIN}.config.error.{error_reason}"
@@ -702,6 +797,19 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 f"component.{DOMAIN}.config.step.service_menu_error.description"
             )
             error_template = translations.get(translation_key, "**{error}**")
+            lines.append(error_template.format(error=error))
+        if not is_mcp and self._reranker_error_reason is not None:
+            error_key = (
+                f"component.{DOMAIN}.config.error.{self._reranker_error_reason}"
+            )
+            error = translations.get(error_key, self._reranker_error_reason)
+            translation_key = (
+                f"component.{DOMAIN}.config.step."
+                "service_menu_reranker_error.description"
+            )
+            error_template = translations.get(
+                translation_key, "**Reranker error: {error}**"
+            )
             lines.append(error_template.format(error=error))
         if not is_mcp and self._embeddings_error_reason is not None:
             error_key = (
@@ -800,6 +908,45 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         )
         return self.async_show_form(
             step_id="embeddings_endpoint",
+            data_schema=schema,
+        )
+
+    async def async_step_reranker_endpoint(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Configure and validate the optional reranker endpoint."""
+        if self._embeddings_endpoint_data is None:
+            return await self.async_step_service_menu()
+
+        if user_input is not None:
+            submitted_data = dict(user_input)
+            self._reranker_endpoint_draft = dict(submitted_data)
+            error_reason: str | None = None
+            try:
+                await validate_reranker_input(self.hass, submitted_data)
+            except _RerankerAuthenticationError:
+                error_reason = "invalid_auth"
+            except _RerankerConnectionError:
+                error_reason = "cannot_connect"
+            except HomeAssistantError:
+                error_reason = "invalid_reranker"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception validating reranker")
+                error_reason = "unknown"
+
+            self._reranker_connection_status = error_reason is None
+            self._reranker_error_reason = error_reason
+            if error_reason is None:
+                self._reranker_endpoint_data = dict(submitted_data)
+                self._reranker_endpoint_draft = None
+            return await self.async_step_service_menu()
+
+        schema = self.add_suggested_values_to_schema(
+            STEP_RERANKER_ENDPOINT_DATA_SCHEMA,
+            self._reranker_endpoint_draft
+            or self._reranker_endpoint_data
+            or {},
+        )
+        return self.async_show_form(
+            step_id="reranker_endpoint",
             data_schema=schema,
         )
 
@@ -1719,9 +1866,12 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         else:
             ai_endpoint_data = {**entry.data, CONF_NAME: entry.title}
             embeddings_data = ai_endpoint_data.pop(CONF_EMBEDDINGS, None)
+            reranker_data = ai_endpoint_data.pop(CONF_RERANKER, None)
             self._ai_endpoint_data = ai_endpoint_data
             if isinstance(embeddings_data, Mapping):
                 self._embeddings_endpoint_data = dict(embeddings_data)
+            if isinstance(reranker_data, Mapping):
+                self._reranker_endpoint_data = dict(reranker_data)
             try:
                 await validate_input(self.hass, dict(self._ai_endpoint_data))
             except AuthenticationError:
@@ -1756,6 +1906,24 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 else:
                     self._embeddings_connection_status = True
                     self._embeddings_error_reason = None
+            if self._reranker_endpoint_data is not None:
+                try:
+                    await validate_reranker_input(self.hass, dict(self._reranker_endpoint_data))
+                except _RerankerAuthenticationError:
+                    self._reranker_connection_status = False
+                    self._reranker_error_reason = "invalid_auth"
+                except _RerankerConnectionError:
+                    self._reranker_connection_status = False
+                    self._reranker_error_reason = "cannot_connect"
+                except HomeAssistantError:
+                    self._reranker_connection_status = False
+                    self._reranker_error_reason = "invalid_reranker"
+                except Exception:  # pylint: disable=broad-except
+                    self._reranker_connection_status = False
+                    self._reranker_error_reason = "unknown"
+                else:
+                    self._reranker_connection_status = True
+                    self._reranker_error_reason = None
         if (
             self._selected_service_type == SERVICE_TYPE_MCP
             and self._mcp_config is not None
@@ -1779,6 +1947,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             data = dict(self._ai_endpoint_data)
             if self._embeddings_endpoint_data is not None:
                 data[CONF_EMBEDDINGS] = dict(self._embeddings_endpoint_data)
+            if self._reranker_endpoint_data is not None:
+                data[CONF_RERANKER] = dict(self._reranker_endpoint_data)
             return data
         service_config = self._mcp_service_config
         if service_config is None:

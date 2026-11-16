@@ -30,8 +30,10 @@ from custom_components.extended_openai_conversation.config_flow import (
     ExtendedOpenAISubentryFlowHandler,
     _mcp_failure_reason,
     _mcp_server_options,
+    _RerankerConnectionError,
     validate_embeddings_input,
     validate_input,
+    validate_reranker_input,
 )
 from custom_components.extended_openai_conversation.const import (
     CONF_API_PROVIDER,
@@ -61,6 +63,9 @@ from custom_components.extended_openai_conversation.const import (
     CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
     CONF_MCP_SERVERS,
     CONF_PROMPT,
+    CONF_RERANKER,
+    CONF_RERANKER_MODEL,
+    CONF_RERANKER_URL,
     CONF_SERVICE_TYPE,
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
@@ -455,6 +460,30 @@ async def test_ai_endpoint_menu_offers_optional_embeddings_and_save(hass):
     ]
 
 
+async def test_ai_endpoint_menu_offers_reranker_after_embeddings(hass):
+    """A reranker can only be configured after an embeddings endpoint."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
+    flow._ai_endpoint_data = {
+        CONF_API_KEY: "chat-key",
+        CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+    }
+    flow._embeddings_endpoint_data = {
+        CONF_API_KEY: "embedding-key",
+        CONF_EMBEDDINGS_MODEL: "embed-model",
+    }
+    flow.async_show_menu = MagicMock(return_value={"type": "menu"})
+
+    await flow.async_step_service_menu()
+
+    assert flow.async_show_menu.call_args.kwargs["menu_options"] == [
+        "ai_endpoint",
+        "embeddings_endpoint",
+        "reranker_endpoint",
+        "service_save",
+    ]
+
+
 async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
     """A validated embeddings endpoint is nested in the AI service config."""
     flow = _config_flow(hass)
@@ -495,6 +524,77 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
     assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
         CONF_EMBEDDINGS
     ]
+
+
+async def test_reranker_endpoint_validates_and_is_saved_nested(hass):
+    """A validated reranker endpoint is nested in the AI service config."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
+    flow._ai_endpoint_data = {
+        CONF_API_KEY: "chat-key",
+        CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+    }
+    flow._embeddings_endpoint_data = {
+        CONF_API_KEY: "embedding-key",
+        CONF_EMBEDDINGS_MODEL: "embed-model",
+    }
+    flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
+    reranker_input = {
+        CONF_API_KEY: "reranker-key",
+        CONF_RERANKER_URL: "https://reranker.example.com/v2/rerank",
+        CONF_RERANKER_MODEL: "reranker-model",
+    }
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "validate_reranker_input",
+        new=AsyncMock(),
+    ):
+        result = await flow.async_step_reranker_endpoint(reranker_input)
+
+    assert result == {"type": "menu"}
+    assert flow._reranker_connection_status is True
+    assert flow._service_configuration()[CONF_RERANKER] == reranker_input
+
+
+async def test_reranker_failure_preserves_last_known_good_config(hass):
+    """A failed reranker edit retains the previously validated endpoint."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_AI_ENDPOINT
+    flow._embeddings_endpoint_data = {
+        CONF_API_KEY: "embedding-key",
+        CONF_EMBEDDINGS_MODEL: "embed-model",
+    }
+    known_good = {
+        CONF_API_KEY: "old-key",
+        CONF_RERANKER_MODEL: "old-model",
+    }
+    flow._reranker_endpoint_data = dict(known_good)
+    flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "validate_reranker_input",
+        new=AsyncMock(
+            side_effect=_RerankerConnectionError("connection failed")
+        ),
+    ):
+        await flow.async_step_reranker_endpoint(
+            {
+                CONF_API_KEY: "new-key",
+                CONF_RERANKER_URL: "https://missing.example.com/custom/rerank",
+                CONF_RERANKER_MODEL: "new-model",
+            }
+        )
+
+    assert flow._reranker_endpoint_data == known_good
+    assert flow._reranker_connection_status is False
+    assert flow._reranker_error_reason == "cannot_connect"
+    assert flow._reranker_endpoint_draft == {
+        CONF_API_KEY: "new-key",
+        CONF_RERANKER_URL: "https://missing.example.com/custom/rerank",
+        CONF_RERANKER_MODEL: "new-model",
+    }
 
 
 async def test_reconfigure_save_performs_requested_embedding_history_wipe(hass):
@@ -612,6 +712,11 @@ async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
             CONF_API_KEY: "embedding-key",
             CONF_EMBEDDINGS_MODEL: "embed-model",
         },
+        CONF_RERANKER: {
+            CONF_API_KEY: "reranker-key",
+            CONF_RERANKER_URL: "https://reranker.example.com/v2/rerank",
+            CONF_RERANKER_MODEL: "reranker-model",
+        },
     }
     flow._get_reconfigure_entry = MagicMock(return_value=entry)
     flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
@@ -627,17 +732,25 @@ async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
             "validate_embeddings_input",
             new=AsyncMock(),
         ) as validate_embeddings,
+        patch(
+            "custom_components.extended_openai_conversation.config_flow."
+            "validate_reranker_input",
+            new=AsyncMock(),
+        ) as validate_reranker,
     ):
         result = await flow.async_step_reconfigure()
 
     assert result == {"type": "menu"}
     assert CONF_EMBEDDINGS not in flow._ai_endpoint_data
     assert flow._embeddings_endpoint_data == entry.data[CONF_EMBEDDINGS]
+    assert flow._reranker_endpoint_data == entry.data[CONF_RERANKER]
     validate_chat.assert_awaited_once_with(hass, flow._ai_endpoint_data)
     validate_embeddings.assert_awaited_once_with(
         hass, entry.data[CONF_EMBEDDINGS]
     )
+    validate_reranker.assert_awaited_once_with(hass, entry.data[CONF_RERANKER])
     assert flow._embeddings_connection_status is True
+    assert flow._reranker_connection_status is True
 
 
 async def test_service_menu_status_lines_only_include_relevant_rows(hass):
@@ -1887,6 +2000,50 @@ async def test_validate_embeddings_input_rejects_empty_vector(hass):
                 CONF_EMBEDDINGS_MODEL: DEFAULT_EMBEDDINGS_MODEL,
             },
         )
+
+
+async def test_validate_reranker_input_makes_real_rerank_request(hass):
+    """Reranker validation posts to the complete configured endpoint URL."""
+    data = {
+        CONF_API_KEY: "reranker-key",
+        CONF_RERANKER_URL: "  https://reranker.example.com/custom/rerank  ",
+        CONF_RERANKER_MODEL: "  reranker-model  ",
+    }
+
+    response = MagicMock(status=200)
+    response.json = AsyncMock(
+        return_value={"results": [{"index": 1, "relevance_score": 0.9}]}
+    )
+    request_context = MagicMock()
+    request_context.__aenter__ = AsyncMock(return_value=response)
+    request_context.__aexit__ = AsyncMock(return_value=None)
+    session = MagicMock()
+    session.post.return_value = request_context
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow."
+        "async_get_clientsession",
+        return_value=session,
+    ):
+        await validate_reranker_input(hass, data)
+
+    session.post.assert_called_once_with(
+        "https://reranker.example.com/custom/rerank",
+        headers={"Authorization": "Bearer reranker-key"},
+        json={
+            "model": "reranker-model",
+            "query": "EOAIC2 reranker connection test",
+            "documents": [
+                "Unrelated content",
+                "EOAIC2 reranker connection test",
+            ],
+            "top_n": 2,
+        },
+    )
+    assert data[CONF_RERANKER_URL] == (
+        "https://reranker.example.com/custom/rerank"
+    )
+    assert data[CONF_RERANKER_MODEL] == "reranker-model"
 
 
 async def test_validate_input_probes_connection_when_authentication_is_skipped(hass):

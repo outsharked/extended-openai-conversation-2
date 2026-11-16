@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "Het embeddings-eindpunt heeft geen geldige embedding teruggegeven.",
+            "invalid_reranker": "Het reranker-eindpunt heeft geen geldige resultaten teruggegeven.",
             "invalid_embedding_history_retention": "Voer een positief geheel getal in gevolgd door m, h of d. Zonder achtervoegsel worden dagen gebruikt.",
             "invalid_context_compaction_target": "Maximale contextgrootte na compactie. Dit moet binnen de contextdrempel voldoende ruimte overlaten voor het ingestelde maximale antwoord.",
             "cannot_connect": "Verbinden mislukt",
@@ -24,11 +25,26 @@
                     "clear_embedding_history": "Deze actie wordt nooit als instelling opgeslagen. Wanneer geselecteerd, wordt alle embeddinggebaseerde gespreksgeschiedenis voor dit eindpunt bij het opslaan verwijderd."
                 }
             },
+            "reranker_endpoint": {
+                "title": "Reranker-eindpunt configureren",
+                "description": "Configureer een optioneel reranker-eindpunt. Voer de volledige aanvraag-URL in; er wordt geen pad toegevoegd. Een echt rerankverzoek controleert de referenties, URL en het model.",
+                "data": {
+                    "api_key": "API-sleutel",
+                    "reranker_url": "URL van reranker-eindpunt",
+                    "reranker_model": "Reranker-model"
+                }
+            },
             "service_menu_embeddings": {
                 "description": "Verbinding met embeddings geslaagd: {status}"
             },
             "service_menu_embeddings_error": {
                 "description": "**Embeddingsfout: {error}**"
+            },
+            "service_menu_reranker": {
+                "description": "Verbinding met reranker geslaagd: {status}"
+            },
+            "service_menu_reranker_error": {
+                "description": "**Reranker-fout: {error}**"
             },
             "mcp_default_prompt": {
                 "description": "Gebruik de MCP-dispatcher met list_servers om beschikbare servers te vinden, list_tools om hulpmiddelen te ontdekken, get_tool_details om alle beschikbare details van een hulpmiddel op te halen en execute_tool om het uit te voeren. get_tool_details retourneert het invoerschema en alle door de server verstrekte titels, beschrijvingen, uitvoerschema's, MCP-annotaties en taakondersteuningsstatus; niet-beschikbare details worden weggelaten. Gebruik de server_id en hulpmiddelnaam uit deze context of uit de zoekresultaten. Hulpmiddelen die al in deze context zijn beschreven, hoeven niet opnieuw te worden ontdekt en verschijnen niet in de zoekresultaten."

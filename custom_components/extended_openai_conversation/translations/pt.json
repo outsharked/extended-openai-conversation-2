@@ -2,6 +2,7 @@
     "config": {
         "error": {
             "invalid_embeddings": "O endpoint de embeddings não devolveu um embedding válido.",
+            "invalid_reranker": "O endpoint de reordenação não devolveu resultados válidos.",
             "invalid_embedding_history_retention": "Introduza um número inteiro positivo seguido de m, h ou d. Sem sufixo são usados dias.",
             "invalid_context_compaction_target": "Tamanho máximo do contexto após a compactação. Deve deixar espaço suficiente dentro do limite de contexto para a resposta máxima configurada.",
             "cannot_connect": "Não é possível ligar",
@@ -24,11 +25,26 @@
                     "clear_embedding_history": "Esta ação nunca é guardada como definição. Quando selecionada, todo o histórico de conversas baseado em embeddings deste endpoint será removido ao guardar."
                 }
             },
+            "reranker_endpoint": {
+                "title": "Configurar endpoint de reordenação",
+                "description": "Configure um endpoint de reordenação opcional. Introduza o URL completo do pedido; nenhum caminho é acrescentado. Um pedido real valida as credenciais, o URL e o modelo.",
+                "data": {
+                    "api_key": "Chave da API",
+                    "reranker_url": "URL do endpoint de reordenação",
+                    "reranker_model": "Modelo de reordenação"
+                }
+            },
             "service_menu_embeddings": {
                 "description": "Ligação aos embeddings bem-sucedida: {status}"
             },
             "service_menu_embeddings_error": {
                 "description": "**Erro de embeddings: {error}**"
+            },
+            "service_menu_reranker": {
+                "description": "Ligação ao reordenador bem-sucedida: {status}"
+            },
+            "service_menu_reranker_error": {
+                "description": "**Erro de reordenação: {error}**"
             },
             "mcp_default_prompt": {
                 "description": "Utilize o dispatcher MCP com list_servers para encontrar servidores disponíveis, list_tools para descobrir ferramentas, get_tool_details para obter todos os detalhes disponíveis de uma ferramenta e execute_tool para a executar. get_tool_details devolve o esquema de entrada e qualquer título, descrição, esquema de saída, anotações MCP e estado de suporte a tarefas fornecidos pelo servidor; os detalhes indisponíveis são omitidos. Utilize o server_id e o nome da ferramenta fornecidos neste contexto ou devolvidos pela descoberta. As ferramentas já descritas neste contexto não precisam de ser descobertas novamente e não aparecerão nos resultados da descoberta."
