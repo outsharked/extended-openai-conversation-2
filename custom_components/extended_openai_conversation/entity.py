@@ -153,6 +153,7 @@ _NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY = "tool_call_extra_content_by_id"
 
 _RECALL_TOOL_NAMES = {"context_recall", "browse_recalled_context"}
 _INTRA_TURN_SUMMARY_NATIVE_KEY = "eoaic_intra_turn_summary"
+_ROLLING_SUMMARY_NATIVE_KEY = "eoaic_rolling_summary"
 
 _SUPPORTED_IMAGE_MIME_TYPES = {
     "image/gif",
@@ -885,6 +886,18 @@ def _group_compaction_contents(contents: list[conversation.Content]) -> list[lis
     if current:
         groups.append(current)
     return groups
+
+
+def _is_generated_compaction_summary(content: conversation.Content) -> bool:
+    """Return whether content is a generated rolling or intra-turn summary."""
+    return (
+        isinstance(content, conversation.AssistantContent)
+        and isinstance(content.native, Mapping)
+        and (
+            content.native.get(_ROLLING_SUMMARY_NATIVE_KEY) is True
+            or content.native.get(_INTRA_TURN_SUMMARY_NATIVE_KEY) is True
+        )
+    )
 
 
 def _intra_turn_reduction(contents: list[conversation.Content]) -> _IntraTurnReduction | None:
@@ -2152,6 +2165,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             conversation.AssistantContent(
                 agent_id=agent_id,
                 content=f"{summary_prefix}\n{summary}",
+                native={_ROLLING_SUMMARY_NATIVE_KEY: True},
             )
         ]
         _LOGGER.info(
@@ -2354,11 +2368,17 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             _LOGGER.info("Context threshold exceeded, but there is no older history to archive")
             return False
 
-        await self._archive_embedding_groups(
-            chat_log,
-            _group_compaction_contents(messages[1:history_split_index]),
-            source=EMBEDDING_MEMORY_SOURCE_CONVERSATION,
-        )
+        archivable_contents = [
+            content
+            for content in messages[1:history_split_index]
+            if not _is_generated_compaction_summary(content)
+        ]
+        if archivable_contents:
+            await self._archive_embedding_groups(
+                chat_log,
+                _group_compaction_contents(archivable_contents),
+                source=EMBEDDING_MEMORY_SOURCE_CONVERSATION,
+            )
 
         if remove_archived_history:
             del messages[1:history_split_index]

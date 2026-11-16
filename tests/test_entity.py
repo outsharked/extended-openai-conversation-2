@@ -1898,6 +1898,7 @@ async def test_compaction_reduces_retained_tail_before_summarizing():
         "Current request",
         "Current response",
     ]
+    assert chat_log.content[1].native == {"eoaic_rolling_summary": True}
 
 
 async def test_compaction_failure_falls_back_to_clear_strategy():
@@ -2308,6 +2309,66 @@ async def test_embedding_archival_adapts_to_endpoint_context_limit():
     assert "".join(chunk.searchable_text for chunk in records[0].chunks).startswith(
         '[{"role": "user", "content": "My preferred temperature is 20 C"}'
     )
+
+
+async def test_embedding_archival_excludes_generated_compaction_summaries():
+    """Retrieval memory contains original history but no generated summaries."""
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    chat_log = MagicMock()
+    chat_log.conversation_id = "conversation-1"
+    chat_log.content = [
+        conversation.SystemContent(content="System prompt"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="Generated rolling summary",
+            native={"eoaic_rolling_summary": True},
+        ),
+        conversation.UserContent(content="Original user fact"),
+        conversation.AssistantContent(
+            agent_id="conversation.test",
+            content="Generated intra-turn summary",
+            native={"eoaic_intra_turn_summary": True},
+        ),
+        conversation.AssistantContent(
+            agent_id="conversation.test", content="Original assistant response"
+        ),
+        conversation.UserContent(content="Current request"),
+        conversation.AssistantContent(
+            agent_id="conversation.test", content="Current response"
+        ),
+    ]
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(
+            data=[SimpleNamespace(index=0, embedding=[1.0])]
+        )
+    )
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        changed = await entity._archive_message_history(chat_log)
+
+    assert changed is True
+    records = memory_store.async_append.await_args.args[1]
+    assert len(records) == 1
+    assert [message["content"] for message in records[0].messages] == [
+        "Original user fact",
+        "Original assistant response",
+    ]
+    embedded_text = "".join(chunk.searchable_text for chunk in records[0].chunks)
+    assert "Generated rolling summary" not in embedded_text
+    assert "Generated intra-turn summary" not in embedded_text
 
 
 async def test_retrieve_compact_uses_archive_when_summarization_fails():
