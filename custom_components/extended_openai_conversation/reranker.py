@@ -190,6 +190,15 @@ class RerankerClient:
         return results
 
 
+def _reranker_memory_document(match: EmbeddingMemoryMatch) -> str:
+    """Add temporal metadata to a memory candidate for reranking."""
+    content = match.matched_text or match.record.searchable_text
+    return (
+        f"Recorded at: {match.record.created_at}\n"
+        f"Conversation content:\n{content}"
+    )
+
+
 async def async_rerank_embedding_matches(
     client: RerankerClient,
     query: str,
@@ -205,7 +214,7 @@ async def async_rerank_embedding_matches(
 
     results = await client.async_rerank(
         query,
-        [match.matched_text or match.record.searchable_text for match in matches],
+        [_reranker_memory_document(match) for match in matches],
         max_results=max_results,
         min_score=min_score,
         max_candidate_tokens=max_candidate_tokens,

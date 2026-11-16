@@ -1398,7 +1398,13 @@ async def test_embedding_recall_reranks_agent_candidate_pool():
     query = embedding_client.embeddings.create.await_args.kwargs["input"][0]
     reranker_client.async_rerank.assert_awaited_once_with(
         query,
-        ["memory 0", "memory 1", "memory 2", "memory 3"],
+        [
+            (
+                f"Recorded at: 2026-01-0{index + 1}T00:00:00+00:00\n"
+                f"Conversation content:\nmemory {index}"
+            )
+            for index in range(4)
+        ],
         max_results=3,
         min_score=0.4,
         max_candidate_tokens=100,

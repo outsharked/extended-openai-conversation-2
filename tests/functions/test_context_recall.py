@@ -246,7 +246,14 @@ async def test_context_recall_reranks_configured_candidate_pool(hass):
     )
     reranker_client.async_rerank.assert_awaited_once_with(
         "earlier details",
-        ["first", "second", "best after reranking"],
+        [
+            "Recorded at: 2026-01-01T00:00:00+00:00\nConversation content:\nfirst",
+            "Recorded at: 2026-01-02T00:00:00+00:00\nConversation content:\nsecond",
+            (
+                "Recorded at: 2026-01-03T00:00:00+00:00\n"
+                "Conversation content:\nbest after reranking"
+            ),
+        ],
         max_results=1,
         min_score=0.5,
         max_candidate_tokens=100,
