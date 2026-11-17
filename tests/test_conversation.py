@@ -145,6 +145,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         CONF_FUNCTION_TOOLS,
         DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
         DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     )
 
@@ -169,6 +170,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
         "close_match_tolerance": None,
         "snapshot_ttl_turns": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+        "snapshot_ttl_time": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
         "rerank": False,
     }
     assert tools[1]["spec"]["name"] == "browse_recalled_context"

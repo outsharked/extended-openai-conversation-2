@@ -179,7 +179,7 @@
                         "context_recall_rerank": "Ponownie szereguje kandydatów wybranych przez osadzenia przed zwróceniem lub automatycznym wstawieniem.",
                         "context_recall_rerank_min_score": "Odrzuca wyniki poniżej tej wartości. Pozostaw puste, aby zaakceptować wszystkie. Zakres zależy od modelu ponownego szeregowania.",
                         "context_recall_rerank_max_candidate_tokens": "Maksymalna szacowana liczba tokenów każdego pasującego fragmentu osadzenia wysyłanego do ponownego szeregowania. Pozostaw puste dla całego fragmentu.",
-                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pomyślne przejrzenie migawki resetuje jej czas życia.",
+                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pozostaw puste, aby wyłączyć wygasanie na podstawie tur. Pomyślne przejrzenie migawki resetuje jej czas życia.",
                         "context_recall_snapshot_ttl_time": "Maksymalny czas dostępności migawki przywołania. Wprowadź dodatnią liczbę całkowitą z m dla minut, h dla godzin lub d dla dni. Bez przyrostka używane są dni. Pomyślne przejrzenie migawki resetuje ten czas życia."
                     }
                 }
@@ -246,7 +246,7 @@
                         "context_recall_rerank": "Ponownie szereguje kandydatów wybranych przez osadzenia przed zwróceniem lub automatycznym wstawieniem.",
                         "context_recall_rerank_min_score": "Odrzuca wyniki poniżej tej wartości. Pozostaw puste, aby zaakceptować wszystkie. Zakres zależy od modelu ponownego szeregowania.",
                         "context_recall_rerank_max_candidate_tokens": "Maksymalna szacowana liczba tokenów każdego pasującego fragmentu osadzenia wysyłanego do ponownego szeregowania. Pozostaw puste dla całego fragmentu.",
-                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pomyślne przejrzenie migawki resetuje jej czas życia.",
+                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pozostaw puste, aby wyłączyć wygasanie na podstawie tur. Pomyślne przejrzenie migawki resetuje jej czas życia.",
                         "context_recall_snapshot_ttl_time": "Maksymalny czas dostępności migawki przywołania. Wprowadź dodatnią liczbę całkowitą z m dla minut, h dla godzin lub d dla dni. Bez przyrostka używane są dni. Pomyślne przejrzenie migawki resetuje ten czas życia."
                     }
                 }

@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import json
 from typing import Any
 
-from ..const import DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
-from .embedding_memory import EmbeddingMemoryMatch
+from ..const import (
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+)
+from .embedding_memory import EmbeddingMemoryMatch, embedding_history_retention
 from .recall_snapshot import RecallSnapshotScope, RecallSnapshotStore
+
+_DEFAULT_SNAPSHOT_TTL_TIME = embedding_history_retention(
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+)
 
 
 def _estimated_tokens(value: Any) -> int:
@@ -205,7 +213,8 @@ def build_paginated_recall_result(
     close_matches: list[EmbeddingMemoryMatch] | None = None,
     snapshot_store: RecallSnapshotStore | None = None,
     snapshot_scope: RecallSnapshotScope | None = None,
-    snapshot_ttl_turns: int = DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+    snapshot_ttl_turns: int | None = DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+    snapshot_ttl_time: timedelta = _DEFAULT_SNAPSHOT_TTL_TIME,
     include_relevance: bool = True,
 ) -> dict[str, Any]:
     """Return the first bounded page and snapshot later pages when available."""
@@ -235,6 +244,7 @@ def build_paginated_recall_result(
             pages,
             matches_available,
             snapshot_ttl_turns,
+            snapshot_ttl_time,
         )
     close_match_summary = (
         {
@@ -259,7 +269,9 @@ def build_paginated_recall_result(
         total_pages=total_pages,
         snapshot_id=snapshot_id,
         ttl_turns_remaining=(
-            snapshot_ttl_turns if snapshot_id is not None else None
+            snapshot_ttl_turns
+            if snapshot_id is not None and snapshot_ttl_turns is not None
+            else None
         ),
         close_matches=close_match_summary,
     )

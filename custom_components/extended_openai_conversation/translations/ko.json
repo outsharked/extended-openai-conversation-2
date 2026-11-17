@@ -179,7 +179,7 @@
                         "context_recall_rerank": "임베딩으로 선택한 회상 후보를 반환하거나 자동 삽입하기 전에 다시 정렬합니다.",
                         "context_recall_rerank_min_score": "이 점수보다 낮은 결과를 버립니다. 모두 허용하려면 비워 두세요. 점수 범위는 리랭커 모델에 따라 다릅니다.",
                         "context_recall_rerank_max_candidate_tokens": "리랭커에 전송되는 각 일치 임베딩 청크의 최대 예상 토큰입니다. 전체 청크를 보내려면 비워 두세요.",
-                        "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다.",
+                        "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 턴 기반 만료를 비활성화하려면 비워 두세요. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다.",
                         "context_recall_snapshot_ttl_time": "회상 스냅샷이 유지되는 최대 시간입니다. 분은 m, 시간은 h, 일은 d를 양의 정수 뒤에 입력하세요. 접미사가 없으면 일 단위가 사용됩니다. 스냅샷을 성공적으로 조회하면 이 수명이 재설정됩니다."
                     }
                 }
@@ -246,7 +246,7 @@
                         "context_recall_rerank": "임베딩으로 선택한 회상 후보를 반환하거나 자동 삽입하기 전에 다시 정렬합니다.",
                         "context_recall_rerank_min_score": "이 점수보다 낮은 결과를 버립니다. 모두 허용하려면 비워 두세요. 점수 범위는 리랭커 모델에 따라 다릅니다.",
                         "context_recall_rerank_max_candidate_tokens": "리랭커에 전송되는 각 일치 임베딩 청크의 최대 예상 토큰입니다. 전체 청크를 보내려면 비워 두세요.",
-                        "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다.",
+                        "context_recall_snapshot_ttl_turns": "잘린 회상 스냅샷을 사용할 수 있는 이후 사용자 턴 수입니다. 턴 기반 만료를 비활성화하려면 비워 두세요. 스냅샷을 성공적으로 조회하면 수명이 재설정됩니다.",
                         "context_recall_snapshot_ttl_time": "회상 스냅샷이 유지되는 최대 시간입니다. 분은 m, 시간은 h, 일은 d를 양의 정수 뒤에 입력하세요. 접미사가 없으면 일 단위가 사용됩니다. 스냅샷을 성공적으로 조회하면 이 수명이 재설정됩니다."
                     }
                 }

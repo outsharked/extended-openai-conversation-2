@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime, timedelta
 from functools import partial
 import logging
 from typing import Any, cast
@@ -16,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -45,6 +47,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.AI_TASK, Platform.CONVERSATION]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+_CONTEXT_MEMORY_CLEANUP_INTERVAL = timedelta(hours=1)
 
 type ExtendedOpenAIConfigEntry = ConfigEntry[OpenAIServiceRuntime | MCPClient]
 
@@ -142,6 +145,26 @@ async def async_setup_entry(
         embedding_memory=embedding_memory,
         reranker_client=reranker_client,
     )
+    runtime = entry.runtime_data
+    context_memory = runtime.embedding_memory
+
+    if context_memory is not None:
+
+        async def _async_cleanup_context_memory(_: datetime) -> None:
+            """Discard expired persistent and in-memory context data."""
+            runtime.recall_snapshots.cleanup_expired()
+            try:
+                await context_memory.async_cleanup_expired()
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unable to clean expired context memory")
+
+        entry.async_on_unload(
+            async_track_time_interval(
+                hass,
+                _async_cleanup_context_memory,
+                _CONTEXT_MEMORY_CLEANUP_INTERVAL,
+            )
+        )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))

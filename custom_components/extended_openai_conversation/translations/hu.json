@@ -179,7 +179,7 @@
                         "context_recall_rerank": "Újrarangsorolja a beágyazásokkal kiválasztott jelölteket visszaadás vagy automatikus beillesztés előtt.",
                         "context_recall_rerank_min_score": "Elveti az ennél alacsonyabb pontszámú eredményeket. Hagyja üresen az összes elfogadásához. A tartomány az újrarangsoroló modelltől függ.",
                         "context_recall_rerank_max_candidate_tokens": "Az újrarangsorolónak küldött minden egyező beágyazási rész becsült maximális tokenje. Hagyja üresen a teljes rész elküldéséhez.",
-                        "context_recall_snapshot_ttl_turns": "Azon következő felhasználói körök száma, amelyek alatt egy csonkolt visszahívási pillanatkép elérhető marad. A pillanatkép sikeres megtekintése visszaállítja az élettartamát.",
+                        "context_recall_snapshot_ttl_turns": "Azon következő felhasználói körök száma, amelyek alatt egy csonkolt visszahívási pillanatkép elérhető marad. Hagyja üresen a körök alapján történő lejárat letiltásához. A pillanatkép sikeres megtekintése visszaállítja az élettartamát.",
                         "context_recall_snapshot_ttl_time": "A visszahívási pillanatkép elérhetőségének maximális ideje. Adjon meg pozitív egész számot, amelyet perc esetén m, óra esetén h, nap esetén d követ. Utótag nélkül napok értendők. A pillanatkép sikeres megtekintése visszaállítja ezt az élettartamot."
                     }
                 }
@@ -246,7 +246,7 @@
                         "context_recall_rerank": "Újrarangsorolja a beágyazásokkal kiválasztott jelölteket visszaadás vagy automatikus beillesztés előtt.",
                         "context_recall_rerank_min_score": "Elveti az ennél alacsonyabb pontszámú eredményeket. Hagyja üresen az összes elfogadásához. A tartomány az újrarangsoroló modelltől függ.",
                         "context_recall_rerank_max_candidate_tokens": "Az újrarangsorolónak küldött minden egyező beágyazási rész becsült maximális tokenje. Hagyja üresen a teljes rész elküldéséhez.",
-                        "context_recall_snapshot_ttl_turns": "Azon következő felhasználói körök száma, amelyek alatt egy csonkolt visszahívási pillanatkép elérhető marad. A pillanatkép sikeres megtekintése visszaállítja az élettartamát.",
+                        "context_recall_snapshot_ttl_turns": "Azon következő felhasználói körök száma, amelyek alatt egy csonkolt visszahívási pillanatkép elérhető marad. Hagyja üresen a körök alapján történő lejárat letiltásához. A pillanatkép sikeres megtekintése visszaállítja az élettartamát.",
                         "context_recall_snapshot_ttl_time": "A visszahívási pillanatkép elérhetőségének maximális ideje. Adjon meg pozitív egész számot, amelyet perc esetén m, óra esetén h, nap esetén d követ. Utótag nélkül napok értendők. A pillanatkép sikeres megtekintése visszaállítja ezt az élettartamot."
                     }
                 }

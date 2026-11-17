@@ -179,7 +179,7 @@
                         "context_recall_rerank": "Rangschikt door embeddings geselecteerde kandidaten opnieuw voordat ze worden teruggegeven of automatisch ingevoegd.",
                         "context_recall_rerank_min_score": "Verwijder resultaten onder deze score. Laat leeg om alles te accepteren. Het scorebereik hangt af van het reranker-model.",
                         "context_recall_rerank_max_candidate_tokens": "Maximaal geschat aantal tokens van elk overeenkomend embeddingfragment dat naar de reranker wordt gestuurd. Laat leeg voor het volledige fragment.",
-                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in.",
+                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Laat leeg om verval op basis van beurten uit te schakelen. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in.",
                         "context_recall_snapshot_ttl_time": "Maximale tijd dat een ophaalsnapshot beschikbaar blijft. Voer een positief geheel getal in, gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt. Het succesvol bekijken van het snapshot stelt deze levensduur opnieuw in."
                     }
                 }
@@ -246,7 +246,7 @@
                         "context_recall_rerank": "Rangschikt door embeddings geselecteerde kandidaten opnieuw voordat ze worden teruggegeven of automatisch ingevoegd.",
                         "context_recall_rerank_min_score": "Verwijder resultaten onder deze score. Laat leeg om alles te accepteren. Het scorebereik hangt af van het reranker-model.",
                         "context_recall_rerank_max_candidate_tokens": "Maximaal geschat aantal tokens van elk overeenkomend embeddingfragment dat naar de reranker wordt gestuurd. Laat leeg voor het volledige fragment.",
-                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in.",
+                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Laat leeg om verval op basis van beurten uit te schakelen. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in.",
                         "context_recall_snapshot_ttl_time": "Maximale tijd dat een ophaalsnapshot beschikbaar blijft. Voer een positief geheel getal in, gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt. Het succesvol bekijken van het snapshot stelt deze levensduur opnieuw in."
                     }
                 }

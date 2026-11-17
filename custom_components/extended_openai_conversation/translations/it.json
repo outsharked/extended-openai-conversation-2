@@ -179,7 +179,7 @@
                         "context_recall_rerank": "Riordina i candidati selezionati dagli embedding prima di restituirli o inserirli automaticamente.",
                         "context_recall_rerank_min_score": "Scarta i risultati sotto questo punteggio. Lascia vuoto per accettarli tutti. L'intervallo dipende dal modello di riordinamento.",
                         "context_recall_rerank_max_candidate_tokens": "Token stimati massimi di ogni blocco embedding corrispondente inviato al riordinatore. Lascia vuoto per inviare il blocco completo.",
-                        "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. La consultazione riuscita dello snapshot ne reimposta la durata.",
+                        "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. Lascia vuoto per disattivare la scadenza basata sui turni. La consultazione riuscita dello snapshot ne reimposta la durata.",
                         "context_recall_snapshot_ttl_time": "Tempo massimo per cui uno snapshot di richiamo rimane disponibile. Inserisci un numero intero positivo seguito da m per minuti, h per ore o d per giorni. Senza suffisso vengono usati i giorni. La consultazione riuscita dello snapshot reimposta questa durata."
                     }
                 }
@@ -246,7 +246,7 @@
                         "context_recall_rerank": "Riordina i candidati selezionati dagli embedding prima di restituirli o inserirli automaticamente.",
                         "context_recall_rerank_min_score": "Scarta i risultati sotto questo punteggio. Lascia vuoto per accettarli tutti. L'intervallo dipende dal modello di riordinamento.",
                         "context_recall_rerank_max_candidate_tokens": "Token stimati massimi di ogni blocco embedding corrispondente inviato al riordinatore. Lascia vuoto per inviare il blocco completo.",
-                        "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. La consultazione riuscita dello snapshot ne reimposta la durata.",
+                        "context_recall_snapshot_ttl_turns": "Numero di turni utente successivi per cui uno snapshot di richiamo troncato rimane disponibile. Lascia vuoto per disattivare la scadenza basata sui turni. La consultazione riuscita dello snapshot ne reimposta la durata.",
                         "context_recall_snapshot_ttl_time": "Tempo massimo per cui uno snapshot di richiamo rimane disponibile. Inserisci un numero intero positivo seguito da m per minuti, h per ore o d per giorni. Senza suffisso vengono usati i giorni. La consultazione riuscita dello snapshot reimposta questa durata."
                     }
                 }

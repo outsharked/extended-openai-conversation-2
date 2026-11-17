@@ -1,5 +1,6 @@
 """Tests for the archived conversation recall function."""
 
+from datetime import UTC, datetime, timedelta
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -8,6 +9,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
 )
 from custom_components.extended_openai_conversation.context_management import (
     EmbeddingMemoryMatch,
@@ -62,6 +64,7 @@ def test_context_recall_tool_keeps_scope_out_of_model_arguments():
         "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
         "close_match_tolerance": None,
         "snapshot_ttl_turns": 3,
+        "snapshot_ttl_time": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
         "rerank": False,
     }
     assert tool["spec"]["parameters"]["properties"]["max_results"] == {
@@ -473,7 +476,13 @@ def test_recall_snapshot_ttl_ages_by_turn_and_browse_resets_it():
     """Snapshots survive the configured later turns and browsing renews them."""
     store = RecallSnapshotStore()
     scope = RecallSnapshotScope("agent-1", "conversation-1")
-    snapshot_id = store.create(scope, [[{"record_id": "one"}]], 1, 3)
+    snapshot_id = store.create(
+        scope,
+        [[{"record_id": "one"}]],
+        1,
+        3,
+        timedelta(hours=2),
+    )
 
     for _ in range(3):
         store.advance_turn("agent-1")
@@ -484,6 +493,32 @@ def test_recall_snapshot_ttl_ages_by_turn_and_browse_resets_it():
     assert store.browse(scope, snapshot_id, 1) is not None
     for _ in range(4):
         store.advance_turn("agent-1")
+    assert store.browse(scope, snapshot_id, 1) is None
+
+
+def test_recall_snapshot_time_ttl_expires_with_turn_ttl_disabled():
+    """Snapshots expire on time even with turn expiry disabled."""
+    current_time = [datetime(2026, 1, 1, tzinfo=UTC)]
+    store = RecallSnapshotStore(lambda: current_time[0])
+    scope = RecallSnapshotScope("agent-1", "conversation-1")
+    snapshot_id = store.create(
+        scope,
+        [[{"record_id": "one"}]],
+        1,
+        None,
+        timedelta(minutes=5),
+    )
+
+    for _ in range(10):
+        store.advance_turn("agent-1")
+    current_time[0] += timedelta(minutes=4)
+    assert store.browse(scope, snapshot_id, 1) is not None
+
+    current_time[0] += timedelta(minutes=4)
+    store.cleanup_expired()
+    assert store.browse(scope, snapshot_id, 1) is not None
+
+    current_time[0] += timedelta(minutes=5)
     assert store.browse(scope, snapshot_id, 1) is None
 
 

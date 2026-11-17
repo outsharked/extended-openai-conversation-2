@@ -21,6 +21,7 @@ from ..const import (
     CONF_CONTEXT_RECALL_RERANK,
     CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
     CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
+    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
     CONF_EMBEDDING_CHUNK_SIZE,
@@ -33,6 +34,7 @@ from ..const import (
     DEFAULT_CONTEXT_RECALL_RERANK,
     DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
@@ -52,6 +54,7 @@ from .embedding_memory import (
     merge_embedding_matches,
     split_close_embedding_matches,
 )
+from .recall_snapshot import normalize_recall_snapshot_ttl_turns
 from .reranker import RerankerClient, async_rerank_embedding_matches
 
 _LOGGER = logging.getLogger(__name__)
@@ -107,13 +110,19 @@ class ContextRecallMixin:
                         DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
                     )
                 ),
-                int(
+                normalize_recall_snapshot_ttl_turns(
                     self.subentry.data.get(
                         CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     )
                 ),
                 max_results,
+                snapshot_ttl_time=str(
+                    self.subentry.data.get(
+                        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    )
+                ),
                 close_match_tolerance=close_match_tolerance,
                 rerank=reranker_client is not None,
                 rerank_min_score=min_score,

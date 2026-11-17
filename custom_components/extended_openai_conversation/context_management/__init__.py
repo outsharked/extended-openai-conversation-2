@@ -21,6 +21,7 @@ from .recall_snapshot import (
     RecallSnapshotPage,
     RecallSnapshotScope,
     RecallSnapshotStore,
+    normalize_recall_snapshot_ttl_turns,
 )
 from .reranker import (
     RerankerAuthenticationError,
@@ -58,6 +59,7 @@ __all__ = [
     "embedding_history_retention",
     "merge_embedding_matches",
     "normalize_embedding_history_retention",
+    "normalize_recall_snapshot_ttl_turns",
     "split_close_embedding_matches",
     "truncate_reranker_document",
 ]

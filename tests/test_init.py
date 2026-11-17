@@ -1,5 +1,6 @@
 """Tests for integration setup and service-type routing."""
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -9,6 +10,7 @@ from custom_components.extended_openai_conversation import (
     async_unload_entry,
 )
 from custom_components.extended_openai_conversation.const import (
+    CONF_EMBEDDINGS,
     CONF_RERANKER,
     CONF_RERANKER_MODEL,
     CONF_RERANKER_URL,
@@ -272,3 +274,50 @@ async def test_ai_entry_creates_configured_reranker_client(hass):
         "https://reranker.example.com/v1/rerank"
     )
     assert entry.runtime_data.reranker_client.model == "reranker-model"
+
+
+async def test_ai_entry_periodically_cleans_context_memory(hass):
+    """AI endpoints periodically reclaim expired context data."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_API_KEY: "chat-key",
+        CONF_EMBEDDINGS: {CONF_API_KEY: "embedding-key"},
+    }
+    entry.add_update_listener.return_value = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+    memory_store = MagicMock()
+    memory_store.async_cleanup_expired = AsyncMock()
+    cancel_interval = MagicMock()
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation."
+            "get_authenticated_client",
+            new=AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "custom_components.extended_openai_conversation."
+            "EmbeddingMemoryStore",
+            return_value=memory_store,
+        ),
+        patch(
+            "custom_components.extended_openai_conversation."
+            "async_track_time_interval",
+            return_value=cancel_interval,
+        ) as track_interval,
+        patch(
+            "custom_components.extended_openai_conversation."
+            "async_setup_templates",
+            new=AsyncMock(),
+        ),
+    ):
+        assert await async_setup_entry(hass, entry)
+
+    cleanup_snapshots = MagicMock()
+    entry.runtime_data.recall_snapshots.cleanup_expired = cleanup_snapshots
+    cleanup_callback = track_interval.call_args.args[1]
+    await cleanup_callback(datetime(2026, 1, 1, tzinfo=UTC))
+
+    cleanup_snapshots.assert_called_once_with()
+    assert memory_store.async_cleanup_expired.await_count == 2
+    entry.async_on_unload.assert_any_call(cancel_interval)

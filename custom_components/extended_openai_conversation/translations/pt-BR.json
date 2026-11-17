@@ -179,7 +179,7 @@
                         "context_recall_rerank": "Reordena os candidatos selecionados por embeddings antes de retorná-los ou inseri-los automaticamente.",
                         "context_recall_rerank_min_score": "Descarta resultados abaixo desta pontuação. Deixe vazio para aceitar todos. O intervalo depende do modelo de reordenação.",
                         "context_recall_rerank_max_candidate_tokens": "Máximo estimado de tokens de cada bloco de embedding correspondente enviado ao reordenador. Deixe vazio para enviar o bloco completo.",
-                        "context_recall_snapshot_ttl_turns": "Número de turnos seguintes do usuário durante os quais um snapshot de recuperação truncado permanece disponível. Consultar o snapshot com sucesso redefine sua duração.",
+                        "context_recall_snapshot_ttl_turns": "Número de turnos seguintes do usuário durante os quais um snapshot de recuperação truncado permanece disponível. Deixe em branco para desativar a expiração baseada em turnos. Consultar o snapshot com sucesso redefine sua duração.",
                         "context_recall_snapshot_ttl_time": "Tempo máximo em que um snapshot de recuperação permanece disponível. Insira um número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo, são usados dias. Consultar o snapshot com sucesso redefine essa duração."
                     }
                 }
@@ -246,7 +246,7 @@
                         "context_recall_rerank": "Reordena os candidatos selecionados por embeddings antes de retorná-los ou inseri-los automaticamente.",
                         "context_recall_rerank_min_score": "Descarta resultados abaixo desta pontuação. Deixe vazio para aceitar todos. O intervalo depende do modelo de reordenação.",
                         "context_recall_rerank_max_candidate_tokens": "Máximo estimado de tokens de cada bloco de embedding correspondente enviado ao reordenador. Deixe vazio para enviar o bloco completo.",
-                        "context_recall_snapshot_ttl_turns": "Número de turnos seguintes do usuário durante os quais um snapshot de recuperação truncado permanece disponível. Consultar o snapshot com sucesso redefine sua duração.",
+                        "context_recall_snapshot_ttl_turns": "Número de turnos seguintes do usuário durante os quais um snapshot de recuperação truncado permanece disponível. Deixe em branco para desativar a expiração baseada em turnos. Consultar o snapshot com sucesso redefine sua duração.",
                         "context_recall_snapshot_ttl_time": "Tempo máximo em que um snapshot de recuperação permanece disponível. Insira um número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo, são usados dias. Consultar o snapshot com sucesso redefine essa duração."
                     }
                 }

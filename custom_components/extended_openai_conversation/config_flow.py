@@ -172,7 +172,6 @@ from .const import (
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     MIN_CONTEXT_RECALL_MAX_TOKENS,
-    MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     MIN_EMBEDDING_CHUNK_SIZE,
     REASONING_EFFORT_OPTIONS,
     SERVICE_TIER_OPTIONS,
@@ -186,6 +185,7 @@ from .context_management import (
     RerankerClient,
     RerankerConnectionError as _RerankerConnectionError,
     normalize_embedding_history_retention,
+    normalize_recall_snapshot_ttl_turns,
 )
 from .helpers import (
     async_check_openai_connection,
@@ -532,6 +532,30 @@ def _validate_context_recall_snapshot_ttl_time_input(
         default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
         error="invalid_context_recall_snapshot_ttl_time",
     )
+
+
+def _validate_context_recall_snapshot_ttl_turns_input(
+    strategy: Any, user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Normalize optional turn expiry or return its field error."""
+    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        return {}
+    try:
+        user_input[CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS] = (
+            normalize_recall_snapshot_ttl_turns(
+                user_input.get(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                )
+            )
+        )
+    except ValueError:
+        return {
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: (
+                "invalid_context_recall_max_results"
+            )
+        }
+    return {}
 
 
 def _validate_context_recall_max_results_input(
@@ -2315,6 +2339,11 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             )
             errors.update(
+                _validate_context_recall_snapshot_ttl_turns_input(
+                    strategy, user_input
+                )
+            )
+            errors.update(
                 _validate_context_recall_max_results_input(strategy, user_input)
             )
             errors.update(
@@ -2511,12 +2540,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                 )
-            ] = NumberSelector(
-                NumberSelectorConfig(
-                    min=MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    step=1,
-                )
-            )
+            ] = TextSelector()
             schema[
                 vol.Optional(
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
@@ -2820,6 +2844,11 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 )
             )
             errors.update(
+                _validate_context_recall_snapshot_ttl_turns_input(
+                    strategy, user_input
+                )
+            )
+            errors.update(
                 _validate_context_recall_max_results_input(strategy, user_input)
             )
             errors.update(
@@ -3016,12 +3045,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                     default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                 )
-            ] = NumberSelector(
-                NumberSelectorConfig(
-                    min=MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    step=1,
-                )
-            )
+            ] = TextSelector()
             schema[
                 vol.Optional(
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,

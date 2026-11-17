@@ -101,7 +101,6 @@ from custom_components.extended_openai_conversation.const import (
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     MIN_CONTEXT_RECALL_MAX_TOKENS,
-    MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
 )
@@ -2583,12 +2582,7 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
         if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
     )
     assert snapshot_ttl_key.default() == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
-    assert (
-        schema[snapshot_ttl_key].config["min"]
-        == MIN_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
-    )
-    assert "max" not in schema[snapshot_ttl_key].config
-    assert schema[snapshot_ttl_key].config["step"] == 1
+    assert isinstance(schema[snapshot_ttl_key], TextSelector)
     snapshot_time_ttl_key = next(
         key
         for key in schema
@@ -3023,8 +3017,8 @@ async def test_agent_advanced_rejects_invalid_snapshot_time_ttl(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_agent_advanced_accepts_zero_snapshot_turn_ttl(hass, handler_type):
-    """Turn expiry may be disabled independently of time expiry."""
+async def test_agent_advanced_accepts_blank_snapshot_turn_ttl(hass, handler_type):
+    """A blank turn lifetime disables turn-based expiry."""
     handler = handler_type()
     handler.hass = hass
     handler.context = {"source": "reconfigure"}
@@ -3041,14 +3035,51 @@ async def test_agent_advanced_accepts_zero_snapshot_turn_ttl(hass, handler_type)
     result = await handler.async_step_advanced(
         {
             CONF_EMBEDDING_HISTORY_RETENTION: "30d",
-            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: 0,
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: "",
             CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: "2h",
         }
     )
 
     assert result == {"type": "abort"}
     saved_data = handler.async_update_and_abort.call_args.kwargs["data"]
-    assert saved_data[CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS] == 0
+    assert saved_data[CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS] is None
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+@pytest.mark.parametrize("value", [0, "0", -1, "-1", "1.5", "invalid"])
+async def test_agent_advanced_rejects_invalid_snapshot_turn_ttl(
+    hass, handler_type, value
+):
+    """Turn expiry must be blank or a positive whole number."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: value,
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: "2h",
+        }
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: (
+            "invalid_context_recall_max_results"
+        )
+    }
 
 
 @pytest.mark.parametrize(

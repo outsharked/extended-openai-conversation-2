@@ -19,6 +19,7 @@ from ..const import (
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK,
     DEFAULT_CONTEXT_RECALL_RESULTS,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
 )
@@ -27,7 +28,9 @@ from ..context_management import (
     RecallSnapshotScope,
     async_embed_text_chunks,
     async_rerank_embedding_matches,
+    embedding_history_retention,
     merge_embedding_matches,
+    normalize_recall_snapshot_ttl_turns,
     split_close_embedding_matches,
 )
 from ..context_management.recall_result import (
@@ -44,9 +47,10 @@ def build_context_recall_function_tool(
     entry_id: str,
     agent_id: str,
     max_tokens: int,
-    snapshot_ttl_turns: int,
+    snapshot_ttl_turns: int | None,
     max_results: int = DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     *,
+    snapshot_ttl_time: str = DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     close_match_tolerance: float | None = None,
     rerank: bool = DEFAULT_CONTEXT_RECALL_RERANK,
     rerank_min_score: float | None = None,
@@ -62,6 +66,7 @@ def build_context_recall_function_tool(
         "max_results": max_results,
         "close_match_tolerance": close_match_tolerance,
         "snapshot_ttl_turns": snapshot_ttl_turns,
+        "snapshot_ttl_time": snapshot_ttl_time,
         "rerank": rerank,
     }
     if rerank_min_score is not None:
@@ -121,7 +126,8 @@ def build_browse_recalled_context_function_tool(entry_id: str, agent_id: str) ->
             "description": (
                 "Read another page from a paginated context_recall result. Use the "
                 "snapshot_id, current_page, and total_pages returned by recall. A "
-                "successful read refreshes the snapshot's remaining turn lifetime."
+                "successful read refreshes the snapshot's remaining turn and time "
+                "lifetimes."
             ),
             "parameters": {
                 "type": "object",
@@ -182,7 +188,11 @@ class ContextRecallFunction(Function):
                     vol.Optional(
                         "snapshot_ttl_turns",
                         default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    ): vol.All(int, vol.Range(min=1)),
+                    ): vol.Any(None, vol.All(int, vol.Range(min=1))),
+                    vol.Optional(
+                        "snapshot_ttl_time",
+                        default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    ): str,
                     vol.Optional(
                         "rerank", default=DEFAULT_CONTEXT_RECALL_RERANK
                     ): bool,
@@ -220,9 +230,20 @@ class ContextRecallFunction(Function):
             "max_results", DEFAULT_CONTEXT_RECALL_MAX_RESULTS
         )
         close_match_tolerance = function_config.get("close_match_tolerance")
-        snapshot_ttl_turns = function_config.get(
-            "snapshot_ttl_turns", DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+        snapshot_ttl_turns = normalize_recall_snapshot_ttl_turns(
+            function_config.get(
+                "snapshot_ttl_turns", DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+            )
         )
+        try:
+            snapshot_ttl_time = embedding_history_retention(
+                function_config.get(
+                    "snapshot_ttl_time",
+                    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                )
+            )
+        except ValueError:
+            return _error("recall_unavailable", "Conversation recall is unavailable")
         if (
             not isinstance(max_results, int)
             or isinstance(max_results, bool)
@@ -329,6 +350,7 @@ class ContextRecallFunction(Function):
                 conversation_id=function_config["conversation_id"],
             ),
             snapshot_ttl_turns=snapshot_ttl_turns,
+            snapshot_ttl_time=snapshot_ttl_time,
         )
 
 

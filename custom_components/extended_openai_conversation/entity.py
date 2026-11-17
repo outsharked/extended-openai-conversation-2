@@ -40,6 +40,7 @@ from .const import (
     CONF_CHAT_MODEL,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
+    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -61,6 +62,7 @@ from .const import (
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -83,7 +85,12 @@ from .const import (
     MCP_CONTEXT_PLACEMENT_DISABLED,
     MCP_CONTEXT_PLACEMENT_USER,
 )
-from .context_management import EmbeddingMemoryStore, RecallSnapshotScope
+from .context_management import (
+    EmbeddingMemoryStore,
+    RecallSnapshotScope,
+    embedding_history_retention,
+    normalize_recall_snapshot_ttl_turns,
+)
 from .context_management.active_context import _bound_active_recalled_context
 from .context_management.compaction import (
     RequestTokenUsage as _RequestTokenUsage,
@@ -828,10 +835,16 @@ class ExtendedOpenAIBaseLLMEntity(
                 DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
             )
         )
-        recall_snapshot_ttl_turns = int(
+        recall_snapshot_ttl_turns = normalize_recall_snapshot_ttl_turns(
             options.get(
                 CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
                 DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+            )
+        )
+        recall_snapshot_ttl_time = embedding_history_retention(
+            options.get(
+                CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
             )
         )
         runtime = self.entry.runtime_data
@@ -881,6 +894,7 @@ class ExtendedOpenAIBaseLLMEntity(
                 ),
                 snapshot_scope=recall_snapshot_scope,
                 snapshot_ttl_turns=recall_snapshot_ttl_turns,
+                snapshot_ttl_time=recall_snapshot_ttl_time,
                 include_relevance=False,
             )
             snapshot_id = recall_result.get("snapshot_id")
