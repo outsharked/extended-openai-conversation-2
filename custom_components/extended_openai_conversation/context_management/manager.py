@@ -28,9 +28,9 @@ from ..const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_MAX_TOKENS,
-    CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES,
-    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
-    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
+    CONTEXT_PRESERVATION_METHOD_COMPACT,
+    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+    CONTEXT_PRESERVATION_METHOD_KEYWORD,
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
@@ -73,6 +73,7 @@ from .embedding_memory import (
     async_embed_text_chunks,
     embedding_history_retention,
 )
+from .methods import archives_context, context_preservation_methods
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,6 +94,11 @@ class ContextManagementMixin:
     @property
     def _embedding_runtime(self) -> tuple[AsyncClient, EmbeddingMemoryStore]:
         """Return the configured embedding client and memory store."""
+        raise NotImplementedError
+
+    @property
+    def _context_memory(self) -> EmbeddingMemoryStore:
+        """Return the shared lossless conversation archive."""
         raise NotImplementedError
 
     def _clear_message_history(self, chat_log: conversation.ChatLog) -> bool:
@@ -370,7 +376,7 @@ class ContextManagementMixin:
         )
         return True
 
-    async def _archive_embedding_groups(
+    async def _archive_context_groups(
         self,
         chat_log: conversation.ChatLog,
         groups: list[list[conversation.Content]],
@@ -378,35 +384,57 @@ class ContextManagementMixin:
         source: str,
         turn_id: str | None = None,
     ) -> None:
-        """Embed complete history or intra-turn groups in the conversation store."""
+        """Archive complete history or intra-turn groups for enabled retrieval."""
         conversation_id = chat_log.conversation_id
         if not isinstance(conversation_id, str) or not conversation_id:
             raise HomeAssistantError(
                 "Conversation history cannot be archived without a conversation ID"
             )
 
-        embeddings = self.entry.data.get(CONF_EMBEDDINGS)
-        if not isinstance(embeddings, Mapping):
-            raise HomeAssistantError("Embedding retrieval is not configured")
-        model = embeddings.get(CONF_EMBEDDINGS_MODEL)
-        if not isinstance(model, str) or not model:
-            raise HomeAssistantError("An embedding model is not configured")
-        chunk_size = embeddings.get(
-            CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
-        )
-        if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
-            raise HomeAssistantError("The embedding chunk size is invalid")
-
-        embedding_client, memory_store = self._embedding_runtime
-        embedded_groups = [
-            await async_embed_text_chunks(
-                embedding_client,
-                model,
-                _compaction_transcript(group),
-                chunk_size,
+        methods = context_preservation_methods(
+            self.subentry.data.get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
             )
-            for group in groups
-        ]
+        )
+        use_embeddings = CONTEXT_PRESERVATION_METHOD_EMBEDDINGS in methods
+        use_keyword = CONTEXT_PRESERVATION_METHOD_KEYWORD in methods
+        if not use_embeddings and not use_keyword:
+            raise HomeAssistantError("Conversation retrieval is not configured")
+
+        model: str | None = None
+        embedded_groups: list[list[Any]] | None = None
+        memory_store: EmbeddingMemoryStore | None = None
+        if use_embeddings:
+            embeddings = self.entry.data.get(CONF_EMBEDDINGS)
+            if not isinstance(embeddings, Mapping):
+                raise HomeAssistantError("Embedding retrieval is not configured")
+            model = embeddings.get(CONF_EMBEDDINGS_MODEL)
+            if not isinstance(model, str) or not model:
+                raise HomeAssistantError("An embedding model is not configured")
+            chunk_size = embeddings.get(
+                CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
+            )
+            if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
+                raise HomeAssistantError("The embedding chunk size is invalid")
+            embedding_client, memory_store = self._embedding_runtime
+            try:
+                embedded_groups = [
+                    await async_embed_text_chunks(
+                        embedding_client,
+                        model,
+                        _compaction_transcript(group),
+                        chunk_size,
+                    )
+                    for group in groups
+                ]
+            except Exception:
+                if not use_keyword:
+                    raise
+                _LOGGER.exception(
+                    "Embedding archival failed; preserving raw history for "
+                    "literal recall"
+                )
 
         retention = embedding_history_retention(
             self.subentry.data.get(
@@ -415,12 +443,20 @@ class ContextManagementMixin:
             )
         )
         records: list[EmbeddingMemoryRecord] = []
-        for group, embedded_chunks in zip(groups, embedded_groups, strict=True):
+        for index, group in enumerate(groups):
+            transcript = _compaction_transcript(group)
+            embedded_chunks = (
+                embedded_groups[index] if embedded_groups is not None else []
+            )
             records.append(
                 EmbeddingMemoryRecord.create(
-                    model=model,
-                    embedding=embedded_chunks[0].embedding,
-                    searchable_text=embedded_chunks[0].text,
+                    model=model if embedded_chunks else None,
+                    embedding=(
+                        embedded_chunks[0].embedding if embedded_chunks else []
+                    ),
+                    searchable_text=(
+                        embedded_chunks[0].text if embedded_chunks else transcript
+                    ),
                     messages=[content.as_dict() for content in group],
                     retention=retention,
                     source=source,
@@ -431,6 +467,8 @@ class ContextManagementMixin:
                     ),
                 )
             )
+        if memory_store is None:
+            memory_store = self._context_memory
         scope = EmbeddingMemoryScope(
             entry_id=self.entry.entry_id,
             agent_id=self.subentry.subentry_id,
@@ -455,11 +493,13 @@ class ContextManagementMixin:
         ):
             return False
 
-        strategy = options.get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY,
-            DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+        methods = context_preservation_methods(
+            options.get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
         )
-        if strategy == "clear":
+        if not methods:
             return False
 
         reduction = _intra_turn_reduction(chat_log.content)
@@ -467,9 +507,9 @@ class ContextManagementMixin:
             return False
 
         archived = False
-        if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        if archives_context(methods):
             try:
-                await self._archive_embedding_groups(
+                await self._archive_context_groups(
                     chat_log,
                     [list(group) for group in reduction.archive_groups],
                     source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
@@ -477,13 +517,16 @@ class ContextManagementMixin:
                 )
                 archived = True
             except Exception:
-                _LOGGER.exception("Intra-turn embedding archival failed. Continuing with conversation compaction")
+                _LOGGER.exception(
+                    "Intra-turn context archival failed. Continuing with "
+                    "conversation compaction"
+                )
 
         replacement: str | None = None
-        should_compact = strategy in (
-            "compact",
-            CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
-        ) or (strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE and not archived)
+        should_compact = (
+            CONTEXT_PRESERVATION_METHOD_COMPACT in methods
+            or (archives_context(methods) and not archived)
+        )
         if should_compact:
             try:
                 retained_contents = [
@@ -517,7 +560,20 @@ class ContextManagementMixin:
                 {
                     "archived_tool_context": {
                         "completed_exchanges": len(reduction.archive_groups),
-                        "available_via": "context_recall",
+                        "available_via": [
+                            name
+                            for method, name in (
+                                (
+                                    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+                                    "context_recall",
+                                ),
+                                (
+                                    CONTEXT_PRESERVATION_METHOD_KEYWORD,
+                                    "context_search",
+                                ),
+                            )
+                            if method in methods
+                        ],
                     }
                 },
                 separators=(",", ":"),
@@ -572,7 +628,7 @@ class ContextManagementMixin:
             if not _is_generated_compaction_summary(content)
         ]
         if archivable_contents:
-            await self._archive_embedding_groups(
+            await self._archive_context_groups(
                 chat_log,
                 _group_compaction_contents(archivable_contents),
                 source=EMBEDDING_MEMORY_SOURCE_CONVERSATION,
@@ -626,7 +682,9 @@ class ContextManagementMixin:
                 remove_archived_history=False,
             )
         except Exception:
-            _LOGGER.exception("Embedding archival failed. Continuing with conversation compaction")
+            _LOGGER.exception(
+                "Context archival failed. Continuing with conversation compaction"
+            )
 
         try:
             return await self._compact_message_history(
@@ -645,7 +703,7 @@ class ContextManagementMixin:
                     chat_log, preserve_current_turn, planned_recent_turns
                 )
             _LOGGER.exception(
-                "Embedding archival and conversation compaction failed, "
+                "Context archival and conversation compaction failed, "
                 "falling back to clearing history"
             )
             return self._clear_message_history(chat_log)
@@ -660,14 +718,19 @@ class ContextManagementMixin:
     ) -> bool:
         """Truncate message history based on strategy."""
         options = self.subentry.data
-        strategy = options.get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        methods = context_preservation_methods(
+            options.get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
         )
 
-        if strategy == "clear":
+        if not methods:
             _LOGGER.info("Context threshold exceeded, conversation history cleared")
             return self._clear_message_history(chat_log)
-        if strategy == "compact":
+        if CONTEXT_PRESERVATION_METHOD_COMPACT in methods and not archives_context(
+            methods
+        ):
             try:
                 return await self._compact_message_history(
                     chat_log,
@@ -679,7 +742,7 @@ class ContextManagementMixin:
             except Exception:
                 _LOGGER.exception("Conversation compaction failed; falling back to clearing history")
                 return self._clear_message_history(chat_log)
-        if strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE:
+        if archives_context(methods) and CONTEXT_PRESERVATION_METHOD_COMPACT not in methods:
             try:
                 return await self._archive_message_history(
                     chat_log,
@@ -687,7 +750,9 @@ class ContextManagementMixin:
                     recent_turns_override,
                 )
             except Exception:
-                _LOGGER.exception("Embedding archival failed. Falling back to conversation compaction")
+                _LOGGER.exception(
+                    "Context archival failed. Falling back to conversation compaction"
+                )
                 try:
                     return await self._compact_message_history(
                         chat_log,
@@ -699,7 +764,7 @@ class ContextManagementMixin:
                 except Exception:
                     _LOGGER.exception("Conversation compaction failed. Falling back to clearing history")
                     return self._clear_message_history(chat_log)
-        if strategy == CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT:
+        if archives_context(methods) and CONTEXT_PRESERVATION_METHOD_COMPACT in methods:
             return await self._retrieve_and_compact_message_history(
                 chat_log,
                 token_usage,

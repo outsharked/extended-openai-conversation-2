@@ -25,8 +25,10 @@ from custom_components.extended_openai_conversation.context_management.recall_re
 from custom_components.extended_openai_conversation.functions.context_recall import (
     BrowseRecalledContextFunction,
     ContextRecallFunction,
+    ContextSearchFunction,
     build_browse_recalled_context_function_tool,
     build_context_recall_function_tool,
+    build_context_search_function_tool,
 )
 from custom_components.extended_openai_conversation.runtime import OpenAIServiceRuntime
 
@@ -87,6 +89,81 @@ def test_browse_recalled_context_tool_keeps_scope_out_of_model_arguments():
         "entry_id": "endpoint-1",
         "agent_id": "agent-1",
     }
+
+
+def test_context_search_tool_keeps_scope_out_of_model_arguments():
+    """Literal search exposes only its query controls to the model."""
+    tool = build_context_search_function_tool(
+        "endpoint-1", "agent-1", 3000, 3
+    )
+
+    assert tool["spec"]["name"] == "context_search"
+    assert tool["spec"]["parameters"]["required"] == ["query"]
+    assert set(tool["spec"]["parameters"]["properties"]) == {
+        "query",
+        "case_sensitive",
+    }
+    assert tool["function"] == {
+        "type": "context_search",
+        "entry_id": "endpoint-1",
+        "agent_id": "agent-1",
+        "max_tokens": 3000,
+        "snapshot_ttl_turns": 3,
+        "snapshot_ttl_time": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+    }
+
+
+async def test_context_search_returns_verbatim_messages_without_relevance(hass):
+    """Literal search returns original matching messages without vector scores."""
+    match = EmbeddingMemoryMatch(
+        _record(
+            "literal:0",
+            "2026-01-01T00:00:00+00:00",
+            "The exact Error-42 occurred",
+        ),
+        1.0,
+    )
+    memory_store = MagicMock()
+    memory_store.async_search_literal = AsyncMock(return_value=[match])
+    entry = MagicMock()
+    entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(), embedding_memory=memory_store
+    )
+    hass.config_entries.async_get_entry.return_value = entry
+
+    result = await ContextSearchFunction().execute(
+        hass,
+        {
+            "type": "context_search",
+            "entry_id": "endpoint-1",
+            "agent_id": "agent-1",
+            "conversation_id": "conversation-1",
+            "max_tokens": 3000,
+        },
+        {"query": "Error-42", "case_sensitive": True},
+        None,
+        [],
+    )
+
+    memory_store.async_search_literal.assert_awaited_once_with(
+        EmbeddingMemoryScope(
+            entry_id="endpoint-1",
+            agent_id="agent-1",
+            conversation_id="conversation-1",
+        ),
+        "Error-42",
+        case_sensitive=True,
+    )
+    assert result["memories"] == [
+        {
+            "record_id": "literal:0",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "messages": [
+                {"role": "user", "content": "The exact Error-42 occurred"}
+            ],
+        }
+    ]
+    assert "relevance" not in result["memories"][0]
 
 
 async def test_context_recall_returns_original_messages_chronologically(hass):

@@ -17,6 +17,7 @@ from .embedding_memory import (
     normalize_embedding_history_retention,
     split_close_embedding_matches,
 )
+from .methods import archives_context, context_preservation_methods
 from .recall_snapshot import (
     RecallSnapshotPage,
     RecallSnapshotScope,
@@ -53,9 +54,11 @@ __all__ = [
     "RerankerError",
     "RerankerResponseError",
     "RerankerResult",
+    "archives_context",
     "async_embed_text_chunks",
     "async_rerank_embedding_matches",
     "chunk_embedding_text",
+    "context_preservation_methods",
     "embedding_history_retention",
     "merge_embedding_matches",
     "normalize_embedding_history_retention",

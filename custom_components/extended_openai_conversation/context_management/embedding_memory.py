@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 import json
@@ -101,7 +101,7 @@ class EmbeddingMemoryRecord:
     record_id: str
     created_at: str
     expires_at: str
-    model: str
+    model: str | None
     embedding: list[float]
     searchable_text: str
     messages: list[dict[str, Any]]
@@ -113,7 +113,7 @@ class EmbeddingMemoryRecord:
     def create(
         cls,
         *,
-        model: str,
+        model: str | None,
         embedding: Iterable[float],
         searchable_text: str,
         messages: list[dict[str, Any]],
@@ -141,10 +141,12 @@ class EmbeddingMemoryRecord:
     @property
     def chunks(self) -> tuple[EmbeddingMemoryChunk, ...]:
         """Return every searchable chunk associated with this turn."""
-        return (
-            EmbeddingMemoryChunk(self.embedding, self.searchable_text),
-            *self.additional_chunks,
+        primary = (
+            (EmbeddingMemoryChunk(self.embedding, self.searchable_text),)
+            if self.searchable_text
+            else ()
         )
+        return (*primary, *self.additional_chunks)
 
     def is_expired(self, now: datetime) -> bool:
         """Return whether this record has passed its expiry time."""
@@ -266,6 +268,11 @@ def _cosine_similarity(first: list[float], second: list[float]) -> float | None:
     )
 
 
+def _literal_message_text(message: dict[str, Any]) -> str:
+    """Return lossless searchable text for one archived message."""
+    return json.dumps(message, ensure_ascii=False, default=str)
+
+
 class EmbeddingMemoryStore:
     """Store persistent conversation and temporary intra-turn memories."""
 
@@ -381,6 +388,30 @@ class EmbeddingMemoryStore:
                 temporary_records,
             )
 
+    async def async_search_literal(
+        self,
+        scope: EmbeddingMemoryScope,
+        query: str,
+        *,
+        case_sensitive: bool = False,
+        excluded_turn_id: str | None = None,
+    ) -> list[EmbeddingMemoryMatch]:
+        """Return archived messages containing an exact text fragment."""
+        if not query:
+            return []
+        async with self._lock:
+            now = datetime.now(UTC)
+            temporary_records = self._active_temporary_records(scope, now)
+            return await self._hass.async_add_executor_job(
+                self._search_literal,
+                scope,
+                query,
+                case_sensitive,
+                excluded_turn_id,
+                now,
+                temporary_records,
+            )
+
     async def async_has_memories(
         self, scope: EmbeddingMemoryScope, model: str | None = None
     ) -> bool:
@@ -444,6 +475,47 @@ class EmbeddingMemoryStore:
                 matches.append(EmbeddingMemoryMatch(record, score, matched_text))
         matches.sort(key=lambda match: match.score, reverse=True)
         return matches[:limit]
+
+    def _search_literal(
+        self,
+        scope: EmbeddingMemoryScope,
+        query: str,
+        case_sensitive: bool,
+        excluded_turn_id: str | None,
+        now: datetime,
+        temporary_records: list[EmbeddingMemoryRecord],
+    ) -> list[EmbeddingMemoryMatch]:
+        """Synchronously find literal matches in original archived messages."""
+        records = [
+            *self._active_records(self._path(scope), now),
+            *temporary_records,
+        ]
+        needle = query if case_sensitive else query.casefold()
+        matches: list[EmbeddingMemoryMatch] = []
+        for record in records:
+            if (
+                excluded_turn_id is not None
+                and record.source == EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+                and record.turn_id == excluded_turn_id
+            ):
+                continue
+            for index, message in enumerate(record.messages):
+                searchable = _literal_message_text(message)
+                haystack = searchable if case_sensitive else searchable.casefold()
+                if needle not in haystack:
+                    continue
+                matching_record = replace(
+                    record,
+                    record_id=f"{record.record_id}:{index}",
+                    embedding=[],
+                    searchable_text=searchable,
+                    messages=[message],
+                    additional_chunks=(),
+                )
+                matches.append(
+                    EmbeddingMemoryMatch(matching_record, 1.0, searchable)
+                )
+        return matches
 
     def _active_records(self, path: Path, now: datetime) -> list[EmbeddingMemoryRecord]:
         """Read active records and persist expiry cleanup for one scope."""

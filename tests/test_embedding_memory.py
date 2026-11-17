@@ -215,6 +215,42 @@ async def test_search_returns_nearest_compatible_memories(hass, tmp_path: Path):
     assert matches[0].score == 1.0
 
 
+async def test_literal_search_returns_matching_original_messages_without_vectors(
+    hass, tmp_path: Path
+):
+    """Literal recall works on lossless records without an embeddings model."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    scope = EmbeddingMemoryScope(
+        entry_id="endpoint-1",
+        agent_id="agent-1",
+        conversation_id="conversation-1",
+    )
+    record = EmbeddingMemoryRecord.create(
+        model=None,
+        embedding=[],
+        searchable_text="Archived transcript",
+        messages=[
+            {"role": "user", "content": "Remember Project ALPHA"},
+            {"role": "assistant", "content": "Alpha is due on Friday"},
+            {"role": "user", "content": "Unrelated message"},
+        ],
+        retention=timedelta(days=1),
+    )
+    await store.async_append(scope, [record])
+
+    matches = await store.async_search_literal(scope, "alpha")
+
+    assert [match.record.messages for match in matches] == [
+        [{"role": "user", "content": "Remember Project ALPHA"}],
+        [{"role": "assistant", "content": "Alpha is due on Friday"}],
+    ]
+    assert all(match.record.embedding == [] for match in matches)
+    assert await store.async_search_literal(
+        scope, "alpha", case_sensitive=True
+    ) == []
+
+
 async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
     """Multiple chunk vectors produce one deduplicated turn match."""
     _configure_path(hass, tmp_path)

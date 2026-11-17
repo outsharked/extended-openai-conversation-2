@@ -109,7 +109,7 @@ async def async_setup_entry(
         raise ConfigEntryNotReady(err) from err
 
     embedding_client: AsyncClient | None = None
-    embedding_memory: EmbeddingMemoryStore | None = None
+    embedding_memory = EmbeddingMemoryStore(hass, entry.entry_id)
     reranker_client: RerankerClient | None = None
     embeddings = entry.data.get(CONF_EMBEDDINGS)
     if isinstance(embeddings, Mapping):
@@ -122,13 +122,12 @@ async def async_setup_entry(
             api_provider=None,
             skip_authentication=True,
         )
-        embedding_memory = EmbeddingMemoryStore(hass, entry.entry_id)
-        try:
-            await embedding_memory.async_cleanup_expired()
-        except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception(
-                "Unable to clean expired embedding memory; setup will continue"
-            )
+    try:
+        await embedding_memory.async_cleanup_expired()
+    except Exception:  # pylint: disable=broad-except
+        _LOGGER.exception(
+            "Unable to clean expired context memory; setup will continue"
+        )
 
     reranker = entry.data.get(CONF_RERANKER)
     if isinstance(reranker, Mapping):

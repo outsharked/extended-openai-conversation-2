@@ -28,6 +28,8 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     CONF_MAX_TOKENS,
+    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+    CONTEXT_PRESERVATION_METHOD_KEYWORD,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
 )
@@ -2113,7 +2115,7 @@ async def test_intra_turn_retrieval_stores_old_exchanges_temporarily():
 async def test_intra_turn_retrieval_falls_back_to_compaction():
     """An embedding outage still permits safe intra-turn reduction."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
-    entity._archive_embedding_groups = AsyncMock(
+    entity._archive_context_groups = AsyncMock(
         side_effect=RuntimeError("embedding failed")
     )
     entity._summarize_compaction_groups = AsyncMock(
@@ -2349,6 +2351,71 @@ async def test_embedding_archival_batches_chunks_and_stores_messages_once():
         "user",
         "assistant",
     ]
+
+
+async def test_keyword_archival_stores_raw_messages_without_embedding_request():
+    """Literal retrieval archives original history without an embedding client."""
+    entity = _entity_for_compaction()
+    entity.entry.entry_id = "endpoint-1"
+    entity.subentry.subentry_id = "agent-1"
+    entity.subentry.data[CONF_CONTEXT_TRUNCATE_STRATEGY] = [
+        CONTEXT_PRESERVATION_METHOD_KEYWORD
+    ]
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+    entity.entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(), embedding_memory=memory_store
+    )
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+
+    changed = await entity._archive_message_history(chat_log)
+
+    assert changed is True
+    records = memory_store.async_append.await_args.args[1]
+    assert len(records) == 1
+    assert records[0].model is None
+    assert records[0].embedding == []
+    assert [message["content"] for message in records[0].messages] == [
+        "My preferred temperature is 20 C",
+        "I will remember that preference.",
+    ]
+
+
+async def test_keyword_archival_survives_embedding_failure_when_both_enabled():
+    """A vector outage does not discard the shared literal-search archive."""
+    entity = _entity_for_compaction()
+    entity.entry.entry_id = "endpoint-1"
+    entity.entry.data = {
+        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
+    }
+    entity.subentry.subentry_id = "agent-1"
+    entity.subentry.data[CONF_CONTEXT_TRUNCATE_STRATEGY] = [
+        CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+        CONTEXT_PRESERVATION_METHOD_KEYWORD,
+    ]
+    embedding_client = MagicMock()
+    embedding_client.embeddings.create = AsyncMock(
+        side_effect=RuntimeError("embedding unavailable")
+    )
+    memory_store = MagicMock()
+    memory_store.async_append = AsyncMock()
+    chat_log = _compaction_chat_log()
+    chat_log.conversation_id = "conversation-1"
+
+    with patch.object(
+        ExtendedOpenAIBaseLLMEntity,
+        "_embedding_runtime",
+        new_callable=PropertyMock,
+        return_value=(embedding_client, memory_store),
+    ):
+        changed = await entity._archive_message_history(chat_log)
+
+    assert changed is True
+    records = memory_store.async_append.await_args.args[1]
+    assert len(records) == 1
+    assert records[0].model is None
+    assert records[0].embedding == []
 
 
 async def test_embedding_archival_adapts_to_endpoint_context_limit():

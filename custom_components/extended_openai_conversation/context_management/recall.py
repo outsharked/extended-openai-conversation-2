@@ -15,6 +15,7 @@ from homeassistant.config_entries import ConfigSubentry
 from homeassistant.exceptions import HomeAssistantError
 
 from ..const import (
+    CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
     CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
@@ -27,7 +28,9 @@ from ..const import (
     CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
-    CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES,
+    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+    CONTEXT_PRESERVATION_METHOD_KEYWORD,
+    DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
@@ -43,6 +46,7 @@ from ..const import (
 from ..functions.context_recall import (
     build_browse_recalled_context_function_tool,
     build_context_recall_function_tool,
+    build_context_search_function_tool,
 )
 from ..runtime import OpenAIServiceRuntime
 from .compaction import _compaction_transcript
@@ -54,6 +58,7 @@ from .embedding_memory import (
     merge_embedding_matches,
     split_close_embedding_matches,
 )
+from .methods import context_preservation_methods
 from .recall_snapshot import normalize_recall_snapshot_ttl_turns
 from .reranker import RerankerClient, async_rerank_embedding_matches
 
@@ -72,67 +77,93 @@ class ContextRecallMixin:
         raise NotImplementedError
 
     def _get_context_recall_function_tools(self) -> list[dict[str, Any]]:
-        """Return recall when this agent uses embedding retrieval."""
-        if (
+        """Return the enabled semantic and literal conversation-recall tools."""
+        methods = context_preservation_methods(
             self.subentry.data.get(
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
             )
-            not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES
-            or not isinstance(self.entry.data.get(CONF_EMBEDDINGS), Mapping)
-        ):
+        )
+        semantic_enabled = (
+            CONTEXT_PRESERVATION_METHOD_EMBEDDINGS in methods
+            and isinstance(self.entry.data.get(CONF_EMBEDDINGS), Mapping)
+        )
+        keyword_enabled = CONTEXT_PRESERVATION_METHOD_KEYWORD in methods
+        if not semantic_enabled and not keyword_enabled:
             return []
-        max_results = int(
+        snapshot_ttl_turns = normalize_recall_snapshot_ttl_turns(
             self.subentry.data.get(
-                CONF_CONTEXT_RECALL_MAX_RESULTS,
-                DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+                CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
             )
         )
-        reranker_client, min_score, max_candidate_tokens = (
-            self._context_recall_reranker()
+        snapshot_ttl_time = str(
+            self.subentry.data.get(
+                CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+            )
         )
-        configured_close_match_tolerance = self.subentry.data.get(
-            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
-            DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
-        )
-        close_match_tolerance = (
-            float(configured_close_match_tolerance)
-            if configured_close_match_tolerance
-            else None
-        )
-        return [
-            build_context_recall_function_tool(
-                self.entry.entry_id,
-                self.subentry.subentry_id,
-                int(
-                    self.subentry.data.get(
-                        CONF_CONTEXT_RECALL_MAX_TOKENS,
-                        DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
-                    )
-                ),
-                normalize_recall_snapshot_ttl_turns(
-                    self.subentry.data.get(
-                        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    )
-                ),
-                max_results,
-                snapshot_ttl_time=str(
-                    self.subentry.data.get(
-                        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
-                        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
-                    )
-                ),
-                close_match_tolerance=close_match_tolerance,
-                rerank=reranker_client is not None,
-                rerank_min_score=min_score,
-                rerank_max_candidate_tokens=max_candidate_tokens,
-            ),
+        tools: list[dict[str, Any]] = []
+        if semantic_enabled:
+            max_results = int(
+                self.subentry.data.get(
+                    CONF_CONTEXT_RECALL_MAX_RESULTS,
+                    DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+                )
+            )
+            reranker_client, min_score, max_candidate_tokens = (
+                self._context_recall_reranker()
+            )
+            configured_close_match_tolerance = self.subentry.data.get(
+                CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
+                DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
+            )
+            close_match_tolerance = (
+                float(configured_close_match_tolerance)
+                if configured_close_match_tolerance
+                else None
+            )
+            tools.append(
+                build_context_recall_function_tool(
+                    self.entry.entry_id,
+                    self.subentry.subentry_id,
+                    int(
+                        self.subentry.data.get(
+                            CONF_CONTEXT_RECALL_MAX_TOKENS,
+                            DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
+                        )
+                    ),
+                    snapshot_ttl_turns,
+                    max_results,
+                    snapshot_ttl_time=snapshot_ttl_time,
+                    close_match_tolerance=close_match_tolerance,
+                    rerank=reranker_client is not None,
+                    rerank_min_score=min_score,
+                    rerank_max_candidate_tokens=max_candidate_tokens,
+                )
+            )
+        if keyword_enabled:
+            tools.append(
+                build_context_search_function_tool(
+                    self.entry.entry_id,
+                    self.subentry.subentry_id,
+                    int(
+                        self.subentry.data.get(
+                            CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+                            DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+                        )
+                    ),
+                    snapshot_ttl_turns,
+                    snapshot_ttl_time=snapshot_ttl_time,
+                )
+            )
+        tools.append(
             build_browse_recalled_context_function_tool(
                 self.entry.entry_id,
                 self.subentry.subentry_id,
-            ),
-        ]
+            )
+        )
+        return tools
 
     def _context_recall_reranker(self) -> tuple[RerankerClient | None, float | None, int | None]:
         """Return this agent's enabled reranker and normalized controls."""
@@ -172,10 +203,12 @@ class ContextRecallMixin:
         self, chat_log: conversation.ChatLog
     ) -> tuple[list[EmbeddingMemoryMatch], list[EmbeddingMemoryMatch]]:
         """Return relevant archived turns for the latest user input."""
-        if self.subentry.data.get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY,
-            DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
-        ) not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in context_preservation_methods(
+            self.subentry.data.get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+            )
+        ):
             return [], []
 
         conversation_id = chat_log.conversation_id

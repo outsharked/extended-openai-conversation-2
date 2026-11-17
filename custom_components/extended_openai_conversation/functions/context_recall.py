@@ -124,7 +124,8 @@ def build_browse_recalled_context_function_tool(entry_id: str, agent_id: str) ->
         "spec": {
             "name": "browse_recalled_context",
             "description": (
-                "Read another page from a paginated context_recall result. Use the "
+                "Read another page from a paginated context_recall or "
+                "context_search result. Use the "
                 "snapshot_id, current_page, and total_pages returned by recall. A "
                 "successful read refreshes the snapshot's remaining turn and time "
                 "lifetimes."
@@ -152,6 +153,58 @@ def build_browse_recalled_context_function_tool(entry_id: str, agent_id: str) ->
             "type": "browse_recalled_context",
             "entry_id": entry_id,
             "agent_id": agent_id,
+        },
+    }
+
+
+def build_context_search_function_tool(
+    entry_id: str,
+    agent_id: str,
+    max_tokens: int,
+    snapshot_ttl_turns: int | None,
+    *,
+    snapshot_ttl_time: str = DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+) -> dict[str, Any]:
+    """Build the model-facing literal conversation search tool."""
+    return {
+        "spec": {
+            "name": "context_search",
+            "description": (
+                "Search older messages archived from this conversation for an "
+                "exact text fragment. Use this when semantic recall may miss a "
+                "name, identifier, quotation, error, or other literal text. "
+                "Matching original messages are returned verbatim. Results are "
+                "bounded and may be paginated; use browse_recalled_context with "
+                "the returned snapshot_id to read later pages. This tool can "
+                "access only the current conversation."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000,
+                        "description": "The exact text fragment to find.",
+                    },
+                    "case_sensitive": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Whether letter case must match. Defaults to false."
+                        ),
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+        "function": {
+            "type": "context_search",
+            "entry_id": entry_id,
+            "agent_id": agent_id,
+            "max_tokens": max_tokens,
+            "snapshot_ttl_turns": snapshot_ttl_turns,
+            "snapshot_ttl_time": snapshot_ttl_time,
         },
     }
 
@@ -351,6 +404,109 @@ class ContextRecallFunction(Function):
             ),
             snapshot_ttl_turns=snapshot_ttl_turns,
             snapshot_ttl_time=snapshot_ttl_time,
+        )
+
+
+class ContextSearchFunction(Function):
+    """Search original archived messages for a literal text fragment."""
+
+    def __init__(self) -> None:
+        """Initialize the hidden function configuration schema."""
+        super().__init__(
+            vol.Schema(
+                {
+                    vol.Required("entry_id"): str,
+                    vol.Required("agent_id"): str,
+                    vol.Required("conversation_id"): str,
+                    vol.Optional(
+                        "max_tokens", default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS
+                    ): vol.All(int, vol.Range(min=1)),
+                    vol.Optional(
+                        "snapshot_ttl_turns",
+                        default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    ): vol.Any(None, vol.All(int, vol.Range(min=1))),
+                    vol.Optional(
+                        "snapshot_ttl_time",
+                        default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    ): str,
+                }
+            )
+        )
+
+    async def execute(
+        self,
+        hass: HomeAssistant,
+        function_config: dict[str, Any],
+        arguments: dict[str, Any],
+        llm_context: llm.LLMContext | None,
+        exposed_entities: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Return verbatim archived messages containing the literal query."""
+        query = arguments.get("query")
+        if not isinstance(query, str) or not query:
+            return _error("invalid_query", "A non-empty search query is required")
+        if len(query) > 2000:
+            return _error("invalid_query", "The search query exceeds 2000 characters")
+        case_sensitive = arguments.get("case_sensitive", False)
+        if not isinstance(case_sensitive, bool):
+            return _error(
+                "invalid_case_sensitive", "case_sensitive must be a boolean"
+            )
+
+        try:
+            snapshot_ttl_time = embedding_history_retention(
+                function_config.get(
+                    "snapshot_ttl_time",
+                    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                )
+            )
+        except ValueError:
+            return _error("recall_unavailable", "Conversation recall is unavailable")
+        snapshot_ttl_turns = normalize_recall_snapshot_ttl_turns(
+            function_config.get(
+                "snapshot_ttl_turns", DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+            )
+        )
+
+        entry = hass.config_entries.async_get_entry(function_config["entry_id"])
+        if (
+            entry is None
+            or not isinstance(entry.runtime_data, OpenAIServiceRuntime)
+            or entry.runtime_data.embedding_memory is None
+        ):
+            return _error("recall_unavailable", "Conversation recall is unavailable")
+        runtime = entry.runtime_data
+        memory_store = runtime.embedding_memory
+        if memory_store is None:
+            return _error("recall_unavailable", "Conversation recall is unavailable")
+        scope = EmbeddingMemoryScope(
+            entry_id=function_config["entry_id"],
+            agent_id=function_config["agent_id"],
+            conversation_id=function_config["conversation_id"],
+        )
+        try:
+            matches = await memory_store.async_search_literal(
+                scope,
+                query,
+                case_sensitive=case_sensitive,
+            )
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Literal context search failed")
+            return _error("recall_failed", "Conversation recall failed")
+
+        return build_paginated_recall_result(
+            matches,
+            function_config.get(
+                "max_tokens", DEFAULT_CONTEXT_RECALL_MAX_TOKENS
+            ),
+            snapshot_store=runtime.recall_snapshots,
+            snapshot_scope=RecallSnapshotScope(
+                agent_id=function_config["agent_id"],
+                conversation_id=function_config["conversation_id"],
+            ),
+            snapshot_ttl_turns=snapshot_ttl_turns,
+            snapshot_ttl_time=snapshot_ttl_time,
+            include_relevance=False,
         )
 
 

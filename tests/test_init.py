@@ -237,7 +237,7 @@ async def test_mcp_entry_unloads_without_ai_platforms(hass):
 
 async def test_ai_entry_creates_configured_reranker_client(hass):
     """AI endpoint setup retains an isolated reranker runtime client."""
-    entry = MagicMock()
+    entry = MagicMock(entry_id="endpoint-1")
     entry.data = {
         CONF_API_KEY: "chat-key",
         CONF_RERANKER: {

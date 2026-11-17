@@ -188,6 +188,7 @@ from .context_management import (
     normalize_embedding_history_retention,
     normalize_recall_snapshot_ttl_turns,
 )
+from .context_management.methods import context_preservation_methods
 from .helpers import (
     async_check_openai_connection,
     get_authenticated_client,
@@ -475,23 +476,7 @@ def _context_preservation_methods(entry: ConfigEntry) -> list[str]:
 
 def _selected_context_methods(value: Any) -> frozenset[str]:
     """Normalize the multi-select value used by the agent flows."""
-    if isinstance(value, str):
-        return {
-            "clear": frozenset(),
-            "compact": frozenset({CONTEXT_PRESERVATION_METHOD_COMPACT}),
-            "retrieve": frozenset({CONTEXT_PRESERVATION_METHOD_EMBEDDINGS}),
-            "retrieve_compact": frozenset(
-                {
-                    CONTEXT_PRESERVATION_METHOD_COMPACT,
-                    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
-                }
-            ),
-        }.get(value, frozenset())
-    if not isinstance(value, (list, tuple, set, frozenset)):
-        return frozenset()
-    return frozenset(
-        method for method in value if method in CONTEXT_PRESERVATION_METHODS
-    )
+    return context_preservation_methods(value)
 
 
 def _entry_has_reranker(entry: ConfigEntry) -> bool:

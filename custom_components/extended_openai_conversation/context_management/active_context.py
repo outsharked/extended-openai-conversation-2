@@ -8,7 +8,11 @@ from homeassistant.components import conversation
 
 from .compaction import _estimate_serialized_tokens
 
-_RECALL_TOOL_NAMES = {"context_recall", "browse_recalled_context"}
+_RECALL_TOOL_NAMES = {
+    "context_recall",
+    "context_search",
+    "browse_recalled_context",
+}
 
 
 def _tool_result_data(content: conversation.ToolResultContent) -> Any:
@@ -42,8 +46,8 @@ def _released_recall_payload(payload: dict[str, Any]) -> dict[str, Any]:
         )
     else:
         released["message"] = (
-            "This result was released from active context. Repeat context_recall "
-            "to retrieve it again."
+            "This result was released from active context. Repeat the original "
+            "recall or search request to retrieve it again."
         )
     return released
 
