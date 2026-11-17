@@ -1,4 +1,4 @@
-"""File-backed conversation memory for embedding retrieval."""
+"""Persistent and temporary conversation memory for embedding retrieval."""
 
 from __future__ import annotations
 
@@ -267,7 +267,7 @@ def _cosine_similarity(first: list[float], second: list[float]) -> float | None:
 
 
 class EmbeddingMemoryStore:
-    """Persist embedding memories in endpoint-scoped JSON files."""
+    """Store persistent conversation and temporary intra-turn memories."""
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         """Initialize the store for an AI endpoint."""
@@ -275,6 +275,9 @@ class EmbeddingMemoryStore:
         self._entry_id = entry_id
         self._directory = self.storage_directory(hass, entry_id)
         self._lock = asyncio.Lock()
+        self._temporary_records: dict[
+            EmbeddingMemoryScope, dict[str, EmbeddingMemoryRecord]
+        ] = {}
 
     @staticmethod
     def storage_directory(hass: HomeAssistant, entry_id: str) -> Path:
@@ -314,6 +317,45 @@ class EmbeddingMemoryStore:
                 self._append, scope, records, datetime.now(UTC)
             )
 
+    async def async_append_temporary(
+        self,
+        scope: EmbeddingMemoryScope,
+        records: list[EmbeddingMemoryRecord],
+    ) -> None:
+        """Retain intra-turn records in memory without writing them to disk."""
+        if not records:
+            return
+        if any(
+            record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+            for record in records
+        ):
+            raise ValueError("Only intra-turn memories may be stored temporarily")
+        async with self._lock:
+            now = datetime.now(UTC)
+            records_by_id = {
+                record.record_id: record
+                for record in self._active_temporary_records(scope, now)
+            }
+            records_by_id.update(
+                (record.record_id, record)
+                for record in records
+                if not record.is_expired(now)
+            )
+            if records_by_id:
+                self._temporary_records[scope] = records_by_id
+            else:
+                self._temporary_records.pop(scope, None)
+
+    async def async_clear_temporary(self, agent_id: str | None = None) -> None:
+        """Remove temporary records for one agent or the entire endpoint."""
+        async with self._lock:
+            if agent_id is None:
+                self._temporary_records.clear()
+                return
+            for scope in tuple(self._temporary_records):
+                if scope.agent_id == agent_id:
+                    del self._temporary_records[scope]
+
     async def async_search(
         self,
         scope: EmbeddingMemoryScope,
@@ -326,6 +368,8 @@ class EmbeddingMemoryStore:
         if limit <= 0 or not query_embedding:
             return []
         async with self._lock:
+            now = datetime.now(UTC)
+            temporary_records = self._active_temporary_records(scope, now)
             return await self._hass.async_add_executor_job(
                 self._search,
                 scope,
@@ -333,7 +377,8 @@ class EmbeddingMemoryStore:
                 limit,
                 model,
                 excluded_turn_id,
-                datetime.now(UTC),
+                now,
+                temporary_records,
             )
 
     async def async_has_memories(
@@ -341,8 +386,14 @@ class EmbeddingMemoryStore:
     ) -> bool:
         """Return whether a conversation has any unexpired archived turns."""
         async with self._lock:
+            now = datetime.now(UTC)
+            if any(
+                model is None or record.model == model
+                for record in self._active_temporary_records(scope, now)
+            ):
+                return True
             return await self._hass.async_add_executor_job(
-                self._has_memories, scope, model, datetime.now(UTC)
+                self._has_memories, scope, model, now
             )
 
     def _has_memories(
@@ -362,9 +413,13 @@ class EmbeddingMemoryStore:
         model: str | None,
         excluded_turn_id: str | None,
         now: datetime,
+        temporary_records: list[EmbeddingMemoryRecord],
     ) -> list[EmbeddingMemoryMatch]:
         """Synchronously score memories and remove expired records."""
-        records = self._active_records(self._path(scope), now)
+        records = [
+            *self._active_records(self._path(scope), now),
+            *temporary_records,
+        ]
 
         matches: list[EmbeddingMemoryMatch] = []
         for record in records:
@@ -400,6 +455,7 @@ class EmbeddingMemoryStore:
             record
             for record in self._records_from_payload(payload)
             if not record.is_expired(now)
+            and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
         ]
         if not records:
             path.unlink(missing_ok=True)
@@ -422,11 +478,13 @@ class EmbeddingMemoryStore:
             record.record_id: record
             for record in existing
             if not record.is_expired(now)
+            and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
         }
         records_by_id.update(
             (record.record_id, record)
             for record in records
             if not record.is_expired(now)
+            and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
         )
         if not records_by_id:
             path.unlink(missing_ok=True)
@@ -441,9 +499,30 @@ class EmbeddingMemoryStore:
     async def async_cleanup_expired(self) -> None:
         """Delete expired records and empty memory files."""
         async with self._lock:
+            now = datetime.now(UTC)
+            for scope in tuple(self._temporary_records):
+                self._active_temporary_records(scope, now)
             await self._hass.async_add_executor_job(
-                self._cleanup_expired, datetime.now(UTC)
+                self._cleanup_expired, now
             )
+
+    def _active_temporary_records(
+        self, scope: EmbeddingMemoryScope, now: datetime
+    ) -> list[EmbeddingMemoryRecord]:
+        """Return active in-memory records and discard expired entries."""
+        records_by_id = self._temporary_records.get(scope)
+        if records_by_id is None:
+            return []
+        active = {
+            record_id: record
+            for record_id, record in records_by_id.items()
+            if not record.is_expired(now)
+        }
+        if active:
+            self._temporary_records[scope] = active
+        else:
+            del self._temporary_records[scope]
+        return list(active.values())
 
     def _cleanup_expired(self, now: datetime) -> None:
         """Synchronously remove expired records from every scoped file."""
@@ -457,6 +536,7 @@ class EmbeddingMemoryStore:
                 record
                 for record in self._records_from_payload(payload)
                 if not record.is_expired(now)
+                and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
             ]
             if not records:
                 path.unlink(missing_ok=True)

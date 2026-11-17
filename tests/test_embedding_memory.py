@@ -1,5 +1,6 @@
 """Tests for file-backed embedding conversation memory."""
 
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
@@ -271,7 +272,7 @@ async def test_search_can_exclude_intra_turn_memories_from_the_current_turn(hass
             ("earlier active turn", "earlier-turn"),
         )
     ]
-    await store.async_append(scope, records)
+    await store.async_append_temporary(scope, records)
 
     matches = await store.async_search(
         scope,
@@ -328,6 +329,14 @@ async def test_clear_temporary_memories_is_scoped_to_the_requested_agent(
     second_scope = EmbeddingMemoryScope(
         "endpoint-1", "agent-2", "conversation-2"
     )
+    persistent = EmbeddingMemoryRecord.create(
+        model="embedding-model",
+        embedding=[1.0, 0.0],
+        searchable_text="persistent result",
+        messages=[{"role": "user", "content": "persistent result"}],
+        retention=timedelta(days=1),
+    )
+    await store.async_append(first_scope, [persistent])
     for scope, text in (
         (first_scope, "first temporary result"),
         (second_scope, "second temporary result"),
@@ -349,7 +358,10 @@ async def test_clear_temporary_memories_is_scoped_to_the_requested_agent(
 
     await store.async_clear_temporary("agent-1")
 
-    assert await store.async_has_memories(first_scope, "embedding-model") is False
+    matches = await store.async_search(
+        first_scope, [1.0, 0.0], limit=5, model="embedding-model"
+    )
+    assert [match.record for match in matches] == [persistent]
     assert await store.async_has_memories(second_scope, "embedding-model") is True
 
 
@@ -378,11 +390,14 @@ async def test_cleanup_removes_legacy_persisted_intra_turn_memories(
         source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
         turn_id="turn-1",
     )
-    await store.async_append(scope, [persistent, legacy_temporary])
+    await store.async_append(scope, [persistent])
+    path = next(store.storage_directory(hass, "endpoint-1").glob("*.json"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["records"].append(asdict(legacy_temporary))
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
     await store.async_cleanup_expired()
 
-    path = next(store.storage_directory(hass, "endpoint-1").glob("*.json"))
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert [record["record_id"] for record in payload["records"]] == [
         persistent.record_id

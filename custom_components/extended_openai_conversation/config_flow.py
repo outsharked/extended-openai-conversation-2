@@ -74,6 +74,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_CLEAR_EMBEDDING_HISTORY,
+    CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
     CONF_CONTEXT_COMPACTION_INTRA_TURN,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -239,6 +240,7 @@ from .mcp_oauth import (
     oauth_application_context_from_data,
     static_oauth_auth,
 )
+from .runtime import OpenAIServiceRuntime
 from .skills import SkillManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -467,6 +469,18 @@ def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
 def _entry_has_reranker(entry: ConfigEntry) -> bool:
     """Return whether an AI endpoint has a configured reranker."""
     return isinstance(entry.data.get(CONF_RERANKER), Mapping)
+
+
+async def _async_clear_intra_turn_embeddings(
+    entry: ConfigEntry, agent_id: str
+) -> None:
+    """Clear one agent's temporary intra-turn embedding memories."""
+    runtime = entry.runtime_data
+    if (
+        isinstance(runtime, OpenAIServiceRuntime)
+        and runtime.embedding_memory is not None
+    ):
+        await runtime.embedding_memory.async_clear_temporary(agent_id)
 
 
 def _validate_embedding_history_retention_input(
@@ -2172,6 +2186,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
     options: dict[str, Any]
     _temp_data: dict[str, Any] | None = None
     _available_skills: list[dict[str, Any]] | None = None
+    _clear_intra_turn_embeddings_requested = False
 
     @property
     def _is_new(self) -> bool:
@@ -2182,6 +2197,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Add a subentry."""
+        self._clear_intra_turn_embeddings_requested = False
         self.options = dict(DEFAULT_OPTIONS)
         return await self.async_step_init()
 
@@ -2189,6 +2205,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Handle reconfiguration of a subentry."""
+        self._clear_intra_turn_embeddings_requested = False
         self.options = dict(self._get_reconfigure_subentry().data)
         return await self.async_step_init()
 
@@ -2252,6 +2269,9 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         """Handle advanced options step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            self._clear_intra_turn_embeddings_requested = bool(
+                user_input.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
+            )
             strategy = (self._temp_data or {}).get(
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -2291,9 +2311,15 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                         title=title,
                         data=final_data,
                     )
+                reconfigure_subentry = self._get_reconfigure_subentry()
+                if self._clear_intra_turn_embeddings_requested:
+                    await _async_clear_intra_turn_embeddings(
+                        self._get_entry(), reconfigure_subentry.subentry_id
+                    )
+                    self._clear_intra_turn_embeddings_requested = False
                 return self.async_update_and_abort(
                     self._get_entry(),
-                    self._get_reconfigure_subentry(),
+                    reconfigure_subentry,
                     data=final_data,
                 )
 
@@ -2409,6 +2435,17 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_CONTEXT_COMPACTION_PROMPT,
                 )
             ] = TextSelector(TextSelectorConfig(multiline=True))
+
+        if (
+            not self._is_new
+            and isinstance(self._get_entry().data.get(CONF_EMBEDDINGS), Mapping)
+        ):
+            schema[
+                vol.Optional(
+                    CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
+                    default=False,
+                )
+            ] = BooleanSelector()
 
         if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
             schema[
@@ -2583,6 +2620,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
 
     options: dict[str, Any]
     _temp_data: dict[str, Any] | None = None
+    _clear_intra_turn_embeddings_requested = False
 
     @property
     def _is_new(self) -> bool:
@@ -2593,6 +2631,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Add a subentry."""
+        self._clear_intra_turn_embeddings_requested = False
         self.options = dict(DEFAULT_AI_TASK_OPTIONS)
         return await self.async_step_init()
 
@@ -2600,6 +2639,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Handle reconfiguration of a subentry."""
+        self._clear_intra_turn_embeddings_requested = False
         self.options = dict(self._get_reconfigure_subentry().data)
         return await self.async_step_init()
 
@@ -2723,6 +2763,9 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         """Handle advanced options step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            self._clear_intra_turn_embeddings_requested = bool(
+                user_input.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
+            )
             strategy = (self._temp_data or {}).get(
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -2762,9 +2805,15 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                         title=title,
                         data=final_data,
                     )
+                reconfigure_subentry = self._get_reconfigure_subentry()
+                if self._clear_intra_turn_embeddings_requested:
+                    await _async_clear_intra_turn_embeddings(
+                        self._get_entry(), reconfigure_subentry.subentry_id
+                    )
+                    self._clear_intra_turn_embeddings_requested = False
                 return self.async_update_and_abort(
                     self._get_entry(),
-                    self._get_reconfigure_subentry(),
+                    reconfigure_subentry,
                     data=final_data,
                 )
 
@@ -2880,6 +2929,17 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_CONTEXT_COMPACTION_PROMPT,
                 )
             ] = TextSelector(TextSelectorConfig(multiline=True))
+
+        if (
+            not self._is_new
+            and isinstance(self._get_entry().data.get(CONF_EMBEDDINGS), Mapping)
+        ):
+            schema[
+                vol.Optional(
+                    CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
+                    default=False,
+                )
+            ] = BooleanSelector()
 
         if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
             schema[

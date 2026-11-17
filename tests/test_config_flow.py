@@ -40,6 +40,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_CLEAR_EMBEDDING_HISTORY,
+    CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
     CONF_CONTEXT_COMPACTION_INTRA_TURN,
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -133,6 +134,7 @@ from custom_components.extended_openai_conversation.mcp_client.mcp_const import 
     CONF_MCP_TOOL_NAME_PATTERN,
     CONF_MCP_USE_OAUTH,
 )
+from custom_components.extended_openai_conversation.runtime import OpenAIServiceRuntime
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
@@ -2592,6 +2594,13 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     )
     assert intra_turn_key.default() is DEFAULT_CONTEXT_COMPACTION_INTRA_TURN
     assert isinstance(schema[intra_turn_key], BooleanSelector)
+    clear_temporary_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CLEAR_INTRA_TURN_EMBEDDINGS
+    )
+    assert clear_temporary_key.default() is False
+    assert isinstance(schema[clear_temporary_key], BooleanSelector)
     assert CONF_CONTEXT_COMPACTION_TARGET not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_RECENT_TURNS not in _schema_keys(schema)
     assert CONF_CONTEXT_COMPACTION_PROMPT not in _schema_keys(schema)
@@ -2619,6 +2628,104 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     assert (
         CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
         not in _schema_keys(schema)
+    )
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_new_agent_does_not_offer_temporary_embedding_cleanup(
+    hass, handler_type
+):
+    """A new agent cannot have temporary intra-turn embeddings to clear."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "user"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    if handler_type is ExtendedOpenAISubentryFlowHandler:
+        handler._available_skills = []
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    assert CONF_CLEAR_INTRA_TURN_EMBEDDINGS not in _schema_keys(schema)
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_existing_agent_can_clear_temporary_embeddings_after_switching_strategy(
+    hass, handler_type
+):
+    """Cleanup remains available after changing away from retrieval."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: "compact",
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    await handler.async_step_advanced()
+
+    schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    assert CONF_CLEAR_INTRA_TURN_EMBEDDINGS in _schema_keys(schema)
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_temporary_embedding_cleanup_is_transient(hass, handler_type):
+    """The cleanup action is requested once and never enters agent data."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    memory_store = MagicMock()
+    memory_store.async_clear_temporary = AsyncMock()
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(), embedding_memory=memory_store
+    )
+    handler._get_entry = MagicMock(return_value=entry)
+    subentry = MagicMock()
+    subentry.subentry_id = "agent-1"
+    handler._get_reconfigure_subentry = MagicMock(return_value=subentry)
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_CLEAR_INTRA_TURN_EMBEDDINGS: True,
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+        }
+    )
+
+    assert result == {"type": "abort"}
+    assert handler._clear_intra_turn_embeddings_requested is False
+    memory_store.async_clear_temporary.assert_awaited_once_with("agent-1")
+    assert (
+        CONF_CLEAR_INTRA_TURN_EMBEDDINGS
+        not in handler.async_update_and_abort.call_args.kwargs["data"]
     )
 
 

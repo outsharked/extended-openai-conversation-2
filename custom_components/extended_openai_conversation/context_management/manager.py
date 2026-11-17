@@ -431,14 +431,15 @@ class ContextManagementMixin:
                     ),
                 )
             )
-        await memory_store.async_append(
-            EmbeddingMemoryScope(
-                entry_id=self.entry.entry_id,
-                agent_id=self.subentry.subentry_id,
-                conversation_id=conversation_id,
-            ),
-            records,
+        scope = EmbeddingMemoryScope(
+            entry_id=self.entry.entry_id,
+            agent_id=self.subentry.subentry_id,
+            conversation_id=conversation_id,
         )
+        if source == EMBEDDING_MEMORY_SOURCE_INTRA_TURN:
+            await memory_store.async_append_temporary(scope, records)
+        else:
+            await memory_store.async_append(scope, records)
 
     async def _reduce_intra_turn_history(
         self,
