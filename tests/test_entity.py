@@ -2070,8 +2070,8 @@ async def test_intra_turn_compaction_can_be_disabled():
     assert chat_log.content == original_contents
 
 
-async def test_intra_turn_retrieval_archives_old_exchanges_with_turn_metadata():
-    """Retrieval archives old exchanges and leaves a compact recall reference."""
+async def test_intra_turn_retrieval_stores_old_exchanges_temporarily():
+    """Retrieval keeps old exchanges in memory with their turn metadata."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
     entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
@@ -2087,6 +2087,7 @@ async def test_intra_turn_retrieval_archives_old_exchanges_with_turn_metadata():
     )
     memory_store = MagicMock()
     memory_store.async_append = AsyncMock()
+    memory_store.async_append_temporary = AsyncMock()
 
     with patch.object(
         ExtendedOpenAIBaseLLMEntity,
@@ -2100,7 +2101,8 @@ async def test_intra_turn_retrieval_archives_old_exchanges_with_turn_metadata():
         )
 
     assert changed is True
-    records = memory_store.async_append.await_args.args[1]
+    memory_store.async_append.assert_not_awaited()
+    records = memory_store.async_append_temporary.await_args.args[1]
     assert len(records) == 2
     assert {record.source for record in records} == {EMBEDDING_MEMORY_SOURCE_INTRA_TURN}
     assert {record.turn_id for record in records} == {current_turn_id}

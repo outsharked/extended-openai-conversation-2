@@ -286,6 +286,109 @@ async def test_search_can_exclude_intra_turn_memories_from_the_current_turn(hass
     ]
 
 
+async def test_temporary_intra_turn_memories_are_searchable_without_disk_write(
+    hass, tmp_path: Path
+):
+    """Intra-turn recall remains available without entering persistent storage."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    scope = EmbeddingMemoryScope(
+        entry_id="endpoint-1",
+        agent_id="agent-1",
+        conversation_id="conversation-1",
+    )
+    record = EmbeddingMemoryRecord.create(
+        model="embedding-model",
+        embedding=[1.0, 0.0],
+        searchable_text="temporary tool result",
+        messages=[{"role": "tool_result", "content": "temporary tool result"}],
+        retention=timedelta(days=1),
+        source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
+        turn_id="turn-1",
+    )
+
+    await store.async_append_temporary(scope, [record])
+
+    matches = await store.async_search(
+        scope, [1.0, 0.0], limit=5, model="embedding-model"
+    )
+    assert [match.record for match in matches] == [record]
+    assert not list(store.storage_directory(hass, "endpoint-1").glob("*.json"))
+
+
+async def test_clear_temporary_memories_is_scoped_to_the_requested_agent(
+    hass, tmp_path: Path
+):
+    """The manual action clears only one agent's temporary recall data."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    first_scope = EmbeddingMemoryScope(
+        "endpoint-1", "agent-1", "conversation-1"
+    )
+    second_scope = EmbeddingMemoryScope(
+        "endpoint-1", "agent-2", "conversation-2"
+    )
+    for scope, text in (
+        (first_scope, "first temporary result"),
+        (second_scope, "second temporary result"),
+    ):
+        await store.async_append_temporary(
+            scope,
+            [
+                EmbeddingMemoryRecord.create(
+                    model="embedding-model",
+                    embedding=[1.0, 0.0],
+                    searchable_text=text,
+                    messages=[{"role": "tool_result", "content": text}],
+                    retention=timedelta(days=1),
+                    source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
+                    turn_id="turn-1",
+                )
+            ],
+        )
+
+    await store.async_clear_temporary("agent-1")
+
+    assert await store.async_has_memories(first_scope, "embedding-model") is False
+    assert await store.async_has_memories(second_scope, "embedding-model") is True
+
+
+async def test_cleanup_removes_legacy_persisted_intra_turn_memories(
+    hass, tmp_path: Path
+):
+    """Persistent stores discard intra-turn records written by older versions."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    scope = EmbeddingMemoryScope(
+        "endpoint-1", "agent-1", "conversation-1"
+    )
+    persistent = EmbeddingMemoryRecord.create(
+        model="embedding-model",
+        embedding=[1.0, 0.0],
+        searchable_text="persistent conversation memory",
+        messages=[{"role": "user", "content": "persistent conversation memory"}],
+        retention=timedelta(days=1),
+    )
+    legacy_temporary = EmbeddingMemoryRecord.create(
+        model="embedding-model",
+        embedding=[0.0, 1.0],
+        searchable_text="legacy intra-turn result",
+        messages=[{"role": "tool_result", "content": "legacy intra-turn result"}],
+        retention=timedelta(days=1),
+        source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
+        turn_id="turn-1",
+    )
+    await store.async_append(scope, [persistent, legacy_temporary])
+
+    await store.async_cleanup_expired()
+
+    path = next(store.storage_directory(hass, "endpoint-1").glob("*.json"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert [record["record_id"] for record in payload["records"]] == [
+        persistent.record_id
+    ]
+
+
 async def test_clear_endpoint_only_removes_the_requested_endpoint(hass, tmp_path: Path):
     """The explicit wipe action cannot affect another endpoint's memories."""
     _configure_path(hass, tmp_path)
