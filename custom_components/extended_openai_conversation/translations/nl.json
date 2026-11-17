@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Voer een positieve gehele tokenlimiet in.",
             "invalid_context_recall_snapshot_ttl_time": "Voer een positief geheel getal in, gevolgd door m, h of d. Nul is niet toegestaan. Zonder achtervoegsel worden dagen gebruikt.",
             "invalid_context_recall_max_results": "Voer een positief geheel getal in.",
-            "invalid_embedding_chunk_size": "Voer een embeddingsegmentgrootte tussen 100 en 100000 geschatte tokens in.",
+            "invalid_embedding_chunk_size": "Voer een embeddingsegmentgrootte van minimaal 1 geschat token in.",
             "invalid_context_recall_close_match_tolerance": "Voer een decimaal getal groter dan 0 in of laat het veld leeg.",
             "invalid_context_recall_rerank_min_score": "Voer een decimaal getal in of laat het veld leeg.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Voer een positief geheel getal in of laat het veld leeg.",

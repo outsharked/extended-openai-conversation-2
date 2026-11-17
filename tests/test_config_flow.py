@@ -99,13 +99,11 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DOMAIN,
-    MAX_EMBEDDING_CHUNK_SIZE,
     MCP_CONTEXT_PLACEMENTS,
     MCP_MEDIA_TYPES,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     MIN_CONTEXT_RECALL_MAX_TOKENS,
-    MIN_EMBEDDING_CHUNK_SIZE,
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
 )
@@ -2594,8 +2592,9 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
         if getattr(key, "schema", key) == CONF_EMBEDDING_CHUNK_SIZE
     )
     assert chunk_key.default() == DEFAULT_EMBEDDING_CHUNK_SIZE
-    assert schema[chunk_key].config["min"] == MIN_EMBEDDING_CHUNK_SIZE
-    assert schema[chunk_key].config["max"] == MAX_EMBEDDING_CHUNK_SIZE
+    assert schema[chunk_key].config["min"] == 1
+    assert "max" not in schema[chunk_key].config
+    assert schema[chunk_key].config["step"] == 1
     assert chunk_key.description["suggested_value"] == 7000
     snapshot_time_ttl_key = next(
         key
@@ -3143,7 +3142,7 @@ async def test_agent_advanced_rejects_invalid_snapshot_turn_ttl(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-@pytest.mark.parametrize("value", [99, 100001])
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
 async def test_agent_advanced_rejects_invalid_embedding_chunk_size(
     hass, handler_type, value
 ):
@@ -3173,6 +3172,45 @@ async def test_agent_advanced_rejects_invalid_embedding_chunk_size(
     assert handler.async_show_form.call_args.kwargs["errors"] == {
         CONF_EMBEDDING_CHUNK_SIZE: "invalid_embedding_chunk_size"
     }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_accepts_unbounded_embedding_chunk_size(
+    hass, handler_type
+):
+    """Embedding chunk size has no integration-defined upper bound."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: [CONTEXT_PRESERVATION_METHOD_EMBEDDINGS]
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler._get_reconfigure_subentry = MagicMock()
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: "3",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: "2h",
+            CONF_EMBEDDING_CHUNK_SIZE: 100001,
+        }
+    )
+
+    assert result == {"type": "abort"}
+    assert (
+        handler.async_update_and_abort.call_args.kwargs["data"][
+            CONF_EMBEDDING_CHUNK_SIZE
+        ]
+        == 100001
+    )
 
 
 @pytest.mark.parametrize(

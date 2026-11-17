@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Adjon meg pozitív egész tokenkorlátot.",
             "invalid_context_recall_snapshot_ttl_time": "Adjon meg pozitív egész számot m, h vagy d utótaggal. A nulla nem engedélyezett. Utótag nélkül napokat használunk.",
             "invalid_context_recall_max_results": "Adjon meg pozitív egész számot.",
-            "invalid_embedding_chunk_size": "Adjon meg 100 és 100000 becsült token közötti beágyazási darabméretet.",
+            "invalid_embedding_chunk_size": "Adjon meg legalább 1 becsült tokenes beágyazási darabméretet.",
             "invalid_context_recall_close_match_tolerance": "Adjon meg 0-nál nagyobb tizedes számot, vagy hagyja üresen a mezőt.",
             "invalid_context_recall_rerank_min_score": "Adjon meg egy tizedes számot, vagy hagyja üresen a mezőt.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Adjon meg pozitív egész számot, vagy hagyja üresen a mezőt.",

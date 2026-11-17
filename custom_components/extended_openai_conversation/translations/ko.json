@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "양의 정수 토큰 한도를 입력하세요.",
             "invalid_context_recall_snapshot_ttl_time": "m, h 또는 d가 뒤따르는 양의 정수를 입력하세요. 0은 허용되지 않습니다. 접미사가 없으면 일 단위가 사용됩니다.",
             "invalid_context_recall_max_results": "양의 정수를 입력하세요.",
-            "invalid_embedding_chunk_size": "100에서 100000 사이의 예상 토큰으로 임베딩 청크 크기를 입력하세요.",
+            "invalid_embedding_chunk_size": "1개 이상의 예상 토큰으로 임베딩 청크 크기를 입력하세요.",
             "invalid_context_recall_close_match_tolerance": "0보다 큰 소수를 입력하거나 필드를 비워 두세요.",
             "invalid_context_recall_rerank_min_score": "십진수를 입력하거나 필드를 비워 두세요.",
             "invalid_context_recall_rerank_max_candidate_tokens": "양의 정수를 입력하거나 필드를 비워 두세요.",

@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Inserisci un limite di token intero positivo.",
             "invalid_context_recall_snapshot_ttl_time": "Inserisci un numero intero positivo seguito da m, h o d. Lo zero non è consentito. Senza suffisso vengono usati i giorni.",
             "invalid_context_recall_max_results": "Inserisci un numero intero positivo.",
-            "invalid_embedding_chunk_size": "Inserisci una dimensione del blocco embedding tra 100 e 100000 token stimati.",
+            "invalid_embedding_chunk_size": "Inserisci una dimensione del blocco embedding di almeno 1 token stimato.",
             "invalid_context_recall_close_match_tolerance": "Inserisci un numero decimale maggiore di 0 o lascia vuoto il campo.",
             "invalid_context_recall_rerank_min_score": "Inserisci un numero decimale o lascia vuoto il campo.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Inserisci un numero intero positivo o lascia vuoto il campo.",

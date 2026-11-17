@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Wprowadź dodatni całkowity limit tokenów.",
             "invalid_context_recall_snapshot_ttl_time": "Wprowadź dodatnią liczbę całkowitą z m, h lub d. Zero jest niedozwolone. Brak przyrostka oznacza dni.",
             "invalid_context_recall_max_results": "Wprowadź dodatnią liczbę całkowitą.",
-            "invalid_embedding_chunk_size": "Wprowadź rozmiar fragmentu osadzania od 100 do 100000 szacowanych tokenów.",
+            "invalid_embedding_chunk_size": "Wprowadź rozmiar fragmentu osadzania wynoszący co najmniej 1 szacowany token.",
             "invalid_context_recall_close_match_tolerance": "Wprowadź liczbę dziesiętną większą niż 0 lub pozostaw pole puste.",
             "invalid_context_recall_rerank_min_score": "Wprowadź liczbę dziesiętną lub pozostaw pole puste.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Wprowadź dodatnią liczbę całkowitą lub pozostaw pole puste.",

@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Εισαγάγετε ένα θετικό ακέραιο όριο διακριτικών.",
             "invalid_context_recall_snapshot_ttl_time": "Εισαγάγετε θετικό ακέραιο αριθμό με m, h ή d. Το μηδέν δεν επιτρέπεται. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
             "invalid_context_recall_max_results": "Εισαγάγετε θετικό ακέραιο αριθμό.",
-            "invalid_embedding_chunk_size": "Εισαγάγετε μέγεθος τμήματος embedding μεταξύ 100 και 100000 εκτιμώμενων διακριτικών.",
+            "invalid_embedding_chunk_size": "Εισαγάγετε μέγεθος τμήματος embedding τουλάχιστον 1 εκτιμώμενου διακριτικού.",
             "invalid_context_recall_close_match_tolerance": "Εισαγάγετε δεκαδικό αριθμό μεγαλύτερο από 0 ή αφήστε το πεδίο κενό.",
             "invalid_context_recall_rerank_min_score": "Εισαγάγετε έναν δεκαδικό αριθμό ή αφήστε το πεδίο κενό.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Εισαγάγετε θετικό ακέραιο αριθμό ή αφήστε το πεδίο κενό.",

@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Gib ein positives ganzzahliges Token-Limit ein.",
             "invalid_context_recall_snapshot_ttl_time": "Gib eine positive ganze Zahl gefolgt von m, h oder d ein. Null ist nicht zulässig. Ohne Einheit werden Tage verwendet.",
             "invalid_context_recall_max_results": "Gib eine positive ganze Zahl ein.",
-            "invalid_embedding_chunk_size": "Gib eine Embedding-Chunk-Größe zwischen 100 und 100000 geschätzten Token ein.",
+            "invalid_embedding_chunk_size": "Gib eine Embedding-Chunk-Größe von mindestens 1 geschätzten Token ein.",
             "invalid_context_recall_close_match_tolerance": "Gib eine Dezimalzahl größer als 0 ein oder lasse das Feld leer.",
             "invalid_context_recall_rerank_min_score": "Gib eine Dezimalzahl ein oder lasse das Feld leer.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Gib eine positive ganze Zahl ein oder lasse das Feld leer.",

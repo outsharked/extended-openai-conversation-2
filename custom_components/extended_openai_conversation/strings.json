@@ -206,7 +206,7 @@
       "invalid_context_keyword_recall_max_tokens": "Enter a positive whole-number token limit.",
       "invalid_context_recall_snapshot_ttl_time": "Enter a positive whole number followed by m, h, or d. Zero is not allowed. A value without a suffix uses days.",
       "invalid_context_recall_max_results": "Enter a positive whole number.",
-      "invalid_embedding_chunk_size": "Enter an embedding chunk size between 100 and 100000 estimated tokens.",
+      "invalid_embedding_chunk_size": "Enter an embedding chunk size of at least 1 estimated token.",
       "invalid_context_recall_close_match_tolerance": "Enter a decimal number greater than 0 or leave the field empty.",
       "invalid_context_recall_rerank_min_score": "Enter a decimal number or leave the field empty.",
       "invalid_context_recall_rerank_max_candidate_tokens": "Enter a positive whole number or leave the field empty.",

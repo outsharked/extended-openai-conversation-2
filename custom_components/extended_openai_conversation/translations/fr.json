@@ -7,7 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Saisissez une limite de jetons entière positive.",
             "invalid_context_recall_snapshot_ttl_time": "Saisissez un entier positif suivi de m, h ou d. Zéro n’est pas autorisé. Sans suffixe, la valeur est exprimée en jours.",
             "invalid_context_recall_max_results": "Saisissez un entier positif.",
-            "invalid_embedding_chunk_size": "Saisissez une taille de segment d’embedding comprise entre 100 et 100000 jetons estimés.",
+            "invalid_embedding_chunk_size": "Saisissez une taille de segment d’embedding d’au moins 1 jeton estimé.",
             "invalid_context_recall_close_match_tolerance": "Saisissez un nombre décimal supérieur à 0 ou laissez le champ vide.",
             "invalid_context_recall_rerank_min_score": "Saisissez un nombre décimal ou laissez le champ vide.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Saisissez un entier positif ou laissez le champ vide.",
