@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Voer een decimaal getal groter dan 0 in of laat het veld leeg.",
             "invalid_context_recall_rerank_min_score": "Voer een decimaal getal in of laat het veld leeg.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Voer een positief geheel getal in of laat het veld leeg.",
-            "invalid_context_compaction_target": "Maximale contextgrootte na compactie. Dit moet binnen de contextdrempel voldoende ruimte overlaten voor het ingestelde maximale antwoord.",
+            "invalid_context_compaction_target": "Voer een positief geheel getal in als compactiedoel.",
+            "context_compaction_target_exceeds_budget": "Het compactiedoel plus het ingestelde maximale antwoord overschrijdt de contextdrempel. Verlaag een van de waarden of verhoog de drempel.",
             "cannot_connect": "Verbinden mislukt",
             "invalid_auth": "Ongeldige authenticatie",
             "unknown": "Onverwachte fout"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Embeddings-eindpunt configureren",
-                "description": "Configureer een optioneel OpenAI-compatibel embeddings-eindpunt. Een echte embeddingaanvraag controleert de referenties, URL en het model.",
+                "description": "Configureer een optioneel OpenAI-compatibel embeddings-eindpunt. Een echte embeddingaanvraag controleert de referenties, URL en het model.\n\nStored archived memories: {stored_memory_count}\nTemporary intra-turn memories: {temporary_memory_count}",
                 "data": {
                     "api_key": "API-sleutel",
                     "base_url": "Basis-URL",
                     "embedding_model": "Embeddingmodel",
-                    "clear_embedding_history": "Opgeslagen embeddinggeschiedenis wissen bij opslaan"
+                    "clear_embedding_history": "Opgeslagen embeddinggeschiedenis wissen bij opslaan",
+                    "clear_intra_turn_embeddings": "Alle tijdelijke herinneringen binnen de beurt wissen bij opslaan"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Deze actie wordt nooit als instelling opgeslagen. Wanneer geselecteerd, wordt alle embeddinggebaseerde gespreksgeschiedenis voor dit eindpunt bij het opslaan verwijderd."
+                    "clear_embedding_history": "Deze actie wordt nooit als instelling opgeslagen. Wanneer geselecteerd, wordt alle embeddinggebaseerde gespreksgeschiedenis voor dit eindpunt bij het opslaan verwijderd.",
+                    "clear_intra_turn_embeddings": "Deze actie wordt niet opgeslagen. Alle tijdelijke herinneringen binnen de beurt voor dit eindpunt worden verwijderd."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperatuur",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Doel voor gecompacteerde prompt",
                         "context_compaction_intra_turn": "Contextcompactie binnen één beurt inschakelen",
+                        "clear_embedding_history": "Opgeslagen archieven van deze agent wissen bij opslaan",
                         "clear_intra_turn_embeddings": "Tijdelijke context binnen de beurt wissen bij opslaan",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Maximale grootte van de actieve prompt in tokens na compactie. De samenvatting en behouden context moeten binnen dit doel passen.",
                         "context_compaction_intra_turn": "Staat toe dat de geselecteerde contextstrategie voltooide toolaanroepen tijdens een actieve beurt verkleint wanneer het verzoek anders de contextdrempel zou overschrijden.",
+                        "clear_embedding_history": "Deze actie wordt niet opgeslagen. De permanente archieven van deze agent worden verwijderd.",
                         "clear_intra_turn_embeddings": "Deze actie wordt nooit als instelling opgeslagen. Wanneer deze is geselecteerd, wordt alle tijdelijk gearchiveerde context binnen de beurt van deze agent verwijderd wanneer de agentconfiguratie wordt opgeslagen.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Doel voor gecompacteerde prompt",
                         "context_compaction_intra_turn": "Contextcompactie binnen één beurt inschakelen",
+                        "clear_embedding_history": "Opgeslagen archieven van deze agent wissen bij opslaan",
                         "clear_intra_turn_embeddings": "Tijdelijke context binnen de beurt wissen bij opslaan",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Maximale grootte van de actieve prompt in tokens na compactie. De samenvatting en behouden context moeten binnen dit doel passen.",
                         "context_compaction_intra_turn": "Staat toe dat de geselecteerde contextstrategie voltooide toolaanroepen tijdens een actieve beurt verkleint wanneer het verzoek anders de contextdrempel zou overschrijden.",
+                        "clear_embedding_history": "Deze actie wordt niet opgeslagen. De permanente archieven van deze agent worden verwijderd.",
                         "clear_intra_turn_embeddings": "Deze actie wordt nooit als instelling opgeslagen. Wanneer deze is geselecteerd, wordt alle tijdelijk gearchiveerde context binnen de beurt van deze agent verwijderd wanneer de agentconfiguratie wordt opgeslagen.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",

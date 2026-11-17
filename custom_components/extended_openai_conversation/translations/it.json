@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Inserisci un numero decimale maggiore di 0 o lascia vuoto il campo.",
             "invalid_context_recall_rerank_min_score": "Inserisci un numero decimale o lascia vuoto il campo.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Inserisci un numero intero positivo o lascia vuoto il campo.",
-            "invalid_context_compaction_target": "Dimensione massima del contesto dopo la compattazione. Deve lasciare spazio sufficiente entro la soglia di contesto per la risposta massima configurata.",
+            "invalid_context_compaction_target": "Inserisci un obiettivo di compattazione intero positivo.",
+            "context_compaction_target_exceeds_budget": "L'obiettivo di compattazione più la risposta massima configurata supera la soglia del contesto. Riduci uno dei valori o aumenta la soglia.",
             "cannot_connect": "Connessione non riuscita",
             "invalid_auth": "Autenticazione non valida",
             "unknown": "Errore imprevisto"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Configura endpoint embedding",
-                "description": "Configura un endpoint embedding compatibile con OpenAI facoltativo. Una richiesta reale verifica credenziali, URL e modello.",
+                "description": "Configura un endpoint embedding compatibile con OpenAI facoltativo. Una richiesta reale verifica credenziali, URL e modello.\n\nMemorie archiviate memorizzate: {stored_memory_count}\nMemorie temporanee intra-turno: {temporary_memory_count}",
                 "data": {
                     "api_key": "Chiave API",
                     "base_url": "URL di base",
                     "embedding_model": "Modello embedding",
-                    "clear_embedding_history": "Cancella la cronologia degli embedding al salvataggio"
+                    "clear_embedding_history": "Cancella tutte le memorie archiviate al salvataggio",
+                    "clear_intra_turn_embeddings": "Cancella tutte le memorie temporanee intra-turno al salvataggio"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Questa azione non viene salvata come impostazione. Se selezionata, al salvataggio verrà rimossa tutta la cronologia delle conversazioni basata sugli embedding per questo endpoint."
+                    "clear_embedding_history": "Questa azione non viene salvata. Se selezionata, rimuove tutti gli archivi persistenti di richiamo semantico e letterale per questo endpoint.",
+                    "clear_intra_turn_embeddings": "Questa azione non viene salvata. Se selezionata, rimuove tutti gli archivi temporanei intra-turno per questo endpoint."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Memorie archiviate memorizzate per questo agente: {stored_memory_count}\nMemorie temporanee intra-turno per questo agente: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperatura",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Obiettivo del prompt compattato",
                         "context_compaction_intra_turn": "Abilita la compattazione del contesto nello stesso turno",
+                        "clear_embedding_history": "Cancella gli archivi memorizzati di questo agente al salvataggio",
                         "clear_intra_turn_embeddings": "Elimina il contesto temporaneo intra-turno al salvataggio",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Dimensione massima del prompt attivo in token dopo la compattazione. Il riepilogo e il contesto conservato devono rientrare in questo obiettivo.",
                         "context_compaction_intra_turn": "Consente alla strategia di contesto selezionata di ridurre gli scambi di chiamate agli strumenti completati durante un turno attivo quando la richiesta supererebbe altrimenti la soglia del contesto.",
+                        "clear_embedding_history": "Questa azione non viene salvata. Se selezionata, gli archivi persistenti di questo agente vengono rimossi al salvataggio.",
                         "clear_intra_turn_embeddings": "Questa azione non viene mai salvata come impostazione. Quando è selezionata, tutto il contesto temporaneo intra-turno archiviato per questo agente viene rimosso al salvataggio della configurazione.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Memorie archiviate memorizzate per questo agente: {stored_memory_count}\nMemorie temporanee intra-turno per questo agente: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Obiettivo del prompt compattato",
                         "context_compaction_intra_turn": "Abilita la compattazione del contesto nello stesso turno",
+                        "clear_embedding_history": "Cancella gli archivi memorizzati di questo agente al salvataggio",
                         "clear_intra_turn_embeddings": "Elimina il contesto temporaneo intra-turno al salvataggio",
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Dimensione massima del prompt attivo in token dopo la compattazione. Il riepilogo e il contesto conservato devono rientrare in questo obiettivo.",
                         "context_compaction_intra_turn": "Consente alla strategia di contesto selezionata di ridurre gli scambi di chiamate agli strumenti completati durante un turno attivo quando la richiesta supererebbe altrimenti la soglia del contesto.",
+                        "clear_embedding_history": "Questa azione non viene salvata. Se selezionata, gli archivi persistenti di questo agente vengono rimossi al salvataggio.",
                         "clear_intra_turn_embeddings": "Questa azione non viene mai salvata come impostazione. Quando è selezionata, tutto il contesto temporaneo intra-turno archiviato per questo agente viene rimosso al salvataggio della configurazione.",
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",

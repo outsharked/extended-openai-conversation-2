@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Adjon meg 0-nál nagyobb tizedes számot, vagy hagyja üresen a mezőt.",
             "invalid_context_recall_rerank_min_score": "Adjon meg egy tizedes számot, vagy hagyja üresen a mezőt.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Adjon meg pozitív egész számot, vagy hagyja üresen a mezőt.",
-            "invalid_context_compaction_target": "A kontextus maximális mérete a tömörítés után. A kontextusküszöbön belül elegendő helyet kell hagynia a beállított maximális válasz számára.",
+            "invalid_context_compaction_target": "Adjon meg pozitív egész számú tömörítési célt.",
+            "context_compaction_target_exceeds_budget": "A tömörítési cél és a beállított maximális válasz együtt meghaladja a kontextusküszöböt. Csökkentse valamelyik értéket, vagy növelje a küszöböt.",
             "cannot_connect": "Nem sikerült csatlakozni",
             "invalid_auth": "Azonosítás sikertelen",
             "unknown": "Váratlan hiba"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Beágyazási végpont beállítása",
-                "description": "Állítson be egy opcionális, OpenAI-kompatibilis beágyazási végpontot. Egy valódi kérés ellenőrzi a hitelesítő adatokat, az URL-t és a modellt.",
+                "description": "Állítson be egy opcionális, OpenAI-kompatibilis beágyazási végpontot. Egy valódi kérés ellenőrzi a hitelesítő adatokat, az URL-t és a modellt.\n\nStored archived memories: {stored_memory_count}\nTemporary intra-turn memories: {temporary_memory_count}",
                 "data": {
                     "api_key": "API-kulcs",
                     "base_url": "Alap URL",
                     "embedding_model": "Beágyazási modell",
-                    "clear_embedding_history": "Tárolt beágyazási előzmények törlése mentéskor"
+                    "clear_embedding_history": "Tárolt beágyazási előzmények törlése mentéskor",
+                    "clear_intra_turn_embeddings": "Minden ideiglenes körön belüli memória törlése mentéskor"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Ez a művelet nem kerül beállításként mentésre. Kiválasztásakor a mentés eltávolítja a végponthoz tartozó összes beágyazásalapú beszélgetési előzményt."
+                    "clear_embedding_history": "Ez a művelet nem kerül beállításként mentésre. Kiválasztásakor a mentés eltávolítja a végponthoz tartozó összes beágyazásalapú beszélgetési előzményt.",
+                    "clear_intra_turn_embeddings": "Ez a művelet nem kerül mentésre. Eltávolítja a végpont minden ideiglenes körön belüli memóriáját."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Hőmérséklet",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Tömörített prompt célértéke",
                         "context_compaction_intra_turn": "Körön belüli kontextustömörítés engedélyezése",
+                        "clear_embedding_history": "Az ügynök tárolt archívumainak törlése mentéskor",
                         "clear_intra_turn_embeddings": "Ideiglenes körön belüli kontextus törlése mentéskor",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az aktív prompt maximális mérete tokenekben a tömörítés után. Az összegzésnek és a megtartott kontextusnak bele kell férnie ebbe a célértékbe.",
                         "context_compaction_intra_turn": "Engedélyezi, hogy a kiválasztott kontextusstratégia csökkentse a befejezett eszközhívásokat egy aktív körön belül, ha a kérés egyébként túllépné a kontextusküszöböt.",
+                        "clear_embedding_history": "Ez a művelet nem kerül mentésre. Eltávolítja az ügynök állandó archívumait.",
                         "clear_intra_turn_embeddings": "Ez a művelet soha nem kerül mentésre beállításként. Kiválasztásakor az ügynök konfigurációjának mentésekor az ügynök összes ideiglenesen archivált, körön belüli kontextusa törlődik.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Tömörített prompt célértéke",
                         "context_compaction_intra_turn": "Körön belüli kontextustömörítés engedélyezése",
+                        "clear_embedding_history": "Az ügynök tárolt archívumainak törlése mentéskor",
                         "clear_intra_turn_embeddings": "Ideiglenes körön belüli kontextus törlése mentéskor",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Az aktív prompt maximális mérete tokenekben a tömörítés után. Az összegzésnek és a megtartott kontextusnak bele kell férnie ebbe a célértékbe.",
                         "context_compaction_intra_turn": "Engedélyezi, hogy a kiválasztott kontextusstratégia csökkentse a befejezett eszközhívásokat egy aktív körön belül, ha a kérés egyébként túllépné a kontextusküszöböt.",
+                        "clear_embedding_history": "Ez a művelet nem kerül mentésre. Eltávolítja az ügynök állandó archívumait.",
                         "clear_intra_turn_embeddings": "Ez a művelet soha nem kerül mentésre beállításként. Kiválasztásakor az ügynök konfigurációjának mentésekor az ügynök összes ideiglenesen archivált, körön belüli kontextusa törlődik.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",

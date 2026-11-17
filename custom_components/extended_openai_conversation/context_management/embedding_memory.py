@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterable
+from contextlib import suppress
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
@@ -160,6 +161,14 @@ class EmbeddingMemoryMatch:
     record: EmbeddingMemoryRecord
     score: float
     matched_text: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryCounts:
+    """Count persistent and temporary archived memories."""
+
+    persistent: int = 0
+    temporary: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +371,82 @@ class EmbeddingMemoryStore:
             for scope in tuple(self._temporary_records):
                 if scope.agent_id == agent_id:
                     del self._temporary_records[scope]
+
+    async def async_clear_persistent(self, agent_id: str | None = None) -> None:
+        """Remove persistent records for one agent or the entire endpoint."""
+        async with self._lock:
+            if agent_id is None:
+                await self._hass.async_add_executor_job(
+                    self._clear_directory, self._directory
+                )
+                return
+            await self._hass.async_add_executor_job(
+                self._clear_agent, self._directory, agent_id
+            )
+
+    async def async_counts(
+        self, agent_id: str | None = None
+    ) -> EmbeddingMemoryCounts:
+        """Count active persistent and temporary memories in one scope."""
+        async with self._lock:
+            now = datetime.now(UTC)
+            temporary = sum(
+                len(self._active_temporary_records(scope, now))
+                for scope in tuple(self._temporary_records)
+                if agent_id is None or scope.agent_id == agent_id
+            )
+            persistent = await self._hass.async_add_executor_job(
+                self._count_persistent, self._directory, agent_id, now
+            )
+        return EmbeddingMemoryCounts(persistent, temporary)
+
+    @classmethod
+    def _clear_agent(cls, directory: Path, agent_id: str) -> None:
+        """Remove persistent memory files belonging to one agent."""
+        if not directory.exists():
+            return
+        for path in directory.glob("*.json"):
+            payload = cls._read_payload(path)
+            if payload is None:
+                continue
+            scope = payload.get("scope")
+            if isinstance(scope, dict) and scope.get("agent_id") == agent_id:
+                path.unlink(missing_ok=True)
+        with suppress(OSError):
+            directory.rmdir()
+
+    @classmethod
+    def _count_persistent(
+        cls,
+        directory: Path,
+        agent_id: str | None,
+        now: datetime,
+    ) -> int:
+        """Count active persistent records for an endpoint or one agent."""
+        if not directory.exists():
+            return 0
+        count = 0
+        for path in directory.glob("*.json"):
+            payload = cls._read_payload(path)
+            if payload is None:
+                continue
+            scope = payload.get("scope")
+            if (
+                agent_id is not None
+                and (
+                    not isinstance(scope, dict)
+                    or scope.get("agent_id") != agent_id
+                )
+            ):
+                continue
+            records = [
+                record
+                for record in cls._records_from_payload(payload)
+                if not record.is_expired(now)
+                and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+            ]
+            count += len(records)
+        return count
 
     async def async_search(
         self,

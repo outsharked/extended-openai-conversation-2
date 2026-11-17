@@ -76,15 +76,17 @@
       },
       "embeddings_endpoint": {
         "title": "Configure embeddings endpoint",
-        "description": "Configure an optional OpenAI-compatible embeddings endpoint. A real embedding request is made to validate the credentials, URL, and model.",
+        "description": "Configure an optional OpenAI-compatible embeddings endpoint. A real embedding request is made to validate the credentials, URL, and model.\n\nStored archived memories: {stored_memory_count}\nTemporary intra-turn memories: {temporary_memory_count}",
         "data": {
           "api_key": "[%key:common::config_flow::data::api_key%]",
           "base_url": "[%key:common::config_flow::data::base_url%]",
           "embedding_model": "Embedding model",
-          "clear_embedding_history": "Clear stored embedding history when saving"
+          "clear_embedding_history": "Clear all stored archived memories when saving",
+          "clear_intra_turn_embeddings": "Clear all temporary intra-turn memories when saving"
         },
         "data_description": {
-          "clear_embedding_history": "This action is never saved as a setting. When selected, all embedding-backed conversation history for this endpoint will be removed when the service configuration is saved."
+          "clear_embedding_history": "This action is never saved as a setting. When selected, all persistent semantic and literal-recall archives for this endpoint are removed when the service configuration is saved.",
+          "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary in-memory intra-turn archives for this endpoint are removed when the service configuration is saved."
         }
       },
       "reranker_endpoint": {
@@ -210,7 +212,8 @@
       "invalid_context_recall_close_match_tolerance": "Enter a decimal number greater than 0 or leave the field empty.",
       "invalid_context_recall_rerank_min_score": "Enter a decimal number or leave the field empty.",
       "invalid_context_recall_rerank_max_candidate_tokens": "Enter a positive whole number or leave the field empty.",
-      "invalid_context_compaction_target": "Maximum context size after compaction. This must leave enough room within the context threshold for the configured maximum response.",
+      "invalid_context_compaction_target": "Enter a positive whole-number compaction target.",
+      "context_compaction_target_exceeds_budget": "The compaction target plus the configured maximum response exceeds the context threshold. Reduce either value or increase the context threshold.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
@@ -292,6 +295,7 @@
         },
         "advanced": {
           "title": "Advanced Options",
+          "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
           "data": {
             "temperature": "Temperature",
             "top_p": "Top P",
@@ -301,6 +305,7 @@
             "shorten_tool_call_id": "Shorten tool call IDs",
             "context_compaction_target": "Compacted prompt target",
             "context_compaction_intra_turn": "Enable intra-turn context compaction",
+            "clear_embedding_history": "Clear this agent's stored archived memories when saving",
             "clear_intra_turn_embeddings": "Clear temporary intra-turn context when saving",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
@@ -320,6 +325,7 @@
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
             "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
             "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
+            "clear_embedding_history": "This action is never saved as a setting. When selected, this agent's persistent semantic and literal-recall archives are removed when the agent configuration is saved.",
             "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn archived context for this agent is removed when the agent configuration is saved.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",
@@ -364,6 +370,7 @@
         },
         "advanced": {
           "title": "Advanced options",
+          "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
           "data": {
             "temperature": "Temperature",
             "top_p": "Top P",
@@ -373,6 +380,7 @@
             "shorten_tool_call_id": "Shorten tool call IDs",
             "context_compaction_target": "Compacted prompt target",
             "context_compaction_intra_turn": "Enable intra-turn context compaction",
+            "clear_embedding_history": "Clear this agent's stored archived memories when saving",
             "clear_intra_turn_embeddings": "Clear temporary intra-turn context when saving",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
@@ -392,6 +400,7 @@
             "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
             "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
             "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
+            "clear_embedding_history": "This action is never saved as a setting. When selected, this agent's persistent semantic and literal-recall archives are removed when the agent configuration is saved.",
             "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn archived context for this agent is removed when the agent configuration is saved.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",

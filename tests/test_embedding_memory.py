@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 from custom_components.extended_openai_conversation.context_management import (
     EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryChunk,
+    EmbeddingMemoryCounts,
     EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
@@ -399,6 +400,61 @@ async def test_clear_temporary_memories_is_scoped_to_the_requested_agent(
     )
     assert [match.record for match in matches] == [persistent]
     assert await store.async_has_memories(second_scope, "embedding-model") is True
+
+
+async def test_memory_counts_and_persistent_clear_are_scoped_to_agent(
+    hass, tmp_path: Path
+):
+    """Counts and persistent clearing support agent and endpoint scopes."""
+    _configure_path(hass, tmp_path)
+    store = EmbeddingMemoryStore(hass, "endpoint-1")
+    first_scope = EmbeddingMemoryScope(
+        "endpoint-1", "agent-1", "conversation-1"
+    )
+    second_scope = EmbeddingMemoryScope(
+        "endpoint-1", "agent-2", "conversation-2"
+    )
+    for scope in (first_scope, second_scope):
+        await store.async_append(
+            scope,
+            [
+                EmbeddingMemoryRecord.create(
+                    model="embedding-model",
+                    embedding=[1.0, 0.0],
+                    searchable_text=scope.agent_id,
+                    messages=[{"role": "user", "content": scope.agent_id}],
+                    retention=timedelta(days=1),
+                )
+            ],
+        )
+        await store.async_append_temporary(
+            scope,
+            [
+                EmbeddingMemoryRecord.create(
+                    model="embedding-model",
+                    embedding=[0.0, 1.0],
+                    searchable_text=f"temporary {scope.agent_id}",
+                    messages=[
+                        {
+                            "role": "tool_result",
+                            "content": f"temporary {scope.agent_id}",
+                        }
+                    ],
+                    retention=timedelta(days=1),
+                    source=EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
+                    turn_id="turn-1",
+                )
+            ],
+        )
+
+    assert await store.async_counts() == EmbeddingMemoryCounts(2, 2)
+    assert await store.async_counts("agent-1") == EmbeddingMemoryCounts(1, 1)
+
+    await store.async_clear_persistent("agent-1")
+
+    assert await store.async_counts() == EmbeddingMemoryCounts(1, 2)
+    assert await store.async_counts("agent-1") == EmbeddingMemoryCounts(0, 1)
+    assert await store.async_counts("agent-2") == EmbeddingMemoryCounts(1, 1)
 
 
 async def test_cleanup_removes_legacy_persisted_intra_turn_memories(

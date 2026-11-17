@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Εισαγάγετε δεκαδικό αριθμό μεγαλύτερο από 0 ή αφήστε το πεδίο κενό.",
             "invalid_context_recall_rerank_min_score": "Εισαγάγετε έναν δεκαδικό αριθμό ή αφήστε το πεδίο κενό.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Εισαγάγετε θετικό ακέραιο αριθμό ή αφήστε το πεδίο κενό.",
-            "invalid_context_compaction_target": "Μέγιστο μέγεθος περιεχομένου μετά τη σύμπτυξη. Πρέπει να απομένει αρκετός χώρος εντός του ορίου περιεχομένου για τη ρυθμισμένη μέγιστη απόκριση.",
+            "invalid_context_compaction_target": "Εισαγάγετε έναν θετικό ακέραιο στόχο σύμπτυξης.",
+            "context_compaction_target_exceeds_budget": "Ο στόχος σύμπτυξης μαζί με τη ρυθμισμένη μέγιστη απόκριση υπερβαίνει το όριο περιεχομένου. Μειώστε μία τιμή ή αυξήστε το όριο.",
             "cannot_connect": "Αποτυχία σύνδεσης",
             "invalid_auth": "Μη έγκυρος έλεγχος ταυτότητας",
             "unknown": "Απροσδόκητο σφάλμα"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Ρύθμιση τελικού σημείου embeddings",
-                "description": "Ρυθμίστε ένα προαιρετικό τελικό σημείο embeddings συμβατό με OpenAI. Ένα πραγματικό αίτημα ελέγχει τα διαπιστευτήρια, τη διεύθυνση URL και το μοντέλο.",
+                "description": "Ρυθμίστε ένα προαιρετικό τελικό σημείο embeddings συμβατό με OpenAI. Ένα πραγματικό αίτημα ελέγχει τα διαπιστευτήρια, τη διεύθυνση URL και το μοντέλο.\n\nStored archived memories: {stored_memory_count}\nTemporary intra-turn memories: {temporary_memory_count}",
                 "data": {
                     "api_key": "Κλειδί API",
                     "base_url": "Βασική διεύθυνση URL",
                     "embedding_model": "Μοντέλο embeddings",
-                    "clear_embedding_history": "Εκκαθάριση αποθηκευμένου ιστορικού embeddings κατά την αποθήκευση"
+                    "clear_embedding_history": "Εκκαθάριση αποθηκευμένου ιστορικού embeddings κατά την αποθήκευση",
+                    "clear_intra_turn_embeddings": "Εκκαθάριση όλων των προσωρινών μνημών κατά την αποθήκευση"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Αυτή η ενέργεια δεν αποθηκεύεται ως ρύθμιση. Όταν επιλεγεί, όλο το ιστορικό συνομιλιών embeddings για αυτό το τελικό σημείο θα αφαιρεθεί κατά την αποθήκευση."
+                    "clear_embedding_history": "Αυτή η ενέργεια δεν αποθηκεύεται ως ρύθμιση. Όταν επιλεγεί, όλο το ιστορικό συνομιλιών embeddings για αυτό το τελικό σημείο θα αφαιρεθεί κατά την αποθήκευση.",
+                    "clear_intra_turn_embeddings": "Αυτή η ενέργεια δεν αποθηκεύεται. Αφαιρεί όλες τις προσωρινές μνήμες αυτού του τελικού σημείου."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Θερμοκρασία",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Στόχος συμπτυγμένης προτροπής",
                         "context_compaction_intra_turn": "Ενεργοποίηση συμπύκνωσης περιεχομένου εντός της ίδιας σειράς",
+                        "clear_embedding_history": "Εκκαθάριση των αρχείων αυτού του πράκτορα κατά την αποθήκευση",
                         "clear_intra_turn_embeddings": "Εκκαθάριση προσωρινού περιεχομένου εντός γύρου κατά την αποθήκευση",
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Μέγιστο μέγεθος της ενεργής προτροπής σε διακριτικά μετά τη σύμπτυξη. Η σύνοψη και το διατηρημένο περιεχόμενο πρέπει να χωρούν σε αυτόν τον στόχο.",
                         "context_compaction_intra_turn": "Επιτρέπει στην επιλεγμένη στρατηγική περιεχομένου να μειώνει ολοκληρωμένες ανταλλαγές κλήσεων εργαλείων κατά τη διάρκεια μιας ενεργής σειράς όταν διαφορετικά το αίτημα θα ξεπερνούσε το όριο περιεχομένου.",
+                        "clear_embedding_history": "Αφαιρεί τα μόνιμα αρχεία αυτού του πράκτορα κατά την αποθήκευση.",
                         "clear_intra_turn_embeddings": "Αυτή η ενέργεια δεν αποθηκεύεται ποτέ ως ρύθμιση. Όταν επιλεγεί, όλο το προσωρινά αρχειοθετημένο περιεχόμενο εντός γύρου αυτού του πράκτορα αφαιρείται κατά την αποθήκευση της διαμόρφωσής του.",
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Στόχος συμπτυγμένης προτροπής",
                         "context_compaction_intra_turn": "Ενεργοποίηση συμπύκνωσης περιεχομένου εντός της ίδιας σειράς",
+                        "clear_embedding_history": "Εκκαθάριση των αρχείων αυτού του πράκτορα κατά την αποθήκευση",
                         "clear_intra_turn_embeddings": "Εκκαθάριση προσωρινού περιεχομένου εντός γύρου κατά την αποθήκευση",
                         "context_compaction_recent_turns": "Πρόσφατοι γύροι προς διατήρηση",
                         "context_compaction_prompt": "Προτροπή συμπύκνωσης",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Μέγιστο μέγεθος της ενεργής προτροπής σε διακριτικά μετά τη σύμπτυξη. Η σύνοψη και το διατηρημένο περιεχόμενο πρέπει να χωρούν σε αυτόν τον στόχο.",
                         "context_compaction_intra_turn": "Επιτρέπει στην επιλεγμένη στρατηγική περιεχομένου να μειώνει ολοκληρωμένες ανταλλαγές κλήσεων εργαλείων κατά τη διάρκεια μιας ενεργής σειράς όταν διαφορετικά το αίτημα θα ξεπερνούσε το όριο περιεχομένου.",
+                        "clear_embedding_history": "Αφαιρεί τα μόνιμα αρχεία αυτού του πράκτορα κατά την αποθήκευση.",
                         "clear_intra_turn_embeddings": "Αυτή η ενέργεια δεν αποθηκεύεται ποτέ ως ρύθμιση. Όταν επιλεγεί, όλο το προσωρινά αρχειοθετημένο περιεχόμενο εντός γύρου αυτού του πράκτορα αφαιρείται κατά την αποθήκευση της διαμόρφωσής του.",
                         "context_compaction_recent_turns": "Αριθμός πλήρων πρόσφατων γύρων συνομιλίας που διατηρούνται αυτούσιοι μετά τη συμπύκνωση. Οι κλήσεις εργαλείων και τα αποτελέσματα παραμένουν μαζί.",
                         "context_compaction_prompt": "Οδηγίες για τη σύνοψη παλαιότερου ιστορικού συνομιλίας. Η απομαγνητοφώνηση και το όριο διακριτικών παρέχονται ξεχωριστά.",

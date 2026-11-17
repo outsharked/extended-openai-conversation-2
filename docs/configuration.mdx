@@ -193,6 +193,16 @@ Enable **Advanced Options** in the configuration to access these model-specific 
     **Available when**: `compact` is selected
 
     Sets the desired total context size, in estimated tokens, after compaction. The summary and retained recent messages must fit inside this target. A lower value leaves more room for subsequent conversation turns but requires a more concise summary.
+
+    The target plus **Maximum tokens to return in response** must not exceed the agent's **Context Threshold**. The configuration flow reports this token-budget conflict separately from an invalid numeric target.
+  </Accordion>
+
+  <Accordion title="Archived Memory Maintenance">
+    **Available when**: Reconfiguring an existing agent
+
+    The advanced page reports the number of persistent archived memories and temporary intra-turn memories currently held for that agent. Its two transient clear options remove only that agent's corresponding memory category when the configuration is saved.
+
+    The embeddings-endpoint page reports the totals across every agent belonging to the endpoint and provides equivalent endpoint-wide clear options. These checkboxes are actions and are never saved as configuration settings.
   </Accordion>
 
   <Accordion title="Recent Turns to Preserve">

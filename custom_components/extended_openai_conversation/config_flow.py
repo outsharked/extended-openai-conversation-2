@@ -378,6 +378,9 @@ STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA = vol.Schema(
         vol.Optional(
             CONF_CLEAR_EMBEDDING_HISTORY, default=False
         ): BooleanSelector(),
+        vol.Optional(
+            CONF_CLEAR_INTRA_TURN_EMBEDDINGS, default=False
+        ): BooleanSelector(),
     }
 )
 
@@ -488,15 +491,51 @@ def _entry_has_reranker(entry: ConfigEntry) -> bool:
     return isinstance(entry.data.get(CONF_RERANKER), Mapping)
 
 
-async def _async_clear_intra_turn_embeddings(
-    entry: ConfigEntry, agent_id: str
-) -> None:
-    """Clear one agent's temporary intra-turn embedding memories."""
+def _embedding_memory_store(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> EmbeddingMemoryStore:
+    """Return the loaded memory store or a disk-only fallback."""
     runtime = entry.runtime_data
     if (
         isinstance(runtime, OpenAIServiceRuntime)
         and runtime.embedding_memory is not None
     ):
+        return runtime.embedding_memory
+    return EmbeddingMemoryStore(hass, entry.entry_id)
+
+
+async def _async_embedding_memory_count_placeholders(
+    hass: HomeAssistant,
+    entry: ConfigEntry | None,
+    agent_id: str | None = None,
+) -> dict[str, str]:
+    """Return localized-form placeholders for archived-memory counts."""
+    if entry is None:
+        return {"stored_memory_count": "0", "temporary_memory_count": "0"}
+    counts = await _embedding_memory_store(hass, entry).async_counts(agent_id)
+    return {
+        "stored_memory_count": str(counts.persistent),
+        "temporary_memory_count": str(counts.temporary),
+    }
+
+
+async def _async_clear_agent_memories(
+    entry: ConfigEntry,
+    agent_id: str,
+    *,
+    persistent: bool,
+    temporary: bool,
+) -> None:
+    """Clear the requested memory categories for one agent."""
+    runtime = entry.runtime_data
+    if (
+        not isinstance(runtime, OpenAIServiceRuntime)
+        or runtime.embedding_memory is None
+    ):
+        return
+    if persistent:
+        await runtime.embedding_memory.async_clear_persistent(agent_id)
+    if temporary:
         await runtime.embedding_memory.async_clear_temporary(agent_id)
 
 
@@ -785,19 +824,29 @@ def _validate_context_compaction_target_input(
     value = user_input.get(CONF_CONTEXT_COMPACTION_TARGET)
     if value is None or isinstance(value, bool):
         return {
-            CONF_CONTEXT_COMPACTION_TARGET: ( "invalid_context_compaction_target")
+            CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
         }
     try:
-        target = int(value)
+        numeric_value = float(value)
     except (TypeError, ValueError):
-        target = 0
+        numeric_value = 0
+
+    if not math.isfinite(numeric_value) or not numeric_value.is_integer():
+        return {
+            CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
+        }
+    target = int(numeric_value)
+    if target <= 0:
+        return {
+            CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
+        }
 
     threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
     max_tokens = int(options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS))
-    if target != value or target <= 0 or target + max_tokens > threshold:
+    if target + max_tokens > threshold:
         return {
             CONF_CONTEXT_COMPACTION_TARGET: (
-                "invalid_context_compaction_target"
+                "context_compaction_target_exceeds_budget"
             )
         }
 
@@ -929,6 +978,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         self._reranker_connection_status: bool | None = None
         self._reranker_error_reason: str | None = None
         self._clear_embedding_history_requested = False
+        self._clear_intra_turn_embeddings_requested = False
         self._reconfigure_entry: ConfigEntry | None = None
 
     async def async_step_user(
@@ -1126,6 +1176,9 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             clear_history = bool(
                 submitted_data.pop(CONF_CLEAR_EMBEDDING_HISTORY, False)
             )
+            clear_temporary = bool(
+                submitted_data.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
+            )
             self._embeddings_endpoint_draft = dict(submitted_data)
             error_reason: str | None = None
             try:
@@ -1146,6 +1199,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 self._embeddings_endpoint_data = dict(submitted_data)
                 self._embeddings_endpoint_draft = None
                 self._clear_embedding_history_requested = clear_history
+                self._clear_intra_turn_embeddings_requested = clear_temporary
             return await self.async_step_service_menu()
 
         suggested_values = dict(
@@ -1154,12 +1208,17 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             or {}
         )
         suggested_values[CONF_CLEAR_EMBEDDING_HISTORY] = False
+        suggested_values[CONF_CLEAR_INTRA_TURN_EMBEDDINGS] = False
         schema = self.add_suggested_values_to_schema(
             STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA, suggested_values
+        )
+        counts = await _async_embedding_memory_count_placeholders(
+            self.hass, self._reconfigure_entry
         )
         return self.async_show_form(
             step_id="embeddings_endpoint",
             data_schema=schema,
+            description_placeholders=counts,
         )
 
     async def async_step_reranker_endpoint(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -2016,14 +2075,16 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
 
         title = str(data.get(CONF_NAME, DEFAULT_NAME))
         if self._reconfigure_entry is not None:
-            if (
-                self._selected_service_type == SERVICE_TYPE_AI_ENDPOINT
-                and self._clear_embedding_history_requested
-            ):
-                await EmbeddingMemoryStore.async_clear_endpoint(
-                    self.hass, self._reconfigure_entry.entry_id
+            if self._selected_service_type == SERVICE_TYPE_AI_ENDPOINT:
+                memory_store = _embedding_memory_store(
+                    self.hass, self._reconfigure_entry
                 )
+                if self._clear_embedding_history_requested:
+                    await memory_store.async_clear_persistent()
+                if self._clear_intra_turn_embeddings_requested:
+                    await memory_store.async_clear_temporary()
                 self._clear_embedding_history_requested = False
+                self._clear_intra_turn_embeddings_requested = False
             return self.async_update_reload_and_abort(
                 self._reconfigure_entry, title=title, data=data
             )
@@ -2305,6 +2366,8 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
     options: dict[str, Any]
     _temp_data: dict[str, Any] | None = None
     _available_skills: list[dict[str, Any]] | None = None
+    _agent_id: str | None = None
+    _clear_embedding_history_requested = False
     _clear_intra_turn_embeddings_requested = False
 
     @property
@@ -2317,6 +2380,8 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Add a subentry."""
         self._clear_intra_turn_embeddings_requested = False
+        self._clear_embedding_history_requested = False
+        self._agent_id = None
         self.options = dict(DEFAULT_OPTIONS)
         return await self.async_step_init()
 
@@ -2325,7 +2390,10 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Handle reconfiguration of a subentry."""
         self._clear_intra_turn_embeddings_requested = False
-        self.options = dict(self._get_reconfigure_subentry().data)
+        self._clear_embedding_history_requested = False
+        subentry = self._get_reconfigure_subentry()
+        self._agent_id = subentry.subentry_id
+        self.options = dict(subentry.data)
         return await self.async_step_init()
 
     async def async_step_init(
@@ -2399,6 +2467,9 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         """Handle advanced options step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            self._clear_embedding_history_requested = bool(
+                user_input.pop(CONF_CLEAR_EMBEDDING_HISTORY, False)
+            )
             self._clear_intra_turn_embeddings_requested = bool(
                 user_input.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
             )
@@ -2460,10 +2531,17 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                         data=final_data,
                     )
                 reconfigure_subentry = self._get_reconfigure_subentry()
-                if self._clear_intra_turn_embeddings_requested:
-                    await _async_clear_intra_turn_embeddings(
-                        self._get_entry(), reconfigure_subentry.subentry_id
+                if (
+                    self._clear_embedding_history_requested
+                    or self._clear_intra_turn_embeddings_requested
+                ):
+                    await _async_clear_agent_memories(
+                        self._get_entry(),
+                        reconfigure_subentry.subentry_id,
+                        persistent=self._clear_embedding_history_requested,
+                        temporary=self._clear_intra_turn_embeddings_requested,
                     )
+                    self._clear_embedding_history_requested = False
                     self._clear_intra_turn_embeddings_requested = False
                 return self.async_update_and_abort(
                     self._get_entry(),
@@ -2597,6 +2675,12 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         ):
             schema[
                 vol.Optional(
+                    CONF_CLEAR_EMBEDDING_HISTORY,
+                    default=False,
+                )
+            ] = BooleanSelector()
+            schema[
+                vol.Optional(
                     CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
                     default=False,
                 )
@@ -2679,6 +2763,11 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             if _entry_has_reranker(self._get_entry()):
                 _add_context_recall_reranker_schema(schema)
 
+        counts = await _async_embedding_memory_count_placeholders(
+            self.hass,
+            self._get_entry() if self._agent_id is not None else None,
+            self._agent_id,
+        )
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
@@ -2686,6 +2775,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 _advanced_form_values(self.options, user_input),
             ),
             errors=errors,
+            description_placeholders=counts,
         )
 
     async def _async_get_skills(self) -> list[dict[str, Any]]:
@@ -2809,6 +2899,8 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
 
     options: dict[str, Any]
     _temp_data: dict[str, Any] | None = None
+    _agent_id: str | None = None
+    _clear_embedding_history_requested = False
     _clear_intra_turn_embeddings_requested = False
 
     @property
@@ -2821,6 +2913,8 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Add a subentry."""
         self._clear_intra_turn_embeddings_requested = False
+        self._clear_embedding_history_requested = False
+        self._agent_id = None
         self.options = dict(DEFAULT_AI_TASK_OPTIONS)
         return await self.async_step_init()
 
@@ -2829,7 +2923,10 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Handle reconfiguration of a subentry."""
         self._clear_intra_turn_embeddings_requested = False
-        self.options = dict(self._get_reconfigure_subentry().data)
+        self._clear_embedding_history_requested = False
+        subentry = self._get_reconfigure_subentry()
+        self._agent_id = subentry.subentry_id
+        self.options = dict(subentry.data)
         return await self.async_step_init()
 
     async def async_step_init(
@@ -2964,6 +3061,9 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         """Handle advanced options step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            self._clear_embedding_history_requested = bool(
+                user_input.pop(CONF_CLEAR_EMBEDDING_HISTORY, False)
+            )
             self._clear_intra_turn_embeddings_requested = bool(
                 user_input.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
             )
@@ -3025,10 +3125,17 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                         data=final_data,
                     )
                 reconfigure_subentry = self._get_reconfigure_subentry()
-                if self._clear_intra_turn_embeddings_requested:
-                    await _async_clear_intra_turn_embeddings(
-                        self._get_entry(), reconfigure_subentry.subentry_id
+                if (
+                    self._clear_embedding_history_requested
+                    or self._clear_intra_turn_embeddings_requested
+                ):
+                    await _async_clear_agent_memories(
+                        self._get_entry(),
+                        reconfigure_subentry.subentry_id,
+                        persistent=self._clear_embedding_history_requested,
+                        temporary=self._clear_intra_turn_embeddings_requested,
                     )
+                    self._clear_embedding_history_requested = False
                     self._clear_intra_turn_embeddings_requested = False
                 return self.async_update_and_abort(
                     self._get_entry(),
@@ -3162,6 +3269,12 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         ):
             schema[
                 vol.Optional(
+                    CONF_CLEAR_EMBEDDING_HISTORY,
+                    default=False,
+                )
+            ] = BooleanSelector()
+            schema[
+                vol.Optional(
                     CONF_CLEAR_INTRA_TURN_EMBEDDINGS,
                     default=False,
                 )
@@ -3244,6 +3357,11 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             if _entry_has_reranker(self._get_entry()):
                 _add_context_recall_reranker_schema(schema)
 
+        counts = await _async_embedding_memory_count_placeholders(
+            self.hass,
+            self._get_entry() if self._agent_id is not None else None,
+            self._agent_id,
+        )
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
@@ -3251,4 +3369,5 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 _advanced_form_values(self.options, user_input),
             ),
             errors=errors,
+            description_placeholders=counts,
         )

@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Gib eine Dezimalzahl größer als 0 ein oder lasse das Feld leer.",
             "invalid_context_recall_rerank_min_score": "Gib eine Dezimalzahl ein oder lasse das Feld leer.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Gib eine positive ganze Zahl ein oder lasse das Feld leer.",
-            "invalid_context_compaction_target": "Maximale Kontextgröße nach der Kompaktierung. Dabei muss innerhalb des Kontext-Schwellenwerts genügend Platz für die konfigurierte maximale Antwort verbleiben.",
+            "invalid_context_compaction_target": "Gib ein positives ganzzahliges Kompaktierungsziel ein.",
+            "context_compaction_target_exceeds_budget": "Das Kompaktierungsziel plus die konfigurierte maximale Antwort überschreitet den Kontextgrenzwert. Reduziere einen der Werte oder erhöhe den Kontextgrenzwert.",
             "cannot_connect": "Fehler beim Verbindungsaufbau",
             "invalid_auth": "Authentifizierung fehlgeschlagen",
             "unknown": "Unbekannter Fehler"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Embeddings-Endpunkt konfigurieren",
-                "description": "Konfiguriere einen optionalen OpenAI-kompatiblen Embeddings-Endpunkt. Zugangsdaten, URL und Modell werden mit einer echten Embedding-Anfrage geprüft.",
+                "description": "Konfiguriere einen optionalen OpenAI-kompatiblen Embeddings-Endpunkt. Zugangsdaten, URL und Modell werden mit einer echten Embedding-Anfrage geprüft.\n\nGespeicherte archivierte Erinnerungen: {stored_memory_count}\nTemporäre Intra-Turn-Erinnerungen: {temporary_memory_count}",
                 "data": {
                     "api_key": "API-Schlüssel",
                     "base_url": "Basis-URL",
                     "embedding_model": "Embedding-Modell",
-                    "clear_embedding_history": "Gespeicherten Embedding-Verlauf beim Speichern löschen"
+                    "clear_embedding_history": "Alle gespeicherten archivierten Erinnerungen beim Speichern löschen",
+                    "clear_intra_turn_embeddings": "Alle temporären Intra-Turn-Erinnerungen beim Speichern löschen"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Diese Aktion wird nicht als Einstellung gespeichert. Bei Auswahl wird beim Speichern der gesamte Embedding-basierte Gesprächsverlauf dieses Endpunkts entfernt."
+                    "clear_embedding_history": "Diese Aktion wird nicht als Einstellung gespeichert. Bei Auswahl werden beim Speichern alle persistenten Archive für semantischen und wörtlichen Abruf dieses Endpunkts entfernt.",
+                    "clear_intra_turn_embeddings": "Diese Aktion wird nicht als Einstellung gespeichert. Bei Auswahl werden beim Speichern alle temporären Intra-Turn-Archive dieses Endpunkts entfernt."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Gespeicherte archivierte Erinnerungen für diesen Agenten: {stored_memory_count}\nTemporäre Intra-Turn-Erinnerungen für diesen Agenten: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperatur",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Zielgröße des kompaktierten Prompts",
                         "context_compaction_intra_turn": "Kontextkomprimierung innerhalb eines Durchgangs aktivieren",
+                        "clear_embedding_history": "Gespeicherte Archive dieses Agenten beim Speichern löschen",
                         "clear_intra_turn_embeddings": "Temporären Intra-Turn-Kontext beim Speichern löschen",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Maximale Größe des aktiven Prompts in Tokens nach der Kompaktierung. Zusammenfassung und beibehaltener Kontext müssen in dieses Ziel passen.",
                         "context_compaction_intra_turn": "Erlaubt der ausgewählten Kontextstrategie, abgeschlossene Werkzeugaufrufe während eines aktiven Durchgangs zu reduzieren, wenn die Anfrage sonst den Kontextgrenzwert überschreiten würde.",
+                        "clear_embedding_history": "Diese Aktion wird nicht gespeichert. Bei Auswahl werden die persistenten Archive dieses Agenten beim Speichern entfernt.",
                         "clear_intra_turn_embeddings": "Diese Aktion wird nie als Einstellung gespeichert. Wenn sie ausgewählt ist, wird beim Speichern der Agentenkonfiguration der gesamte temporär archivierte Intra-Turn-Kontext dieses Agenten entfernt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Gespeicherte archivierte Erinnerungen für diesen Agenten: {stored_memory_count}\nTemporäre Intra-Turn-Erinnerungen für diesen Agenten: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Zielgröße des kompaktierten Prompts",
                         "context_compaction_intra_turn": "Kontextkomprimierung innerhalb eines Durchgangs aktivieren",
+                        "clear_embedding_history": "Gespeicherte Archive dieses Agenten beim Speichern löschen",
                         "clear_intra_turn_embeddings": "Temporären Intra-Turn-Kontext beim Speichern löschen",
                         "context_compaction_recent_turns": "Beizubehaltende letzte Gesprächsrunden",
                         "context_compaction_prompt": "Kompaktierungsanweisung",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Maximale Größe des aktiven Prompts in Tokens nach der Kompaktierung. Zusammenfassung und beibehaltener Kontext müssen in dieses Ziel passen.",
                         "context_compaction_intra_turn": "Erlaubt der ausgewählten Kontextstrategie, abgeschlossene Werkzeugaufrufe während eines aktiven Durchgangs zu reduzieren, wenn die Anfrage sonst den Kontextgrenzwert überschreiten würde.",
+                        "clear_embedding_history": "Diese Aktion wird nicht gespeichert. Bei Auswahl werden die persistenten Archive dieses Agenten beim Speichern entfernt.",
                         "clear_intra_turn_embeddings": "Diese Aktion wird nie als Einstellung gespeichert. Wenn sie ausgewählt ist, wird beim Speichern der Agentenkonfiguration der gesamte temporär archivierte Intra-Turn-Kontext dieses Agenten entfernt.",
                         "context_compaction_recent_turns": "Anzahl vollständiger letzter Gesprächsrunden, die nach der Kompaktierung unverändert erhalten bleiben. Werkzeugaufrufe und Ergebnisse bleiben zusammen.",
                         "context_compaction_prompt": "Anweisungen zum Zusammenfassen des älteren Gesprächsverlaufs. Transkript und Token-Limit werden separat bereitgestellt.",

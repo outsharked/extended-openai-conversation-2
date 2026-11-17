@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Introduza um número decimal superior a 0 ou deixe o campo vazio.",
             "invalid_context_recall_rerank_min_score": "Introduza um número decimal ou deixe o campo vazio.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Introduza um número inteiro positivo ou deixe o campo vazio.",
-            "invalid_context_compaction_target": "Tamanho máximo do contexto após a compactação. Deve deixar espaço suficiente dentro do limite de contexto para a resposta máxima configurada.",
+            "invalid_context_compaction_target": "Introduza um objetivo de compactação inteiro positivo.",
+            "context_compaction_target_exceeds_budget": "O objetivo de compactação mais a resposta máxima configurada excede o limite de contexto. Reduza um dos valores ou aumente o limite.",
             "cannot_connect": "Não é possível ligar",
             "invalid_auth": "Autenticação inválida",
             "unknown": "Erro desconhecido"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Configurar endpoint de embeddings",
-                "description": "Configure um endpoint de embeddings opcional compatível com OpenAI. Um pedido real valida as credenciais, o URL e o modelo.",
+                "description": "Configure um endpoint de embeddings opcional compatível com OpenAI. Um pedido real valida as credenciais, o URL e o modelo.\n\nMemórias arquivadas armazenadas: {stored_memory_count}\nMemórias temporárias durante o turno: {temporary_memory_count}",
                 "data": {
                     "api_key": "Chave da API",
                     "base_url": "URL base",
                     "embedding_model": "Modelo de embeddings",
-                    "clear_embedding_history": "Limpar o histórico de embeddings ao guardar"
+                    "clear_embedding_history": "Limpar o histórico de embeddings ao guardar",
+                    "clear_intra_turn_embeddings": "Limpar todas as memórias temporárias ao guardar"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Esta ação nunca é guardada como definição. Quando selecionada, todo o histórico de conversas baseado em embeddings deste endpoint será removido ao guardar."
+                    "clear_embedding_history": "Esta ação nunca é guardada como definição. Quando selecionada, todo o histórico de conversas baseado em embeddings deste endpoint será removido ao guardar.",
+                    "clear_intra_turn_embeddings": "Esta ação não é guardada e remove todas as memórias temporárias deste endpoint."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Memórias arquivadas armazenadas para este agente: {stored_memory_count}\nMemórias temporárias durante o turno para este agente: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperatura",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Objetivo do prompt compactado",
                         "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
+                        "clear_embedding_history": "Limpar os arquivos guardados deste agente ao guardar",
                         "clear_intra_turn_embeddings": "Limpar contexto temporário durante o turno ao guardar",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Instrução de compactação",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Tamanho máximo do prompt ativo em tokens após a compactação. O resumo e o contexto mantido devem caber neste objetivo.",
                         "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando o pedido excederia o limite de contexto.",
+                        "clear_embedding_history": "Esta ação não é guardada e remove os arquivos persistentes deste agente.",
                         "clear_intra_turn_embeddings": "Esta ação nunca é guardada como definição. Quando selecionada, todo o contexto temporário arquivado durante o turno deste agente é removido ao guardar a configuração.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Memórias arquivadas armazenadas para este agente: {stored_memory_count}\nMemórias temporárias durante o turno para este agente: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Objetivo do prompt compactado",
                         "context_compaction_intra_turn": "Ativar compactação de contexto durante o turno",
+                        "clear_embedding_history": "Limpar os arquivos guardados deste agente ao guardar",
                         "clear_intra_turn_embeddings": "Limpar contexto temporário durante o turno ao guardar",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Instrução de compactação",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Tamanho máximo do prompt ativo em tokens após a compactação. O resumo e o contexto mantido devem caber neste objetivo.",
                         "context_compaction_intra_turn": "Permite que a estratégia de contexto selecionada reduza trocas concluídas de chamadas de ferramentas durante um turno ativo quando o pedido excederia o limite de contexto.",
+                        "clear_embedding_history": "Esta ação não é guardada e remove os arquivos persistentes deste agente.",
                         "clear_intra_turn_embeddings": "Esta ação nunca é guardada como definição. Quando selecionada, todo o contexto temporário arquivado durante o turno deste agente é removido ao guardar a configuração.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções utilizadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",

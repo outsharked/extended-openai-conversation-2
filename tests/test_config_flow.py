@@ -108,6 +108,8 @@ from custom_components.extended_openai_conversation.const import (
     SERVICE_TYPE_MCP,
 )
 from custom_components.extended_openai_conversation.context_management import (
+    EmbeddingMemoryCounts,
+    EmbeddingMemoryStore,
     normalize_embedding_history_retention,
 )
 from custom_components.extended_openai_conversation.mcp_client import (
@@ -515,6 +517,7 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
         CONF_BASE_URL: "https://embeddings.example.com/v1",
         CONF_EMBEDDINGS_MODEL: "embed-model",
         CONF_CLEAR_EMBEDDING_HISTORY: True,
+        CONF_CLEAR_INTRA_TURN_EMBEDDINGS: True,
     }
 
     with patch(
@@ -527,6 +530,7 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
     assert result == {"type": "menu"}
     assert flow._embeddings_connection_status is True
     assert flow._clear_embedding_history_requested is True
+    assert flow._clear_intra_turn_embeddings_requested is True
     assert flow._service_configuration() == {
         **flow._ai_endpoint_data,
         CONF_EMBEDDINGS: {
@@ -538,6 +542,10 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
     assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
         CONF_EMBEDDINGS
     ]
+    assert (
+        CONF_CLEAR_INTRA_TURN_EMBEDDINGS
+        not in flow._service_configuration()[CONF_EMBEDDINGS]
+    )
 
 
 async def test_reranker_endpoint_validates_and_is_saved_nested(hass):
@@ -625,22 +633,28 @@ async def test_reconfigure_save_performs_requested_embedding_history_wipe(hass):
         CONF_EMBEDDINGS_MODEL: "embed-model",
     }
     flow._clear_embedding_history_requested = True
+    flow._clear_intra_turn_embeddings_requested = True
     entry = MagicMock(entry_id="endpoint-1")
     flow._reconfigure_entry = entry
     flow.async_update_reload_and_abort = MagicMock(
         return_value={"type": "abort"}
     )
 
-    with patch(
-        "custom_components.extended_openai_conversation.config_flow."
-        "EmbeddingMemoryStore.async_clear_endpoint",
-        new=AsyncMock(),
-    ) as clear_endpoint:
+    with (
+        patch.object(
+            EmbeddingMemoryStore, "async_clear_persistent", new=AsyncMock()
+        ) as clear_endpoint,
+        patch.object(
+            EmbeddingMemoryStore, "async_clear_temporary", new=AsyncMock()
+        ) as clear_temporary,
+    ):
         result = await flow.async_step_service_save()
 
     assert result == {"type": "abort"}
-    clear_endpoint.assert_awaited_once_with(hass, "endpoint-1")
+    clear_endpoint.assert_awaited_once_with()
+    clear_temporary.assert_awaited_once_with()
     assert flow._clear_embedding_history_requested is False
+    assert flow._clear_intra_turn_embeddings_requested is False
 
 
 async def test_embeddings_failure_preserves_last_known_good_config(hass):
@@ -706,6 +720,16 @@ async def test_embeddings_form_never_rechecks_clear_history(hass):
         if getattr(key, "schema", key) == CONF_CLEAR_EMBEDDING_HISTORY
     )
     assert clear_key.default() is False
+    clear_temporary_key = next(
+        key
+        for key in schema.schema
+        if getattr(key, "schema", key) == CONF_CLEAR_INTRA_TURN_EMBEDDINGS
+    )
+    assert clear_temporary_key.default() is False
+    assert flow.async_show_form.call_args.kwargs["description_placeholders"] == {
+        "stored_memory_count": "0",
+        "temporary_memory_count": "0",
+    }
     assert not any(
         getattr(key, "schema", key) == CONF_EMBEDDING_CHUNK_SIZE
         for key in schema.schema
@@ -2740,6 +2764,7 @@ async def test_existing_agent_can_clear_temporary_embeddings_after_switching_str
     await handler.async_step_advanced()
 
     schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
+    assert CONF_CLEAR_EMBEDDING_HISTORY in _schema_keys(schema)
     assert CONF_CLEAR_INTRA_TURN_EMBEDDINGS in _schema_keys(schema)
 
 
@@ -2747,8 +2772,47 @@ async def test_existing_agent_can_clear_temporary_embeddings_after_switching_str
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_temporary_embedding_cleanup_is_transient(hass, handler_type):
-    """The cleanup action is requested once and never enters agent data."""
+async def test_agent_advanced_reports_scoped_memory_counts(hass, handler_type):
+    """The advanced page reports memory counts for only this agent."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._agent_id = "agent-1"
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: [CONTEXT_PRESERVATION_METHOD_EMBEDDINGS],
+    }
+    memory_store = MagicMock()
+    memory_store.async_counts = AsyncMock(
+        return_value=EmbeddingMemoryCounts(persistent=4, temporary=2)
+    )
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    entry.runtime_data = OpenAIServiceRuntime(
+        client=MagicMock(), embedding_memory=memory_store
+    )
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced()
+
+    assert result == {"type": "form"}
+    memory_store.async_counts.assert_awaited_once_with("agent-1")
+    assert handler.async_show_form.call_args.kwargs[
+        "description_placeholders"
+    ] == {
+        "stored_memory_count": "4",
+        "temporary_memory_count": "2",
+    }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_memory_cleanup_is_transient(hass, handler_type):
+    """Agent-scoped cleanup actions execute once and never enter agent data."""
     handler = handler_type()
     handler.hass = hass
     handler.context = {"source": "reconfigure"}
@@ -2757,6 +2821,7 @@ async def test_temporary_embedding_cleanup_is_transient(hass, handler_type):
         CONF_CONTEXT_TRUNCATE_STRATEGY: [CONTEXT_PRESERVATION_METHOD_EMBEDDINGS]
     }
     memory_store = MagicMock()
+    memory_store.async_clear_persistent = AsyncMock()
     memory_store.async_clear_temporary = AsyncMock()
     entry = MagicMock()
     entry.data = {CONF_EMBEDDINGS: {}}
@@ -2771,14 +2836,21 @@ async def test_temporary_embedding_cleanup_is_transient(hass, handler_type):
 
     result = await handler.async_step_advanced(
         {
+            CONF_CLEAR_EMBEDDING_HISTORY: True,
             CONF_CLEAR_INTRA_TURN_EMBEDDINGS: True,
             CONF_EMBEDDING_HISTORY_RETENTION: "30d",
         }
     )
 
     assert result == {"type": "abort"}
+    assert handler._clear_embedding_history_requested is False
     assert handler._clear_intra_turn_embeddings_requested is False
+    memory_store.async_clear_persistent.assert_awaited_once_with("agent-1")
     memory_store.async_clear_temporary.assert_awaited_once_with("agent-1")
+    assert (
+        CONF_CLEAR_EMBEDDING_HISTORY
+        not in handler.async_update_and_abort.call_args.kwargs["data"]
+    )
     assert (
         CONF_CLEAR_INTRA_TURN_EMBEDDINGS
         not in handler.async_update_and_abort.call_args.kwargs["data"]
@@ -2911,8 +2983,41 @@ async def test_agent_advanced_rejects_compaction_target_outside_request_budget(
     assert result == {"type": "form"}
     assert handler.async_show_form.call_args.kwargs["errors"] == {
         CONF_CONTEXT_COMPACTION_TARGET: (
-            "invalid_context_compaction_target"
+            "context_compaction_target_exceeds_budget"
         )
+    }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+@pytest.mark.parametrize("value", [None, True, 0, -1, 1.5, "invalid"])
+async def test_agent_advanced_rejects_malformed_compaction_target(
+    hass, handler_type, value
+):
+    """Malformed targets use a different error from budget conflicts."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_THRESHOLD: 40000,
+        CONF_CONTEXT_TRUNCATE_STRATEGY: [CONTEXT_PRESERVATION_METHOD_COMPACT],
+        CONF_MAX_TOKENS: 500,
+    }
+    entry = MagicMock()
+    entry.data = {}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {CONF_CONTEXT_COMPACTION_TARGET: value}
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
     }
 
 

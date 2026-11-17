@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Wprowadź liczbę dziesiętną większą niż 0 lub pozostaw pole puste.",
             "invalid_context_recall_rerank_min_score": "Wprowadź liczbę dziesiętną lub pozostaw pole puste.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Wprowadź dodatnią liczbę całkowitą lub pozostaw pole puste.",
-            "invalid_context_compaction_target": "Maksymalny rozmiar kontekstu po kompaktowaniu. Musi pozostawić w limicie kontekstu wystarczająco dużo miejsca na skonfigurowaną maksymalną odpowiedź.",
+            "invalid_context_compaction_target": "Wprowadź dodatni, całkowity cel kompaktowania.",
+            "context_compaction_target_exceeds_budget": "Cel kompaktowania wraz ze skonfigurowaną maksymalną odpowiedzią przekracza próg kontekstu. Zmniejsz jedną z wartości lub zwiększ próg.",
             "cannot_connect": "Nie udało się połączyć",
             "invalid_auth": "Błąd authentykacji",
             "unknown": "Nieznany błąd"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Skonfiguruj punkt końcowy osadzania",
-                "description": "Skonfiguruj opcjonalny punkt końcowy osadzania zgodny z OpenAI. Rzeczywiste żądanie sprawdza dane uwierzytelniające, adres URL i model.",
+                "description": "Skonfiguruj opcjonalny punkt końcowy osadzania zgodny z OpenAI. Rzeczywiste żądanie sprawdza dane uwierzytelniające, adres URL i model.\n\nStored archived memories: {stored_memory_count}\nTemporary intra-turn memories: {temporary_memory_count}",
                 "data": {
                     "api_key": "Klucz API",
                     "base_url": "Bazowy adres URL",
                     "embedding_model": "Model osadzania",
-                    "clear_embedding_history": "Wyczyść zapisaną historię osadzania podczas zapisu"
+                    "clear_embedding_history": "Wyczyść zapisaną historię osadzania podczas zapisu",
+                    "clear_intra_turn_embeddings": "Wyczyść wszystkie tymczasowe wspomnienia podczas zapisu"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Ta czynność nie jest zapisywana jako ustawienie. Po jej wybraniu cała historia rozmów oparta na osadzeniach dla tego punktu końcowego zostanie usunięta podczas zapisu."
+                    "clear_embedding_history": "Ta czynność nie jest zapisywana jako ustawienie. Po jej wybraniu cała historia rozmów oparta na osadzeniach dla tego punktu końcowego zostanie usunięta podczas zapisu.",
+                    "clear_intra_turn_embeddings": "Ta czynność nie jest zapisywana i usuwa wszystkie tymczasowe wspomnienia tego punktu końcowego."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperatura",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego monitu",
                         "context_compaction_intra_turn": "Włącz kompaktowanie kontekstu w trakcie tury",
+                        "clear_embedding_history": "Wyczyść zapisane archiwa tego agenta podczas zapisu",
                         "clear_intra_turn_embeddings": "Wyczyść tymczasowy kontekst wewnątrz tury podczas zapisywania",
                         "context_compaction_recent_turns": "Ostatnie tury do zachowania",
                         "context_compaction_prompt": "Instrukcja kompaktowania",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Maksymalny rozmiar aktywnego monitu w tokenach po kompaktowaniu. Podsumowanie i zachowany kontekst muszą zmieścić się w tym limicie.",
                         "context_compaction_intra_turn": "Zezwala wybranej strategii kontekstu ograniczać zakończone wywołania narzędzi podczas aktywnej tury, gdy żądanie przekroczyłoby inaczej próg kontekstu.",
+                        "clear_embedding_history": "Ta czynność nie jest zapisywana i usuwa trwałe archiwa tego agenta.",
                         "clear_intra_turn_embeddings": "Ta czynność nigdy nie jest zapisywana jako ustawienie. Po jej wybraniu cały tymczasowo zarchiwizowany kontekst wewnątrz tury tego agenta zostanie usunięty podczas zapisywania konfiguracji.",
                         "context_compaction_recent_turns": "Liczba pełnych ostatnich tur rozmowy zachowanych bez zmian po kompaktowaniu. Wywołania narzędzi i ich wyniki pozostają razem.",
                         "context_compaction_prompt": "Instrukcje używane do podsumowania starszej historii rozmowy. Transkrypcja i limit tokenów są przekazywane oddzielnie.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Docelowy rozmiar skompaktowanego monitu",
                         "context_compaction_intra_turn": "Włącz kompaktowanie kontekstu w trakcie tury",
+                        "clear_embedding_history": "Wyczyść zapisane archiwa tego agenta podczas zapisu",
                         "clear_intra_turn_embeddings": "Wyczyść tymczasowy kontekst wewnątrz tury podczas zapisywania",
                         "context_compaction_recent_turns": "Ostatnie tury do zachowania",
                         "context_compaction_prompt": "Instrukcja kompaktowania",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Maksymalny rozmiar aktywnego monitu w tokenach po kompaktowaniu. Podsumowanie i zachowany kontekst muszą zmieścić się w tym limicie.",
                         "context_compaction_intra_turn": "Zezwala wybranej strategii kontekstu ograniczać zakończone wywołania narzędzi podczas aktywnej tury, gdy żądanie przekroczyłoby inaczej próg kontekstu.",
+                        "clear_embedding_history": "Ta czynność nie jest zapisywana i usuwa trwałe archiwa tego agenta.",
                         "clear_intra_turn_embeddings": "Ta czynność nigdy nie jest zapisywana jako ustawienie. Po jej wybraniu cały tymczasowo zarchiwizowany kontekst wewnątrz tury tego agenta zostanie usunięty podczas zapisywania konfiguracji.",
                         "context_compaction_recent_turns": "Liczba pełnych ostatnich tur rozmowy zachowanych bez zmian po kompaktowaniu. Wywołania narzędzi i ich wyniki pozostają razem.",
                         "context_compaction_prompt": "Instrukcje używane do podsumowania starszej historii rozmowy. Transkrypcja i limit tokenów są przekazywane oddzielnie.",

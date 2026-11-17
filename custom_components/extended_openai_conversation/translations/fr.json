@@ -11,7 +11,8 @@
             "invalid_context_recall_close_match_tolerance": "Saisissez un nombre décimal supérieur à 0 ou laissez le champ vide.",
             "invalid_context_recall_rerank_min_score": "Saisissez un nombre décimal ou laissez le champ vide.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Saisissez un entier positif ou laissez le champ vide.",
-            "invalid_context_compaction_target": "Taille maximale du contexte après compactage. Elle doit laisser suffisamment de place dans le seuil de contexte pour la réponse maximale configurée.",
+            "invalid_context_compaction_target": "Saisissez une cible de compactage sous forme de nombre entier positif.",
+            "context_compaction_target_exceeds_budget": "La cible de compactage ajoutée à la réponse maximale configurée dépasse le seuil de contexte. Réduisez l'une de ces valeurs ou augmentez le seuil.",
             "cannot_connect": "Échec de la connexion",
             "invalid_auth": "Authentification invalide",
             "unknown": "Erreur inconnue"
@@ -19,15 +20,17 @@
         "step": {
             "embeddings_endpoint": {
                 "title": "Configurer le point de terminaison d'embeddings",
-                "description": "Configurez un point de terminaison d'embeddings compatible OpenAI facultatif. Une requête réelle vérifie les identifiants, l'URL et le modèle.",
+                "description": "Configurez un point de terminaison d'embeddings compatible OpenAI facultatif. Une requête réelle vérifie les identifiants, l'URL et le modèle.\n\nMémoires archivées stockées : {stored_memory_count}\nMémoires temporaires intra-tour : {temporary_memory_count}",
                 "data": {
                     "api_key": "Clé API",
                     "base_url": "URL de base",
                     "embedding_model": "Modèle d'embedding",
-                    "clear_embedding_history": "Effacer l'historique d'embeddings lors de l'enregistrement"
+                    "clear_embedding_history": "Effacer toutes les mémoires archivées lors de l'enregistrement",
+                    "clear_intra_turn_embeddings": "Effacer toutes les mémoires temporaires intra-tour lors de l'enregistrement"
                 },
                 "data_description": {
-                    "clear_embedding_history": "Cette action n'est jamais enregistrée comme paramètre. Si elle est sélectionnée, tout l'historique de conversation basé sur les embeddings de ce point de terminaison sera supprimé lors de l'enregistrement."
+                    "clear_embedding_history": "Cette action n'est jamais enregistrée. Si elle est sélectionnée, toutes les archives persistantes de rappel sémantique et littéral de ce point de terminaison sont supprimées.",
+                    "clear_intra_turn_embeddings": "Cette action n'est jamais enregistrée. Si elle est sélectionnée, toutes les archives temporaires intra-tour de ce point de terminaison sont supprimées."
                 }
             },
             "reranker_endpoint": {
@@ -143,6 +146,7 @@
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Mémoires archivées stockées pour cet agent : {stored_memory_count}\nMémoires temporaires intra-tour pour cet agent : {temporary_memory_count}",
                     "data": {
                         "temperature": "Température",
                         "top_p": "Top P",
@@ -151,6 +155,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Cible de l'invite compactée",
                         "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
+                        "clear_embedding_history": "Effacer les archives stockées de cet agent lors de l’enregistrement",
                         "clear_intra_turn_embeddings": "Effacer le contexte temporaire intra-tour lors de l’enregistrement",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
@@ -170,6 +175,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Taille maximale de l'invite active en jetons après compactage. Le résumé et le contexte conservé doivent tenir dans cette cible.",
                         "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",
+                        "clear_embedding_history": "Cette action n’est jamais enregistrée. Si elle est sélectionnée, les archives persistantes de cet agent sont supprimées lors de l’enregistrement.",
                         "clear_intra_turn_embeddings": "Cette action n’est jamais enregistrée en tant que paramètre. Lorsqu’elle est sélectionnée, tout le contexte temporaire intra-tour archivé de cet agent est supprimé lors de l’enregistrement de sa configuration.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
@@ -214,6 +220,7 @@
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Mémoires archivées stockées pour cet agent : {stored_memory_count}\nMémoires temporaires intra-tour pour cet agent : {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
@@ -222,6 +229,7 @@
                         "shorten_tool_call_id": "Shorten tool call IDs",
                         "context_compaction_target": "Cible de l'invite compactée",
                         "context_compaction_intra_turn": "Activer la compaction du contexte au cours d’un même tour",
+                        "clear_embedding_history": "Effacer les archives stockées de cet agent lors de l’enregistrement",
                         "clear_intra_turn_embeddings": "Effacer le contexte temporaire intra-tour lors de l’enregistrement",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
@@ -241,6 +249,7 @@
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
                         "context_compaction_target": "Taille maximale de l'invite active en jetons après compactage. Le résumé et le contexte conservé doivent tenir dans cette cible.",
                         "context_compaction_intra_turn": "Autorise la stratégie de contexte sélectionnée à réduire les échanges d’appels d’outils terminés pendant un tour actif lorsque la requête dépasserait autrement le seuil de contexte.",
+                        "clear_embedding_history": "Cette action n’est jamais enregistrée. Si elle est sélectionnée, les archives persistantes de cet agent sont supprimées lors de l’enregistrement.",
                         "clear_intra_turn_embeddings": "Cette action n’est jamais enregistrée en tant que paramètre. Lorsqu’elle est sélectionnée, tout le contexte temporaire intra-tour archivé de cet agent est supprimé lors de l’enregistrement de sa configuration.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
