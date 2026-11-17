@@ -4,6 +4,7 @@
             "invalid_embeddings": "Het embeddings-eindpunt heeft geen geldige embedding teruggegeven.",
             "invalid_reranker": "Het reranker-eindpunt heeft geen geldige resultaten teruggegeven.",
             "invalid_embedding_history_retention": "Voer een positief geheel getal in gevolgd door m, h of d. Zonder achtervoegsel worden dagen gebruikt.",
+            "invalid_context_recall_snapshot_ttl_time": "Voer een positief geheel getal in, gevolgd door m, h of d. Nul is niet toegestaan. Zonder achtervoegsel worden dagen gebruikt.",
             "invalid_context_recall_max_results": "Voer een positief geheel getal in.",
             "invalid_context_recall_close_match_tolerance": "Voer een decimaal getal groter dan 0 in of laat het veld leeg.",
             "invalid_context_recall_rerank_min_score": "Voer een decimaal getal in of laat het veld leeg.",
@@ -161,7 +162,8 @@
                         "context_recall_rerank": "Herordening van herinneringen inschakelen",
                         "context_recall_rerank_min_score": "Minimale relevantiescore van reranker",
                         "context_recall_rerank_max_candidate_tokens": "Maximale grootte reranker-kandidaat (geschatte tokens)",
-                        "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)"
+                        "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)",
+                        "context_recall_snapshot_ttl_time": "Levensduur van ophaalsnapshot (tijd)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -177,7 +179,8 @@
                         "context_recall_rerank": "Rangschikt door embeddings geselecteerde kandidaten opnieuw voordat ze worden teruggegeven of automatisch ingevoegd.",
                         "context_recall_rerank_min_score": "Verwijder resultaten onder deze score. Laat leeg om alles te accepteren. Het scorebereik hangt af van het reranker-model.",
                         "context_recall_rerank_max_candidate_tokens": "Maximaal geschat aantal tokens van elk overeenkomend embeddingfragment dat naar de reranker wordt gestuurd. Laat leeg voor het volledige fragment.",
-                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in."
+                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in.",
+                        "context_recall_snapshot_ttl_time": "Maximale tijd dat een ophaalsnapshot beschikbaar blijft. Voer een positief geheel getal in, gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt. Het succesvol bekijken van het snapshot stelt deze levensduur opnieuw in."
                     }
                 }
             }
@@ -226,7 +229,8 @@
                         "context_recall_rerank": "Herordening van herinneringen inschakelen",
                         "context_recall_rerank_min_score": "Minimale relevantiescore van reranker",
                         "context_recall_rerank_max_candidate_tokens": "Maximale grootte reranker-kandidaat (geschatte tokens)",
-                        "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)"
+                        "context_recall_snapshot_ttl_turns": "Levensduur van ophaalsnapshot (beurten)",
+                        "context_recall_snapshot_ttl_time": "Levensduur van ophaalsnapshot (tijd)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -242,7 +246,8 @@
                         "context_recall_rerank": "Rangschikt door embeddings geselecteerde kandidaten opnieuw voordat ze worden teruggegeven of automatisch ingevoegd.",
                         "context_recall_rerank_min_score": "Verwijder resultaten onder deze score. Laat leeg om alles te accepteren. Het scorebereik hangt af van het reranker-model.",
                         "context_recall_rerank_max_candidate_tokens": "Maximaal geschat aantal tokens van elk overeenkomend embeddingfragment dat naar de reranker wordt gestuurd. Laat leeg voor het volledige fragment.",
-                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in."
+                        "context_recall_snapshot_ttl_turns": "Aantal volgende gebruikersbeurten waarin een afgekapt ophaalsnapshot beschikbaar blijft. Het succesvol bekijken van het snapshot stelt de levensduur opnieuw in.",
+                        "context_recall_snapshot_ttl_time": "Maximale tijd dat een ophaalsnapshot beschikbaar blijft. Voer een positief geheel getal in, gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt. Het succesvol bekijken van het snapshot stelt deze levensduur opnieuw in."
                     }
                 }
             }

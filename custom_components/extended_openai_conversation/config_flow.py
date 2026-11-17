@@ -85,6 +85,7 @@ from .const import (
     CONF_CONTEXT_RECALL_RERANK,
     CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
     CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
+    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -139,6 +140,7 @@ from .const import (
     DEFAULT_CONTEXT_RECALL_RERANK,
     DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_THRESHOLD,
     DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
@@ -431,6 +433,9 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: (
             DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
         ),
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: (
+            DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+        ),
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
         CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -483,25 +488,50 @@ async def _async_clear_intra_turn_embeddings(
         await runtime.embedding_memory.async_clear_temporary(agent_id)
 
 
+def _validate_retrieval_duration_input(
+    strategy: Any,
+    user_input: dict[str, Any],
+    *,
+    field: str,
+    default: str,
+    error: str,
+) -> dict[str, str]:
+    """Normalize a positive retrieval duration or return its field error."""
+    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        return {}
+    try:
+        user_input[field] = normalize_embedding_history_retention(
+            user_input.get(field, default)
+        )
+    except ValueError:
+        return {field: error}
+    return {}
+
+
 def _validate_embedding_history_retention_input(
     strategy: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Normalize retrieval retention or return its field error."""
-    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
-        return {}
-    try:
-        user_input[CONF_EMBEDDING_HISTORY_RETENTION] = (
-            normalize_embedding_history_retention(
-                user_input.get(CONF_EMBEDDING_HISTORY_RETENTION)
-            )
-        )
-    except ValueError:
-        return {
-            CONF_EMBEDDING_HISTORY_RETENTION: (
-                "invalid_embedding_history_retention"
-            )
-        }
-    return {}
+    return _validate_retrieval_duration_input(
+        strategy,
+        user_input,
+        field=CONF_EMBEDDING_HISTORY_RETENTION,
+        default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
+        error="invalid_embedding_history_retention",
+    )
+
+
+def _validate_context_recall_snapshot_ttl_time_input(
+    strategy: Any, user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Normalize snapshot time expiry or return its field error."""
+    return _validate_retrieval_duration_input(
+        strategy,
+        user_input,
+        field=CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+        default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+        error="invalid_context_recall_snapshot_ttl_time",
+    )
 
 
 def _validate_context_recall_max_results_input(
@@ -2280,6 +2310,11 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 strategy, user_input
             )
             errors.update(
+                _validate_context_recall_snapshot_ttl_time_input(
+                    strategy, user_input
+                )
+            )
+            errors.update(
                 _validate_context_recall_max_results_input(strategy, user_input)
             )
             errors.update(
@@ -2482,6 +2517,12 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                     step=1,
                 )
             )
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                )
+            ] = TextSelector()
             schema[
                 vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,
@@ -2774,6 +2815,11 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 strategy, user_input
             )
             errors.update(
+                _validate_context_recall_snapshot_ttl_time_input(
+                    strategy, user_input
+                )
+            )
+            errors.update(
                 _validate_context_recall_max_results_input(strategy, user_input)
             )
             errors.update(
@@ -2976,6 +3022,12 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     step=1,
                 )
             )
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                )
+            ] = TextSelector()
             schema[
                 vol.Optional(
                     CONF_EMBEDDING_HISTORY_RETENTION,

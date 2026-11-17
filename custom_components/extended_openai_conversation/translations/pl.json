@@ -4,6 +4,7 @@
             "invalid_embeddings": "Punkt końcowy osadzania nie zwrócił prawidłowego osadzenia.",
             "invalid_reranker": "Punkt końcowy ponownego rankingu nie zwrócił prawidłowych wyników.",
             "invalid_embedding_history_retention": "Wprowadź dodatnią liczbę całkowitą z m, h lub d. Brak przyrostka oznacza dni.",
+            "invalid_context_recall_snapshot_ttl_time": "Wprowadź dodatnią liczbę całkowitą z m, h lub d. Zero jest niedozwolone. Brak przyrostka oznacza dni.",
             "invalid_context_recall_max_results": "Wprowadź dodatnią liczbę całkowitą.",
             "invalid_context_recall_close_match_tolerance": "Wprowadź liczbę dziesiętną większą niż 0 lub pozostaw pole puste.",
             "invalid_context_recall_rerank_min_score": "Wprowadź liczbę dziesiętną lub pozostaw pole puste.",
@@ -161,7 +162,8 @@
                         "context_recall_rerank": "Włącz ponowne szeregowanie przywołania",
                         "context_recall_rerank_min_score": "Minimalny wynik trafności ponownego szeregowania",
                         "context_recall_rerank_max_candidate_tokens": "Maksymalny rozmiar kandydata ponownego szeregowania (szacowane tokeny)",
-                        "context_recall_snapshot_ttl_turns": "Czas życia migawki przywołania (tury)"
+                        "context_recall_snapshot_ttl_turns": "Czas życia migawki przywołania (tury)",
+                        "context_recall_snapshot_ttl_time": "Czas życia migawki przywołania (czas)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -177,7 +179,8 @@
                         "context_recall_rerank": "Ponownie szereguje kandydatów wybranych przez osadzenia przed zwróceniem lub automatycznym wstawieniem.",
                         "context_recall_rerank_min_score": "Odrzuca wyniki poniżej tej wartości. Pozostaw puste, aby zaakceptować wszystkie. Zakres zależy od modelu ponownego szeregowania.",
                         "context_recall_rerank_max_candidate_tokens": "Maksymalna szacowana liczba tokenów każdego pasującego fragmentu osadzenia wysyłanego do ponownego szeregowania. Pozostaw puste dla całego fragmentu.",
-                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pomyślne przejrzenie migawki resetuje jej czas życia."
+                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pomyślne przejrzenie migawki resetuje jej czas życia.",
+                        "context_recall_snapshot_ttl_time": "Maksymalny czas dostępności migawki przywołania. Wprowadź dodatnią liczbę całkowitą z m dla minut, h dla godzin lub d dla dni. Bez przyrostka używane są dni. Pomyślne przejrzenie migawki resetuje ten czas życia."
                     }
                 }
             }
@@ -226,7 +229,8 @@
                         "context_recall_rerank": "Włącz ponowne szeregowanie przywołania",
                         "context_recall_rerank_min_score": "Minimalny wynik trafności ponownego szeregowania",
                         "context_recall_rerank_max_candidate_tokens": "Maksymalny rozmiar kandydata ponownego szeregowania (szacowane tokeny)",
-                        "context_recall_snapshot_ttl_turns": "Czas życia migawki przywołania (tury)"
+                        "context_recall_snapshot_ttl_turns": "Czas życia migawki przywołania (tury)",
+                        "context_recall_snapshot_ttl_time": "Czas życia migawki przywołania (czas)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -242,7 +246,8 @@
                         "context_recall_rerank": "Ponownie szereguje kandydatów wybranych przez osadzenia przed zwróceniem lub automatycznym wstawieniem.",
                         "context_recall_rerank_min_score": "Odrzuca wyniki poniżej tej wartości. Pozostaw puste, aby zaakceptować wszystkie. Zakres zależy od modelu ponownego szeregowania.",
                         "context_recall_rerank_max_candidate_tokens": "Maksymalna szacowana liczba tokenów każdego pasującego fragmentu osadzenia wysyłanego do ponownego szeregowania. Pozostaw puste dla całego fragmentu.",
-                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pomyślne przejrzenie migawki resetuje jej czas życia."
+                        "context_recall_snapshot_ttl_turns": "Liczba kolejnych tur użytkownika, przez które migawka obciętego przywołania pozostaje dostępna. Pomyślne przejrzenie migawki resetuje jej czas życia.",
+                        "context_recall_snapshot_ttl_time": "Maksymalny czas dostępności migawki przywołania. Wprowadź dodatnią liczbę całkowitą z m dla minut, h dla godzin lub d dla dni. Bez przyrostka używane są dni. Pomyślne przejrzenie migawki resetuje ten czas życia."
                     }
                 }
             }

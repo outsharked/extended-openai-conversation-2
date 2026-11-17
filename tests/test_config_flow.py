@@ -51,6 +51,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_CONTEXT_RECALL_RERANK,
     CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
     CONF_CONTEXT_RECALL_RERANK_MIN_SCORE,
+    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     CONF_CONTEXT_THRESHOLD,
     CONF_CONTEXT_TRUNCATE_STRATEGY,
@@ -89,6 +90,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_CONTEXT_RECALL_RERANK,
     DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE,
+    DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -2587,6 +2589,13 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     )
     assert "max" not in schema[snapshot_ttl_key].config
     assert schema[snapshot_ttl_key].config["step"] == 1
+    snapshot_time_ttl_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+    )
+    assert snapshot_time_ttl_key.default() == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+    assert isinstance(schema[snapshot_time_ttl_key], TextSelector)
     intra_turn_key = next(
         key
         for key in schema
@@ -2901,6 +2910,41 @@ async def test_agent_advanced_normalizes_retrieval_retention(hass, handler_type)
     assert handler.async_update_and_abort.call_args.kwargs["data"][
         CONF_EMBEDDING_HISTORY_RETENTION
     ] == "10d"
+    assert handler.async_update_and_abort.call_args.kwargs["data"][
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+    ] == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_normalizes_snapshot_time_ttl(hass, handler_type):
+    """Both agent flows normalize an omitted snapshot TTL suffix as days."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler._get_reconfigure_subentry = MagicMock()
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: "2",
+        }
+    )
+
+    assert result == {"type": "abort"}
+    assert handler.async_update_and_abort.call_args.kwargs["data"][
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+    ] == "2d"
 
 
 @pytest.mark.parametrize(
@@ -2934,6 +2978,77 @@ async def test_agent_advanced_rejects_invalid_retrieval_retention(
             "invalid_embedding_history_retention"
         )
     }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+@pytest.mark.parametrize(
+    "value", ["0", "0m", "0h", "0d", "", "-1h", "2w"]
+)
+async def test_agent_advanced_rejects_invalid_snapshot_time_ttl(
+    hass, handler_type, value
+):
+    """Snapshot time expiry must be a positive supported duration."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CHAT_MODEL: "gpt-4o-mini",
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: value,
+        }
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: (
+            "invalid_context_recall_snapshot_ttl_time"
+        )
+    }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+async def test_agent_advanced_accepts_zero_snapshot_turn_ttl(hass, handler_type):
+    """Turn expiry may be disabled independently of time expiry."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: CONTEXT_TRUNCATE_STRATEGY_RETRIEVE
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler._get_reconfigure_subentry = MagicMock()
+    handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: 0,
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: "2h",
+        }
+    )
+
+    assert result == {"type": "abort"}
+    saved_data = handler.async_update_and_abort.call_args.kwargs["data"]
+    assert saved_data[CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS] == 0
 
 
 @pytest.mark.parametrize(

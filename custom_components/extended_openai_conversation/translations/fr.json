@@ -4,6 +4,7 @@
             "invalid_embeddings": "Le point de terminaison d'embeddings n'a pas renvoyé d'embedding valide.",
             "invalid_reranker": "Le point de terminaison de reclassement n'a pas renvoyé de résultats valides.",
             "invalid_embedding_history_retention": "Saisissez un entier positif suivi de m, h ou d. Sans suffixe, la valeur est exprimée en jours.",
+            "invalid_context_recall_snapshot_ttl_time": "Saisissez un entier positif suivi de m, h ou d. Zéro n’est pas autorisé. Sans suffixe, la valeur est exprimée en jours.",
             "invalid_context_recall_max_results": "Saisissez un entier positif.",
             "invalid_context_recall_close_match_tolerance": "Saisissez un nombre décimal supérieur à 0 ou laissez le champ vide.",
             "invalid_context_recall_rerank_min_score": "Saisissez un nombre décimal ou laissez le champ vide.",
@@ -161,7 +162,8 @@
                         "context_recall_rerank": "Activer le reclassement du rappel",
                         "context_recall_rerank_min_score": "Score de pertinence minimal du reclasseur",
                         "context_recall_rerank_max_candidate_tokens": "Taille maximale d'un candidat de reclassement (jetons estimés)",
-                        "context_recall_snapshot_ttl_turns": "Durée de vie de l’instantané de rappel (tours)"
+                        "context_recall_snapshot_ttl_turns": "Durée de vie de l’instantané de rappel (tours)",
+                        "context_recall_snapshot_ttl_time": "Durée de vie de l’instantané de rappel (temps)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -177,7 +179,8 @@
                         "context_recall_rerank": "Reclasse les candidats sélectionnés par embeddings avant de les renvoyer ou de les injecter automatiquement.",
                         "context_recall_rerank_min_score": "Écarte les résultats dont le score est inférieur à cette valeur. Laissez vide pour tout accepter. La plage dépend du modèle de reclassement.",
                         "context_recall_rerank_max_candidate_tokens": "Nombre maximal estimé de jetons de chaque fragment d'embedding correspondant envoyé au reclasseur. Laissez vide pour envoyer le fragment complet.",
-                        "context_recall_snapshot_ttl_turns": "Nombre de tours utilisateur suivants pendant lesquels un instantané de rappel tronqué reste disponible. La consultation réussie de l’instantané réinitialise sa durée de vie."
+                        "context_recall_snapshot_ttl_turns": "Nombre de tours utilisateur suivants pendant lesquels un instantané de rappel tronqué reste disponible. La consultation réussie de l’instantané réinitialise sa durée de vie.",
+                        "context_recall_snapshot_ttl_time": "Durée maximale pendant laquelle un instantané de rappel reste disponible. Saisissez un entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés. La consultation réussie de l’instantané réinitialise cette durée de vie."
                     }
                 }
             }
@@ -226,7 +229,8 @@
                         "context_recall_rerank": "Activer le reclassement du rappel",
                         "context_recall_rerank_min_score": "Score de pertinence minimal du reclasseur",
                         "context_recall_rerank_max_candidate_tokens": "Taille maximale d'un candidat de reclassement (jetons estimés)",
-                        "context_recall_snapshot_ttl_turns": "Durée de vie de l’instantané de rappel (tours)"
+                        "context_recall_snapshot_ttl_turns": "Durée de vie de l’instantané de rappel (tours)",
+                        "context_recall_snapshot_ttl_time": "Durée de vie de l’instantané de rappel (temps)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -242,7 +246,8 @@
                         "context_recall_rerank": "Reclasse les candidats sélectionnés par embeddings avant de les renvoyer ou de les injecter automatiquement.",
                         "context_recall_rerank_min_score": "Écarte les résultats dont le score est inférieur à cette valeur. Laissez vide pour tout accepter. La plage dépend du modèle de reclassement.",
                         "context_recall_rerank_max_candidate_tokens": "Nombre maximal estimé de jetons de chaque fragment d'embedding correspondant envoyé au reclasseur. Laissez vide pour envoyer le fragment complet.",
-                        "context_recall_snapshot_ttl_turns": "Nombre de tours utilisateur suivants pendant lesquels un instantané de rappel tronqué reste disponible. La consultation réussie de l’instantané réinitialise sa durée de vie."
+                        "context_recall_snapshot_ttl_turns": "Nombre de tours utilisateur suivants pendant lesquels un instantané de rappel tronqué reste disponible. La consultation réussie de l’instantané réinitialise sa durée de vie.",
+                        "context_recall_snapshot_ttl_time": "Durée maximale pendant laquelle un instantané de rappel reste disponible. Saisissez un entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés. La consultation réussie de l’instantané réinitialise cette durée de vie."
                     }
                 }
             }

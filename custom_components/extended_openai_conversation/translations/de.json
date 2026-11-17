@@ -4,6 +4,7 @@
             "invalid_embeddings": "Der Embeddings-Endpunkt hat kein gültiges Embedding zurückgegeben.",
             "invalid_reranker": "Der Reranker-Endpunkt hat keine gültigen Ergebnisse zurückgegeben.",
             "invalid_embedding_history_retention": "Gib eine positive ganze Zahl gefolgt von m, h oder d ein. Ohne Einheit werden Tage verwendet.",
+            "invalid_context_recall_snapshot_ttl_time": "Gib eine positive ganze Zahl gefolgt von m, h oder d ein. Null ist nicht zulässig. Ohne Einheit werden Tage verwendet.",
             "invalid_context_recall_max_results": "Gib eine positive ganze Zahl ein.",
             "invalid_context_recall_close_match_tolerance": "Gib eine Dezimalzahl größer als 0 ein oder lasse das Feld leer.",
             "invalid_context_recall_rerank_min_score": "Gib eine Dezimalzahl ein oder lasse das Feld leer.",
@@ -161,7 +162,8 @@
                         "context_recall_rerank": "Abruf-Neurangordnung aktivieren",
                         "context_recall_rerank_min_score": "Mindest-Relevanzwert des Rerankers",
                         "context_recall_rerank_max_candidate_tokens": "Maximale Reranker-Kandidatengröße (geschätzte Tokens)",
-                        "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)"
+                        "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)",
+                        "context_recall_snapshot_ttl_time": "Lebensdauer des Abruf-Snapshots (Zeit)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -177,7 +179,8 @@
                         "context_recall_rerank": "Ordnet durch Embeddings ausgewählte Abrufkandidaten neu, bevor sie zurückgegeben oder automatisch eingefügt werden.",
                         "context_recall_rerank_min_score": "Verwirf neu geordnete Ergebnisse unterhalb dieses Werts. Leer lassen, um alle Ergebnisse zu akzeptieren. Der Wertebereich hängt vom Reranker-Modell ab.",
                         "context_recall_rerank_max_candidate_tokens": "Maximale geschätzte Tokenzahl jedes passenden Embedding-Chunks, der an den Reranker gesendet wird. Leer lassen, um den vollständigen Chunk zu senden.",
-                        "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück."
+                        "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück.",
+                        "context_recall_snapshot_ttl_time": "Maximale Zeit, für die ein Abruf-Snapshot verfügbar bleibt. Gib eine positive ganze Zahl gefolgt von m für Minuten, h für Stunden oder d für Tage ein. Ohne Einheit werden Tage verwendet. Erfolgreiches Durchsuchen des Snapshots setzt diese Lebensdauer zurück."
                     }
                 }
             }
@@ -226,7 +229,8 @@
                         "context_recall_rerank": "Abruf-Neurangordnung aktivieren",
                         "context_recall_rerank_min_score": "Mindest-Relevanzwert des Rerankers",
                         "context_recall_rerank_max_candidate_tokens": "Maximale Reranker-Kandidatengröße (geschätzte Tokens)",
-                        "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)"
+                        "context_recall_snapshot_ttl_turns": "Lebensdauer des Abruf-Snapshots (Runden)",
+                        "context_recall_snapshot_ttl_time": "Lebensdauer des Abruf-Snapshots (Zeit)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -242,7 +246,8 @@
                         "context_recall_rerank": "Ordnet durch Embeddings ausgewählte Abrufkandidaten neu, bevor sie zurückgegeben oder automatisch eingefügt werden.",
                         "context_recall_rerank_min_score": "Verwirf neu geordnete Ergebnisse unterhalb dieses Werts. Leer lassen, um alle Ergebnisse zu akzeptieren. Der Wertebereich hängt vom Reranker-Modell ab.",
                         "context_recall_rerank_max_candidate_tokens": "Maximale geschätzte Tokenzahl jedes passenden Embedding-Chunks, der an den Reranker gesendet wird. Leer lassen, um den vollständigen Chunk zu senden.",
-                        "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück."
+                        "context_recall_snapshot_ttl_turns": "Anzahl nachfolgender Benutzerrunden, für die ein Snapshot eines gekürzten Abrufs verfügbar bleibt. Erfolgreiches Durchsuchen des Snapshots setzt seine Lebensdauer zurück.",
+                        "context_recall_snapshot_ttl_time": "Maximale Zeit, für die ein Abruf-Snapshot verfügbar bleibt. Gib eine positive ganze Zahl gefolgt von m für Minuten, h für Stunden oder d für Tage ein. Ohne Einheit werden Tage verwendet. Erfolgreiches Durchsuchen des Snapshots setzt diese Lebensdauer zurück."
                     }
                 }
             }

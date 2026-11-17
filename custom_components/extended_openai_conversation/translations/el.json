@@ -4,6 +4,7 @@
             "invalid_embeddings": "Το τελικό σημείο embeddings δεν επέστρεψε έγκυρο embedding.",
             "invalid_reranker": "Το τελικό σημείο ανακατάταξης δεν επέστρεψε έγκυρα αποτελέσματα.",
             "invalid_embedding_history_retention": "Εισαγάγετε θετικό ακέραιο αριθμό με m, h ή d. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
+            "invalid_context_recall_snapshot_ttl_time": "Εισαγάγετε θετικό ακέραιο αριθμό με m, h ή d. Το μηδέν δεν επιτρέπεται. Χωρίς επίθημα χρησιμοποιούνται ημέρες.",
             "invalid_context_recall_max_results": "Εισαγάγετε θετικό ακέραιο αριθμό.",
             "invalid_context_recall_close_match_tolerance": "Εισαγάγετε δεκαδικό αριθμό μεγαλύτερο από 0 ή αφήστε το πεδίο κενό.",
             "invalid_context_recall_rerank_min_score": "Εισαγάγετε έναν δεκαδικό αριθμό ή αφήστε το πεδίο κενό.",
@@ -161,7 +162,8 @@
                         "context_recall_rerank": "Ενεργοποίηση ανακατάταξης ανάκλησης",
                         "context_recall_rerank_min_score": "Ελάχιστη βαθμολογία συνάφειας ανακατάταξης",
                         "context_recall_rerank_max_candidate_tokens": "Μέγιστο μέγεθος υποψηφίου ανακατάταξης (εκτιμώμενα tokens)",
-                        "context_recall_snapshot_ttl_turns": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (γύροι)"
+                        "context_recall_snapshot_ttl_turns": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (γύροι)",
+                        "context_recall_snapshot_ttl_time": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (χρόνος)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -177,7 +179,8 @@
                         "context_recall_rerank": "Ανακατατάσσει τους υποψηφίους ανάκλησης που επέλεξαν τα embeddings πριν επιστραφούν ή εισαχθούν αυτόματα.",
                         "context_recall_rerank_min_score": "Απορρίπτει αποτελέσματα κάτω από αυτή τη βαθμολογία. Αφήστε κενό για αποδοχή όλων. Το εύρος εξαρτάται από το μοντέλο ανακατάταξης.",
                         "context_recall_rerank_max_candidate_tokens": "Μέγιστος εκτιμώμενος αριθμός tokens από κάθε αντιστοιχισμένο τμήμα embedding που αποστέλλεται για ανακατάταξη. Αφήστε κενό για ολόκληρο το τμήμα.",
-                        "context_recall_snapshot_ttl_turns": "Αριθμός επόμενων γύρων χρήστη για τους οποίους ένα περικομμένο στιγμιότυπο ανάκλησης παραμένει διαθέσιμο. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει τη διάρκεια ζωής του."
+                        "context_recall_snapshot_ttl_turns": "Αριθμός επόμενων γύρων χρήστη για τους οποίους ένα περικομμένο στιγμιότυπο ανάκλησης παραμένει διαθέσιμο. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει τη διάρκεια ζωής του.",
+                        "context_recall_snapshot_ttl_time": "Μέγιστος χρόνος διαθεσιμότητας ενός στιγμιότυπου ανάκλησης. Εισαγάγετε θετικό ακέραιο με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει αυτή τη διάρκεια ζωής."
                     }
                 }
             }
@@ -226,7 +229,8 @@
                         "context_recall_rerank": "Ενεργοποίηση ανακατάταξης ανάκλησης",
                         "context_recall_rerank_min_score": "Ελάχιστη βαθμολογία συνάφειας ανακατάταξης",
                         "context_recall_rerank_max_candidate_tokens": "Μέγιστο μέγεθος υποψηφίου ανακατάταξης (εκτιμώμενα tokens)",
-                        "context_recall_snapshot_ttl_turns": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (γύροι)"
+                        "context_recall_snapshot_ttl_turns": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (γύροι)",
+                        "context_recall_snapshot_ttl_time": "Διάρκεια ζωής στιγμιότυπου ανάκλησης (χρόνος)"
                     },
                     "data_description": {
                         "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
@@ -242,7 +246,8 @@
                         "context_recall_rerank": "Ανακατατάσσει τους υποψηφίους ανάκλησης που επέλεξαν τα embeddings πριν επιστραφούν ή εισαχθούν αυτόματα.",
                         "context_recall_rerank_min_score": "Απορρίπτει αποτελέσματα κάτω από αυτή τη βαθμολογία. Αφήστε κενό για αποδοχή όλων. Το εύρος εξαρτάται από το μοντέλο ανακατάταξης.",
                         "context_recall_rerank_max_candidate_tokens": "Μέγιστος εκτιμώμενος αριθμός tokens από κάθε αντιστοιχισμένο τμήμα embedding που αποστέλλεται για ανακατάταξη. Αφήστε κενό για ολόκληρο το τμήμα.",
-                        "context_recall_snapshot_ttl_turns": "Αριθμός επόμενων γύρων χρήστη για τους οποίους ένα περικομμένο στιγμιότυπο ανάκλησης παραμένει διαθέσιμο. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει τη διάρκεια ζωής του."
+                        "context_recall_snapshot_ttl_turns": "Αριθμός επόμενων γύρων χρήστη για τους οποίους ένα περικομμένο στιγμιότυπο ανάκλησης παραμένει διαθέσιμο. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει τη διάρκεια ζωής του.",
+                        "context_recall_snapshot_ttl_time": "Μέγιστος χρόνος διαθεσιμότητας ενός στιγμιότυπου ανάκλησης. Εισαγάγετε θετικό ακέραιο με m για λεπτά, h για ώρες ή d για ημέρες. Χωρίς επίθημα χρησιμοποιούνται ημέρες. Η επιτυχής προβολή του στιγμιότυπου επαναφέρει αυτή τη διάρκεια ζωής."
                     }
                 }
             }
