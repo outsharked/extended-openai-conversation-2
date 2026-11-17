@@ -2673,6 +2673,7 @@ async def test_agent_advanced_schema_keyword_recall(hass, handler_type):
     assert CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS in keys
     assert CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME in keys
     assert CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS in keys
+    assert CONF_CLEAR_INTRA_TURN_EMBEDDINGS in keys
     assert CONF_CONTEXT_RECALL_MAX_TOKENS not in keys
     assert CONF_CONTEXT_RECALL_MAX_RESULTS not in keys
     keyword_tokens_key = next(
