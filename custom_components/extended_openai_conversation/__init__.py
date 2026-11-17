@@ -33,11 +33,10 @@ from .const import (
     DOMAIN,
     SERVICE_TYPE_MCP,
 )
-from .embedding_memory import EmbeddingMemoryStore
+from .context_management import EmbeddingMemoryStore, RerankerClient
 from .helpers import get_authenticated_client, get_service_type
 from .mcp_client import MCPClient, MCPServerConfig
 from .mcp_oauth import async_get_mcp_oauth_auth
-from .reranker import RerankerClient
 from .runtime import OpenAIServiceRuntime
 from .services import async_setup_services
 from .template import async_setup_templates, async_unload_templates

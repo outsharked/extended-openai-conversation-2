@@ -102,7 +102,7 @@ from custom_components.extended_openai_conversation.const import (
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
 )
-from custom_components.extended_openai_conversation.embedding_memory import (
+from custom_components.extended_openai_conversation.context_management import (
     normalize_embedding_history_retention,
 )
 from custom_components.extended_openai_conversation.mcp_client import (

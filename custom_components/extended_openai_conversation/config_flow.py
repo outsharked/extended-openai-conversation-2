@@ -177,8 +177,11 @@ from .const import (
     SERVICE_TYPE_MCP,
     SERVICE_TYPES,
 )
-from .embedding_memory import (
+from .context_management import (
     EmbeddingMemoryStore,
+    RerankerAuthenticationError as _RerankerAuthenticationError,
+    RerankerClient,
+    RerankerConnectionError as _RerankerConnectionError,
     normalize_embedding_history_retention,
 )
 from .helpers import (
@@ -235,11 +238,6 @@ from .mcp_oauth import (
     async_get_mcp_oauth_auth,
     oauth_application_context_from_data,
     static_oauth_auth,
-)
-from .reranker import (
-    RerankerAuthenticationError as _RerankerAuthenticationError,
-    RerankerClient,
-    RerankerConnectionError as _RerankerConnectionError,
 )
 from .skills import SkillManager
 

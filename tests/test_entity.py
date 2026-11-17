@@ -31,16 +31,22 @@ from custom_components.extended_openai_conversation.const import (
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
     CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
 )
-from custom_components.extended_openai_conversation.embedding_memory import (
+from custom_components.extended_openai_conversation.context_management import (
     EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
+    RerankerResult,
+)
+from custom_components.extended_openai_conversation.context_management.active_context import (
+    _bound_active_recalled_context,
+)
+from custom_components.extended_openai_conversation.context_management.recall_result import (
+    build_paginated_recall_result,
 )
 from custom_components.extended_openai_conversation.entity import (
     ExtendedOpenAIBaseLLMEntity,
     MCPAgentContext,
-    _bound_active_recalled_context,
     _convert_content_to_param,
     _extract_extra_content,
     _extract_mcp_media_content,
@@ -54,15 +60,11 @@ from custom_components.extended_openai_conversation.entity import (
     _tool_result_data,
     encode_attachments,
 )
-from custom_components.extended_openai_conversation.functions.context_recall import (
-    build_paginated_recall_result,
-)
 from custom_components.extended_openai_conversation.mcp_client import (
     MCPServerConfig,
     MCPServiceConfig,
     MCPTool,
 )
-from custom_components.extended_openai_conversation.reranker import RerankerResult
 from custom_components.extended_openai_conversation.runtime import OpenAIServiceRuntime
 from homeassistant.components import conversation
 from homeassistant.helpers import llm
@@ -1729,7 +1731,7 @@ async def test_compaction_summarizes_old_history_and_keeps_latest_turn():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
@@ -1792,12 +1794,12 @@ async def test_compaction_uses_configured_prompt_and_preserves_recent_turns():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_get_context_compaction_text",
             new=AsyncMock(
                 return_value=(
@@ -1887,7 +1889,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=create_completion,
         ),
@@ -1952,7 +1954,7 @@ async def test_compaction_reduces_retained_tail_before_summarizing():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
@@ -1994,7 +1996,7 @@ async def test_compaction_failure_falls_back_to_clear_strategy():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(side_effect=RuntimeError("summary failed")),
         ),
@@ -2027,7 +2029,7 @@ async def test_intra_turn_compaction_preserves_latest_completed_exchange():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
@@ -2150,7 +2152,7 @@ async def test_compaction_rolls_previous_summary_into_next_summary():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+                "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(side_effect=responses),
         ) as create_completion,
@@ -2187,7 +2189,7 @@ async def test_clear_strategy_does_not_call_summarizer():
     chat_log = _compaction_chat_log()
 
     with patch(
-        "custom_components.extended_openai_conversation.entity."
+        "custom_components.extended_openai_conversation.context_management.manager."
         "async_create_chat_completion",
         new=AsyncMock(),
     ) as create_completion:
@@ -2246,7 +2248,7 @@ async def test_retrieve_compact_archives_and_summarizes_the_same_history():
             return_value=MagicMock(),
         ),
         patch(
-            "custom_components.extended_openai_conversation.entity."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=summary_response),
         ) as create_completion,

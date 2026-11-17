@@ -15,6 +15,9 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SERVICE_TYPE,
     SERVICE_TYPE_MCP,
 )
+from custom_components.extended_openai_conversation.context_management import (
+    RerankerClient,
+)
 from custom_components.extended_openai_conversation.mcp_client import (
     CONF_MCP_AUTHORIZATION_URL,
     CONF_MCP_SERVER_ID,
@@ -23,7 +26,6 @@ from custom_components.extended_openai_conversation.mcp_client import (
     CONF_MCP_USE_OAUTH,
     MCPClient,
 )
-from custom_components.extended_openai_conversation.reranker import RerankerClient
 from homeassistant.const import CONF_API_KEY, CONF_TOKEN
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 

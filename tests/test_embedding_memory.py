@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from custom_components.extended_openai_conversation.embedding_memory import (
+from custom_components.extended_openai_conversation.context_management import (
     EMBEDDING_MEMORY_SOURCE_INTRA_TURN,
     EmbeddingMemoryChunk,
     EmbeddingMemoryMatch,

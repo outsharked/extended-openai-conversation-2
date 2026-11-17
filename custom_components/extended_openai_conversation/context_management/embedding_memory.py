@@ -21,7 +21,7 @@ from openai import AsyncClient
 
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from ..const import DOMAIN
 
 _STORAGE_VERSION = 1
 _RETENTION_PATTERN = re.compile(r"(?P<value>[1-9]\d*)(?P<unit>[mhd]?)")

@@ -9,23 +9,23 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS_MODEL,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
 )
-from custom_components.extended_openai_conversation.embedding_memory import (
+from custom_components.extended_openai_conversation.context_management import (
     EmbeddingMemoryMatch,
     EmbeddingMemoryRecord,
     EmbeddingMemoryScope,
+    RecallSnapshotScope,
+    RecallSnapshotStore,
+    RerankerResult,
+)
+from custom_components.extended_openai_conversation.context_management.recall_result import (
+    build_paginated_recall_result,
 )
 from custom_components.extended_openai_conversation.functions.context_recall import (
     BrowseRecalledContextFunction,
     ContextRecallFunction,
     build_browse_recalled_context_function_tool,
     build_context_recall_function_tool,
-    build_paginated_recall_result,
 )
-from custom_components.extended_openai_conversation.recall_snapshot import (
-    RecallSnapshotScope,
-    RecallSnapshotStore,
-)
-from custom_components.extended_openai_conversation.reranker import RerankerResult
 from custom_components.extended_openai_conversation.runtime import OpenAIServiceRuntime
 
 

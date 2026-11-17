@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.extended_openai_conversation.reranker import (
+from custom_components.extended_openai_conversation.context_management import (
     RerankerAuthenticationError,
     RerankerClient,
     RerankerConnectionError,
