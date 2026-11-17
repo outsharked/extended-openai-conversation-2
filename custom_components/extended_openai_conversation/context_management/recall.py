@@ -135,6 +135,12 @@ class ContextRecallMixin:
                     ),
                     snapshot_ttl_turns,
                     max_results,
+                    embedding_chunk_size=int(
+                        self.subentry.data.get(
+                            CONF_EMBEDDING_CHUNK_SIZE,
+                            DEFAULT_EMBEDDING_CHUNK_SIZE,
+                        )
+                    ),
                     snapshot_ttl_time=snapshot_ttl_time,
                     close_match_tolerance=close_match_tolerance,
                     rerank=reranker_client is not None,
@@ -241,7 +247,7 @@ class ContextRecallMixin:
             )
             if not await memory_store.async_has_memories(scope, model):
                 return [], []
-            chunk_size = embeddings.get(
+            chunk_size = self.subentry.data.get(
                 CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
             )
             if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):

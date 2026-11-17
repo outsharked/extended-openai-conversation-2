@@ -10,6 +10,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_EMBEDDINGS_MODEL,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+    DEFAULT_EMBEDDING_CHUNK_SIZE,
 )
 from custom_components.extended_openai_conversation.context_management import (
     EmbeddingMemoryMatch,
@@ -64,6 +65,7 @@ def test_context_recall_tool_keeps_scope_out_of_model_arguments():
         "agent_id": "agent-1",
         "max_tokens": 4000,
         "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+        "embedding_chunk_size": DEFAULT_EMBEDDING_CHUNK_SIZE,
         "close_match_tolerance": None,
         "snapshot_ttl_turns": 3,
         "snapshot_ttl_time": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,

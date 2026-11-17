@@ -168,7 +168,7 @@ Configure Extended OpenAI Conversation through the Options menu in your Voice As
 
     If older history cannot fit into one summarization request, it is summarized in bounded chunks. Each chunk updates the rolling summary. If archival fails, the integration attempts compaction before clearing. If compaction fails after archival succeeds, the archived history remains available through the enabled retrieval tools.
 
-    Older completed turns are split into bounded embedding chunks before they are sent to the embeddings endpoint. Configure **Maximum embedding chunk size** on the embeddings endpoint below that model's input limit. The value is an estimate based on four characters per token because OpenAI-compatible embedding providers can use different tokenizers. Every chunk receives its own vector, while the original messages are stored only once and returned only once when any chunk matches a recall query.
+    Older completed turns are split into bounded embedding chunks before they are sent to the embeddings endpoint. Configure **Maximum embedding chunk size** in each agent's advanced options below the embedding model's input limit. This can differ between agents sharing the same endpoint. The value is an estimate based on four characters per token because OpenAI-compatible embedding providers can use different tokenizers. Every chunk receives its own vector, while the original messages are stored only once and returned only once when any chunk matches a recall query.
 
     <Note>
     The compaction request uses the same endpoint, model and authentication as the agent, but does not include agent tools, MCP catalogues or embedded media.

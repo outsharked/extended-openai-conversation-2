@@ -147,6 +147,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+            DEFAULT_EMBEDDING_CHUNK_SIZE,
     )
 
     subentry = _mock_subentry("conversation", "sub_1")
@@ -168,6 +169,7 @@ def test_get_function_tools_adds_recall_only_for_retrieval_agents(strategy):
         "agent_id": "sub_1",
         "max_tokens": DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
         "max_results": DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
+            "embedding_chunk_size": DEFAULT_EMBEDDING_CHUNK_SIZE,
         "close_match_tolerance": None,
         "snapshot_ttl_turns": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
         "snapshot_ttl_time": DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,

@@ -377,16 +377,6 @@ STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA = vol.Schema(
         vol.Required(
             CONF_EMBEDDINGS_MODEL, default=DEFAULT_EMBEDDINGS_MODEL
         ): str,
-        vol.Required(
-            CONF_EMBEDDING_CHUNK_SIZE,
-            default=DEFAULT_EMBEDDING_CHUNK_SIZE,
-        ): NumberSelector(
-            NumberSelectorConfig(
-                min=MIN_EMBEDDING_CHUNK_SIZE,
-                max=MAX_EMBEDDING_CHUNK_SIZE,
-                step=100,
-            )
-        ),
         vol.Optional(
             CONF_CLEAR_EMBEDDING_HISTORY, default=False
         ): BooleanSelector(),
@@ -441,6 +431,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: (
             DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
         ),
+        CONF_EMBEDDING_CHUNK_SIZE: DEFAULT_EMBEDDING_CHUNK_SIZE,
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
         CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_PRESERVATION_METHODS,
         CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -477,6 +468,21 @@ def _context_preservation_methods(entry: ConfigEntry) -> list[str]:
 def _selected_context_methods(value: Any) -> frozenset[str]:
     """Normalize the multi-select value used by the agent flows."""
     return context_preservation_methods(value)
+
+
+def _advanced_form_values(
+    options: Mapping[str, Any], user_input: Mapping[str, Any] | None
+) -> dict[str, Any]:
+    """Return advanced-form values with text-selector values normalized."""
+    values = {**options, **(user_input or {})}
+    snapshot_ttl_turns = values.get(
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+    )
+    values[CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS] = (
+        "" if snapshot_ttl_turns is None else str(snapshot_ttl_turns)
+    )
+    return values
 
 
 def _entry_has_reranker(entry: ConfigEntry) -> bool:
@@ -601,6 +607,30 @@ def _validate_context_recall_max_results_input(
             )
         }
     user_input[CONF_CONTEXT_RECALL_MAX_RESULTS] = int(max_results)
+    return {}
+
+
+def _validate_embedding_chunk_size_input(
+    methods: Any, user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Validate and normalize an agent's embedding chunk size."""
+    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(
+        methods
+    ):
+        return {}
+    chunk_size = user_input.get(
+        CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
+    )
+    if (
+        not isinstance(chunk_size, int | float)
+        or isinstance(chunk_size, bool)
+        or int(chunk_size) != chunk_size
+        or not MIN_EMBEDDING_CHUNK_SIZE
+        <= int(chunk_size)
+        <= MAX_EMBEDDING_CHUNK_SIZE
+    ):
+        return {CONF_EMBEDDING_CHUNK_SIZE: "invalid_embedding_chunk_size"}
+    user_input[CONF_EMBEDDING_CHUNK_SIZE] = int(chunk_size)
     return {}
 
 
@@ -820,20 +850,6 @@ async def validate_embeddings_input(
     if not model:
         raise HomeAssistantError("An embedding model is required.")
     data[CONF_EMBEDDINGS_MODEL] = model
-    chunk_size = data.get(
-        CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
-    )
-    if (
-        not isinstance(chunk_size, int | float)
-        or isinstance(chunk_size, bool)
-        or int(chunk_size) != chunk_size
-        or not MIN_EMBEDDING_CHUNK_SIZE
-        <= int(chunk_size)
-        <= MAX_EMBEDDING_CHUNK_SIZE
-    ):
-        raise HomeAssistantError("The embedding chunk size is invalid.")
-    data[CONF_EMBEDDING_CHUNK_SIZE] = int(chunk_size)
-
     base_url = data.get(CONF_BASE_URL)
     if base_url == DEFAULT_CONF_BASE_URL:
         base_url = None
@@ -2411,6 +2427,9 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 _validate_context_recall_max_results_input(methods, user_input)
             )
             errors.update(
+                _validate_embedding_chunk_size_input(methods, user_input)
+            )
+            errors.update(
                 _validate_context_keyword_recall_max_tokens_input(
                     methods, user_input
                 )
@@ -2596,7 +2615,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             schema[
                 vol.Optional(
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    default=str(DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS),
                 )
             ] = TextSelector()
             schema[
@@ -2629,6 +2648,18 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS in methods:
             schema[
                 vol.Optional(
+                    CONF_EMBEDDING_CHUNK_SIZE,
+                    default=DEFAULT_EMBEDDING_CHUNK_SIZE,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_EMBEDDING_CHUNK_SIZE,
+                    max=MAX_EMBEDDING_CHUNK_SIZE,
+                    step=100,
+                )
+            )
+            schema[
+                vol.Optional(
                     CONF_CONTEXT_RECALL_MAX_TOKENS,
                     default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
                 )
@@ -2656,7 +2687,8 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(schema), {**self.options, **(user_input or {})}
+                vol.Schema(schema),
+                _advanced_form_values(self.options, user_input),
             ),
             errors=errors,
         )
@@ -2961,6 +2993,9 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 _validate_context_recall_max_results_input(methods, user_input)
             )
             errors.update(
+                _validate_embedding_chunk_size_input(methods, user_input)
+            )
+            errors.update(
                 _validate_context_keyword_recall_max_tokens_input(
                     methods, user_input
                 )
@@ -3146,7 +3181,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             schema[
                 vol.Optional(
                     CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    default=str(DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS),
                 )
             ] = TextSelector()
             schema[
@@ -3179,6 +3214,18 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS in methods:
             schema[
                 vol.Optional(
+                    CONF_EMBEDDING_CHUNK_SIZE,
+                    default=DEFAULT_EMBEDDING_CHUNK_SIZE,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_EMBEDDING_CHUNK_SIZE,
+                    max=MAX_EMBEDDING_CHUNK_SIZE,
+                    step=100,
+                )
+            )
+            schema[
+                vol.Optional(
                     CONF_CONTEXT_RECALL_MAX_TOKENS,
                     default=DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
                 )
@@ -3206,7 +3253,8 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         return self.async_show_form(
             step_id="advanced",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(schema), {**self.options, **(user_input or {})}
+                vol.Schema(schema),
+                _advanced_form_values(self.options, user_input),
             ),
             errors=errors,
         )

@@ -99,11 +99,13 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
     DOMAIN,
+    MAX_EMBEDDING_CHUNK_SIZE,
     MCP_CONTEXT_PLACEMENTS,
     MCP_MEDIA_TYPES,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     MIN_CONTEXT_RECALL_MAX_TOKENS,
+    MIN_EMBEDDING_CHUNK_SIZE,
     SERVICE_TYPE_AI_ENDPOINT,
     SERVICE_TYPE_MCP,
 )
@@ -514,7 +516,6 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
         CONF_API_KEY: "embedding-key",
         CONF_BASE_URL: "https://embeddings.example.com/v1",
         CONF_EMBEDDINGS_MODEL: "embed-model",
-        CONF_EMBEDDING_CHUNK_SIZE: 7000,
         CONF_CLEAR_EMBEDDING_HISTORY: True,
     }
 
@@ -534,7 +535,6 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
             CONF_API_KEY: "embedding-key",
             CONF_BASE_URL: "https://embeddings.example.com/v1",
             CONF_EMBEDDINGS_MODEL: "embed-model",
-            CONF_EMBEDDING_CHUNK_SIZE: 7000,
         },
     }
     assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
@@ -708,12 +708,10 @@ async def test_embeddings_form_never_rechecks_clear_history(hass):
         if getattr(key, "schema", key) == CONF_CLEAR_EMBEDDING_HISTORY
     )
     assert clear_key.default() is False
-    chunk_key = next(
-        key
+    assert not any(
+        getattr(key, "schema", key) == CONF_EMBEDDING_CHUNK_SIZE
         for key in schema.schema
-        if getattr(key, "schema", key) == CONF_EMBEDDING_CHUNK_SIZE
     )
-    assert chunk_key.default() == DEFAULT_EMBEDDING_CHUNK_SIZE
 
 
 async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
@@ -1978,20 +1976,7 @@ async def test_validate_embeddings_input_makes_real_embedding_request(hass):
         input="EOAIC2 embedding connection test",
     )
     assert data[CONF_EMBEDDINGS_MODEL] == "embed-model"
-    assert data[CONF_EMBEDDING_CHUNK_SIZE] == DEFAULT_EMBEDDING_CHUNK_SIZE
-
-
-async def test_validate_embeddings_input_rejects_invalid_chunk_size(hass):
-    """Embedding chunk sizes outside the supported range are rejected."""
-    with pytest.raises(HomeAssistantError, match="chunk size is invalid"):
-        await validate_embeddings_input(
-            hass,
-            {
-                CONF_API_KEY: "embedding-key",
-                CONF_EMBEDDINGS_MODEL: DEFAULT_EMBEDDINGS_MODEL,
-                CONF_EMBEDDING_CHUNK_SIZE: 99,
-            },
-        )
+    assert CONF_EMBEDDING_CHUNK_SIZE not in data
 
 
 async def test_validate_embeddings_input_rejects_empty_vector(hass):
@@ -2558,7 +2543,10 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     handler = handler_type()
     handler.hass = hass
     handler.context = {"source": "reconfigure"}
-    handler.options = {}
+    handler.options = {
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: 3,
+        CONF_EMBEDDING_CHUNK_SIZE: 7000,
+    }
     handler._temp_data = {
         CONF_CHAT_MODEL: "gpt-4o-mini",
         CONF_CONTEXT_TRUNCATE_STRATEGY: [CONTEXT_PRESERVATION_METHOD_EMBEDDINGS],
@@ -2593,8 +2581,22 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
         for key in schema
         if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
     )
-    assert snapshot_ttl_key.default() == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+    assert snapshot_ttl_key.default() == str(
+        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+    )
+    assert snapshot_ttl_key.description["suggested_value"] == str(
+        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
+    )
     assert isinstance(schema[snapshot_ttl_key], TextSelector)
+    chunk_key = next(
+        key
+        for key in schema
+        if getattr(key, "schema", key) == CONF_EMBEDDING_CHUNK_SIZE
+    )
+    assert chunk_key.default() == DEFAULT_EMBEDDING_CHUNK_SIZE
+    assert schema[chunk_key].config["min"] == MIN_EMBEDDING_CHUNK_SIZE
+    assert schema[chunk_key].config["max"] == MAX_EMBEDDING_CHUNK_SIZE
+    assert chunk_key.description["suggested_value"] == 7000
     snapshot_time_ttl_key = next(
         key
         for key in schema
@@ -3134,6 +3136,42 @@ async def test_agent_advanced_rejects_invalid_snapshot_turn_ttl(
         CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: (
             "invalid_context_recall_max_results"
         )
+    }
+
+
+@pytest.mark.parametrize(
+    "handler_type",
+    [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
+)
+@pytest.mark.parametrize("value", [99, 100001])
+async def test_agent_advanced_rejects_invalid_embedding_chunk_size(
+    hass, handler_type, value
+):
+    """Embedding chunk size is configured and validated per agent."""
+    handler = handler_type()
+    handler.hass = hass
+    handler.context = {"source": "reconfigure"}
+    handler.options = {}
+    handler._temp_data = {
+        CONF_CONTEXT_TRUNCATE_STRATEGY: [CONTEXT_PRESERVATION_METHOD_EMBEDDINGS]
+    }
+    entry = MagicMock()
+    entry.data = {CONF_EMBEDDINGS: {}}
+    handler._get_entry = MagicMock(return_value=entry)
+    handler.async_show_form = MagicMock(return_value={"type": "form"})
+
+    result = await handler.async_step_advanced(
+        {
+            CONF_EMBEDDING_HISTORY_RETENTION: "30d",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: "3",
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME: "2h",
+            CONF_EMBEDDING_CHUNK_SIZE: value,
+        }
+    )
+
+    assert result == {"type": "form"}
+    assert handler.async_show_form.call_args.kwargs["errors"] == {
+        CONF_EMBEDDING_CHUNK_SIZE: "invalid_embedding_chunk_size"
     }
 
 

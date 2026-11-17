@@ -12,7 +12,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import llm
 
 from ..const import (
-    CONF_EMBEDDING_CHUNK_SIZE,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
@@ -50,6 +49,7 @@ def build_context_recall_function_tool(
     snapshot_ttl_turns: int | None,
     max_results: int = DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     *,
+    embedding_chunk_size: int = DEFAULT_EMBEDDING_CHUNK_SIZE,
     snapshot_ttl_time: str = DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     close_match_tolerance: float | None = None,
     rerank: bool = DEFAULT_CONTEXT_RECALL_RERANK,
@@ -64,6 +64,7 @@ def build_context_recall_function_tool(
         "agent_id": agent_id,
         "max_tokens": max_tokens,
         "max_results": max_results,
+        "embedding_chunk_size": embedding_chunk_size,
         "close_match_tolerance": close_match_tolerance,
         "snapshot_ttl_turns": snapshot_ttl_turns,
         "snapshot_ttl_time": snapshot_ttl_time,
@@ -231,6 +232,10 @@ class ContextRecallFunction(Function):
                     vol.Optional(
                         "max_results", default=DEFAULT_CONTEXT_RECALL_MAX_RESULTS
                     ): vol.All(int, vol.Range(min=1)),
+                    vol.Optional(
+                        "embedding_chunk_size",
+                        default=DEFAULT_EMBEDDING_CHUNK_SIZE,
+                    ): vol.All(int, vol.Range(min=1)),
                     vol.Optional("close_match_tolerance", default=None): vol.Any(
                         None,
                         vol.All(
@@ -321,8 +326,8 @@ class ContextRecallFunction(Function):
         model = embeddings.get(CONF_EMBEDDINGS_MODEL)
         if not isinstance(model, str) or not model:
             return _error("recall_unavailable", "Conversation recall is unavailable")
-        chunk_size = embeddings.get(
-            CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
+        chunk_size = function_config.get(
+            "embedding_chunk_size", DEFAULT_EMBEDDING_CHUNK_SIZE
         )
         if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
             return _error("recall_unavailable", "Conversation recall is unavailable")

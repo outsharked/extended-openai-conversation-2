@@ -7,6 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Voer een positieve gehele tokenlimiet in.",
             "invalid_context_recall_snapshot_ttl_time": "Voer een positief geheel getal in, gevolgd door m, h of d. Nul is niet toegestaan. Zonder achtervoegsel worden dagen gebruikt.",
             "invalid_context_recall_max_results": "Voer een positief geheel getal in.",
+            "invalid_embedding_chunk_size": "Voer een embeddingsegmentgrootte tussen 100 en 100000 geschatte tokens in.",
             "invalid_context_recall_close_match_tolerance": "Voer een decimaal getal groter dan 0 in of laat het veld leeg.",
             "invalid_context_recall_rerank_min_score": "Voer een decimaal getal in of laat het veld leeg.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Voer een positief geheel getal in of laat het veld leeg.",
@@ -23,11 +24,9 @@
                     "api_key": "API-sleutel",
                     "base_url": "Basis-URL",
                     "embedding_model": "Embeddingmodel",
-                    "embedding_chunk_size": "Maximale grootte van embeddingsegment (geschatte tokens)",
                     "clear_embedding_history": "Opgeslagen embeddinggeschiedenis wissen bij opslaan"
                 },
                 "data_description": {
-                    "embedding_chunk_size": "Maximaal geschat aantal tokens per embeddinginvoer. Kies een waarde onder de contextlimiet van het embeddingmodel, omdat de tokentelling per model verschilt.",
                     "clear_embedding_history": "Deze actie wordt nooit als instelling opgeslagen. Wanneer geselecteerd, wordt alle embeddinggebaseerde gespreksgeschiedenis voor dit eindpunt bij het opslaan verwijderd."
                 }
             },
@@ -156,6 +155,7 @@
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
                         "context_keyword_recall_max_tokens": "Paginagrootte voor letterlijke herinnering (geschatte tokens)",
+                        "embedding_chunk_size": "Maximale grootte van embeddingsegment (geschatte tokens)",
                         "embedding_history_retention": "Bewaartermijn gearchiveerde gesprekken",
                         "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
                         "context_recall_max_results": "Maximaal aantal context_recall-resultaten",
@@ -174,6 +174,7 @@
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
                         "context_keyword_recall_max_tokens": "Maximaal aantal geschatte tokens per pagina met letterlijke zoekresultaten. Te grote overeenkomende berichten worden opgesplitst in geordende, letterlijke fragmenten.",
+                        "embedding_chunk_size": "Maximaal geschat aantal tokens per embeddinginvoer voor deze agent.",
                         "embedding_history_retention": "Gedeelde bewaartermijn voor semantisch ophalen met embeddings en letterlijk tekstzoeken. Voer een positief geheel getal in gevolgd door m, h of d.",
                         "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
                         "context_recall_max_results": "Maximaal aantal herinneringen dat het model via context_recall mag opvragen. Het model mag er minder opvragen. Standaard 20.",
@@ -225,6 +226,7 @@
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
                         "context_keyword_recall_max_tokens": "Paginagrootte voor letterlijke herinnering (geschatte tokens)",
+                        "embedding_chunk_size": "Maximale grootte van embeddingsegment (geschatte tokens)",
                         "embedding_history_retention": "Bewaartermijn gearchiveerde gesprekken",
                         "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
                         "context_recall_max_results": "Maximaal aantal context_recall-resultaten",
@@ -243,6 +245,7 @@
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
                         "context_keyword_recall_max_tokens": "Maximaal aantal geschatte tokens per pagina met letterlijke zoekresultaten. Te grote overeenkomende berichten worden opgesplitst in geordende, letterlijke fragmenten.",
+                        "embedding_chunk_size": "Maximaal geschat aantal tokens per embeddinginvoer voor deze agent.",
                         "embedding_history_retention": "Gedeelde bewaartermijn voor semantisch ophalen met embeddings en letterlijk tekstzoeken. Voer een positief geheel getal in gevolgd door m, h of d.",
                         "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
                         "context_recall_max_results": "Maximaal aantal herinneringen dat het model via context_recall mag opvragen. Het model mag er minder opvragen. Standaard 20.",

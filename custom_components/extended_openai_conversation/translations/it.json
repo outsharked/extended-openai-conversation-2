@@ -7,6 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Inserisci un limite di token intero positivo.",
             "invalid_context_recall_snapshot_ttl_time": "Inserisci un numero intero positivo seguito da m, h o d. Lo zero non è consentito. Senza suffisso vengono usati i giorni.",
             "invalid_context_recall_max_results": "Inserisci un numero intero positivo.",
+            "invalid_embedding_chunk_size": "Inserisci una dimensione del blocco embedding tra 100 e 100000 token stimati.",
             "invalid_context_recall_close_match_tolerance": "Inserisci un numero decimale maggiore di 0 o lascia vuoto il campo.",
             "invalid_context_recall_rerank_min_score": "Inserisci un numero decimale o lascia vuoto il campo.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Inserisci un numero intero positivo o lascia vuoto il campo.",
@@ -23,11 +24,9 @@
                     "api_key": "Chiave API",
                     "base_url": "URL di base",
                     "embedding_model": "Modello embedding",
-                    "embedding_chunk_size": "Dimensione massima del blocco embedding (token stimati)",
                     "clear_embedding_history": "Cancella la cronologia degli embedding al salvataggio"
                 },
                 "data_description": {
-                    "embedding_chunk_size": "Numero massimo stimato di token inviati in un singolo input embedding. Scegli un valore inferiore al limite di contesto del modello, poiché il conteggio varia tra i modelli.",
                     "clear_embedding_history": "Questa azione non viene salvata come impostazione. Se selezionata, al salvataggio verrà rimossa tutta la cronologia delle conversazioni basata sugli embedding per questo endpoint."
                 }
             },
@@ -156,6 +155,7 @@
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
                         "context_keyword_recall_max_tokens": "Dimensione pagina del richiamo letterale (token stimati)",
+                        "embedding_chunk_size": "Dimensione massima del blocco embedding (token stimati)",
                         "embedding_history_retention": "Conservazione conversazioni archiviate",
                         "context_recall_max_tokens": "Contesto richiamato attivo massimo (token stimati)",
                         "context_recall_max_results": "Risultati context_recall massimi",
@@ -174,6 +174,7 @@
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
                         "context_keyword_recall_max_tokens": "Numero massimo di token stimati restituiti in ogni pagina di ricerca letterale. I messaggi corrispondenti troppo grandi vengono suddivisi in frammenti testuali ordinati.",
+                        "embedding_chunk_size": "Numero massimo stimato di token inviati in un input embedding per questo agente.",
                         "embedding_history_retention": "Durata condivisa dal recupero semantico tramite embedding e dalla ricerca testuale letterale. Inserisci un intero positivo seguito da m, h o d.",
                         "context_recall_max_tokens": "Numero totale massimo stimato di token del contesto derivato dagli embedding mantenuti in una richiesta al modello, inclusi il richiamo automatico, i risultati context_recall e le pagine di snapshot consultate.",
                         "context_recall_max_results": "Numero massimo di memorie che il modello può richiedere da context_recall. Il modello può richiederne meno. Valore predefinito 20.",
@@ -225,6 +226,7 @@
                         "context_compaction_recent_turns": "Turni recenti da conservare",
                         "context_compaction_prompt": "Prompt di compattazione",
                         "context_keyword_recall_max_tokens": "Dimensione pagina del richiamo letterale (token stimati)",
+                        "embedding_chunk_size": "Dimensione massima del blocco embedding (token stimati)",
                         "embedding_history_retention": "Conservazione conversazioni archiviate",
                         "context_recall_max_tokens": "Contesto richiamato attivo massimo (token stimati)",
                         "context_recall_max_results": "Risultati context_recall massimi",
@@ -243,6 +245,7 @@
                         "context_compaction_recent_turns": "Numero di turni di conversazione recenti completi da conservare senza modifiche dopo la compattazione. Le chiamate agli strumenti e i risultati restano insieme.",
                         "context_compaction_prompt": "Istruzioni usate per riassumere la cronologia precedente. La trascrizione e il limite di token sono forniti separatamente.",
                         "context_keyword_recall_max_tokens": "Numero massimo di token stimati restituiti in ogni pagina di ricerca letterale. I messaggi corrispondenti troppo grandi vengono suddivisi in frammenti testuali ordinati.",
+                        "embedding_chunk_size": "Numero massimo stimato di token inviati in un input embedding per questo agente.",
                         "embedding_history_retention": "Durata condivisa dal recupero semantico tramite embedding e dalla ricerca testuale letterale. Inserisci un intero positivo seguito da m, h o d.",
                         "context_recall_max_tokens": "Numero totale massimo stimato di token del contesto derivato dagli embedding mantenuti in una richiesta al modello, inclusi il richiamo automatico, i risultati context_recall e le pagine di snapshot consultate.",
                         "context_recall_max_results": "Numero massimo di memorie che il modello può richiedere da context_recall. Il modello può richiederne meno. Valore predefinito 20.",

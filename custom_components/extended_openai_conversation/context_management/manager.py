@@ -412,7 +412,7 @@ class ContextManagementMixin:
             model = embeddings.get(CONF_EMBEDDINGS_MODEL)
             if not isinstance(model, str) or not model:
                 raise HomeAssistantError("An embedding model is not configured")
-            chunk_size = embeddings.get(
+            chunk_size = self.subentry.data.get(
                 CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
             )
             if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):

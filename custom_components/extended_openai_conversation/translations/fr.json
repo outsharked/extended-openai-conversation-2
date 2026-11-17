@@ -7,6 +7,7 @@
             "invalid_context_keyword_recall_max_tokens": "Saisissez une limite de jetons entière positive.",
             "invalid_context_recall_snapshot_ttl_time": "Saisissez un entier positif suivi de m, h ou d. Zéro n’est pas autorisé. Sans suffixe, la valeur est exprimée en jours.",
             "invalid_context_recall_max_results": "Saisissez un entier positif.",
+            "invalid_embedding_chunk_size": "Saisissez une taille de segment d’embedding comprise entre 100 et 100000 jetons estimés.",
             "invalid_context_recall_close_match_tolerance": "Saisissez un nombre décimal supérieur à 0 ou laissez le champ vide.",
             "invalid_context_recall_rerank_min_score": "Saisissez un nombre décimal ou laissez le champ vide.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Saisissez un entier positif ou laissez le champ vide.",
@@ -23,11 +24,9 @@
                     "api_key": "Clé API",
                     "base_url": "URL de base",
                     "embedding_model": "Modèle d'embedding",
-                    "embedding_chunk_size": "Taille maximale d’un segment d’embedding (jetons estimés)",
                     "clear_embedding_history": "Effacer l'historique d'embeddings lors de l'enregistrement"
                 },
                 "data_description": {
-                    "embedding_chunk_size": "Nombre maximal estimé de jetons envoyé dans une entrée d’embedding. Choisissez une valeur inférieure à la limite de contexte du modèle, car le comptage varie selon le modèle.",
                     "clear_embedding_history": "Cette action n'est jamais enregistrée comme paramètre. Si elle est sélectionnée, tout l'historique de conversation basé sur les embeddings de ce point de terminaison sera supprimé lors de l'enregistrement."
                 }
             },
@@ -156,6 +155,7 @@
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
                         "context_keyword_recall_max_tokens": "Taille de page du rappel littéral (jetons estimés)",
+                        "embedding_chunk_size": "Taille maximale d’un segment d’embedding (jetons estimés)",
                         "embedding_history_retention": "Conservation des conversations archivées",
                         "context_recall_max_tokens": "Contexte rappelé actif maximal (jetons estimés)",
                         "context_recall_max_results": "Nombre maximal de résultats context_recall",
@@ -174,6 +174,7 @@
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
                         "context_keyword_recall_max_tokens": "Nombre maximal de jetons estimés renvoyés par page de recherche littérale. Les messages correspondants trop volumineux sont divisés en fragments textuels ordonnés.",
+                        "embedding_chunk_size": "Nombre maximal estimé de jetons envoyé dans une entrée d’embedding pour cet agent.",
                         "embedding_history_retention": "Durée de conservation commune au rappel sémantique par embeddings et à la recherche textuelle littérale. Saisissez un entier positif suivi de m, h ou d.",
                         "context_recall_max_tokens": "Nombre total maximal estimé de jetons de contexte issu des embeddings conservés dans une requête au modèle, y compris le rappel automatique, les résultats context_recall et les pages d’instantané consultées.",
                         "context_recall_max_results": "Nombre maximal de souvenirs que le modèle peut demander à context_recall. Il peut en demander moins. La valeur par défaut est 20.",
@@ -225,6 +226,7 @@
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
                         "context_keyword_recall_max_tokens": "Taille de page du rappel littéral (jetons estimés)",
+                        "embedding_chunk_size": "Taille maximale d’un segment d’embedding (jetons estimés)",
                         "embedding_history_retention": "Conservation des conversations archivées",
                         "context_recall_max_tokens": "Contexte rappelé actif maximal (jetons estimés)",
                         "context_recall_max_results": "Nombre maximal de résultats context_recall",
@@ -243,6 +245,7 @@
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
                         "context_keyword_recall_max_tokens": "Nombre maximal de jetons estimés renvoyés par page de recherche littérale. Les messages correspondants trop volumineux sont divisés en fragments textuels ordonnés.",
+                        "embedding_chunk_size": "Nombre maximal estimé de jetons envoyé dans une entrée d’embedding pour cet agent.",
                         "embedding_history_retention": "Durée de conservation commune au rappel sémantique par embeddings et à la recherche textuelle littérale. Saisissez un entier positif suivi de m, h ou d.",
                         "context_recall_max_tokens": "Nombre total maximal estimé de jetons de contexte issu des embeddings conservés dans une requête au modèle, y compris le rappel automatique, les résultats context_recall et les pages d’instantané consultées.",
                         "context_recall_max_results": "Nombre maximal de souvenirs que le modèle peut demander à context_recall. Il peut en demander moins. La valeur par défaut est 20.",

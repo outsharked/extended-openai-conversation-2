@@ -35,6 +35,7 @@
       "invalid_context_keyword_recall_max_tokens": "Enter a positive whole-number token limit.",
             "invalid_context_recall_snapshot_ttl_time": "Enter a positive whole number followed by m, h, or d. Zero is not allowed. A value without a suffix uses days.",
             "invalid_context_recall_max_results": "Enter a positive whole number.",
+            "invalid_embedding_chunk_size": "Enter an embedding chunk size between 100 and 100000 estimated tokens.",
             "invalid_context_recall_close_match_tolerance": "Enter a decimal number greater than 0 or leave the field empty.",
             "invalid_context_recall_rerank_min_score": "Enter a decimal number or leave the field empty.",
             "invalid_context_recall_rerank_max_candidate_tokens": "Enter a positive whole number or leave the field empty.",
@@ -127,11 +128,9 @@
                     "api_key": "API Key",
                     "base_url": "Base Url",
                     "embedding_model": "Embedding model",
-                    "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
                     "clear_embedding_history": "Clear stored embedding history when saving"
                 },
                 "data_description": {
-                    "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input. Choose a value below the embedding model's context limit because token counts vary by model.",
                     "clear_embedding_history": "This action is never saved as a setting. When selected, all embedding-backed conversation history for this endpoint will be removed when the service configuration is saved."
                 }
             },
@@ -305,6 +304,7 @@
                         "clear_intra_turn_embeddings": "Clear temporary intra-turn context when saving",
                         "context_compaction_recent_turns": "Recent turns to preserve",
                         "context_compaction_prompt": "Compaction prompt",
+            "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
             "embedding_history_retention": "Archived conversation retention",
             "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
                         "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
@@ -323,6 +323,7 @@
                         "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn archived context for this agent is removed when the agent configuration is saved.",
                         "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction. Tool calls and results remain together.",
                         "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
+            "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input for this agent. Choose a value below the embedding model's context limit because token counts vary by model.",
             "embedding_history_retention": "Retention shared by semantic embedding and literal text recall archives. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
             "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
                         "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
@@ -375,6 +376,7 @@
                         "clear_intra_turn_embeddings": "Clear temporary intra-turn context when saving",
                         "context_compaction_recent_turns": "Recent turns to preserve",
                         "context_compaction_prompt": "Compaction prompt",
+            "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
             "embedding_history_retention": "Archived conversation retention",
             "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
                         "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
@@ -393,6 +395,7 @@
                         "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn archived context for this agent is removed when the agent configuration is saved.",
                         "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction. Tool calls and results remain together.",
                         "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
+            "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input for this agent. Choose a value below the embedding model's context limit because token counts vary by model.",
             "embedding_history_retention": "Retention shared by semantic embedding and literal text recall archives. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
             "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
                         "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
