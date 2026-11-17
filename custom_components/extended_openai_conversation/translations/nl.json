@@ -4,6 +4,7 @@
             "invalid_embeddings": "Het embeddings-eindpunt heeft geen geldige embedding teruggegeven.",
             "invalid_reranker": "Het reranker-eindpunt heeft geen geldige resultaten teruggegeven.",
             "invalid_embedding_history_retention": "Voer een positief geheel getal in gevolgd door m, h of d. Zonder achtervoegsel worden dagen gebruikt.",
+            "invalid_context_keyword_recall_max_tokens": "Voer een positieve gehele tokenlimiet in.",
             "invalid_context_recall_snapshot_ttl_time": "Voer een positief geheel getal in, gevolgd door m, h of d. Nul is niet toegestaan. Zonder achtervoegsel worden dagen gebruikt.",
             "invalid_context_recall_max_results": "Voer een positief geheel getal in.",
             "invalid_context_recall_close_match_tolerance": "Voer een decimaal getal groter dan 0 in of laat het veld leeg.",
@@ -106,10 +107,9 @@
         },
         "context_truncate_strategy": {
             "options": {
-                "clear": "Alle berichten wissen",
-                "compact": "Berichten samenvatten en compact maken",
-                "retrieve": "Ophaalgeheugen met embeddings",
-                "retrieve_compact": "Ophalen met embeddings en doorlopende samenvatting"
+                "compact": "Doorlopende samenvatting",
+                "embeddings": "Semantisch ophalen met embeddings",
+                "keyword": "Letterlijk tekst zoeken"
             }
         }
     },
@@ -134,7 +134,7 @@
                         "functions": "Functies",
                         "attach_username": "Gebruikersnaam aan bericht toevoegen",
                         "context_threshold": "Context Threshold",
-                        "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+                        "context_truncate_strategy": "Aanvullende methoden voor contextbehoud",
                         "advanced_options": "Advanced Options"
                     },
                     "data_description": {
@@ -155,7 +155,8 @@
                         "clear_intra_turn_embeddings": "Tijdelijke intra-beurt-embeddings wissen bij opslaan",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
-                        "embedding_history_retention": "Bewaartermijn embeddinggeschiedenis",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Bewaartermijn gearchiveerde gesprekken",
                         "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
                         "context_recall_max_results": "Maximaal aantal context_recall-resultaten",
                         "context_recall_close_match_tolerance": "Tolerantie voor vergelijkbare herinneringen",
@@ -172,7 +173,8 @@
                         "clear_intra_turn_embeddings": "Deze actie wordt nooit als instelling opgeslagen. Wanneer deze is geselecteerd, worden alle tijdelijke intra-beurt-embeddings van deze agent verwijderd wanneer de agentconfiguratie wordt opgeslagen.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
-                        "embedding_history_retention": "Positief geheel getal gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "Gedeelde bewaartermijn voor semantisch ophalen met embeddings en letterlijk tekstzoeken. Voer een positief geheel getal in gevolgd door m, h of d.",
                         "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
                         "context_recall_max_results": "Maximaal aantal herinneringen dat het model via context_recall mag opvragen. Het model mag er minder opvragen. Standaard 20.",
                         "context_recall_close_match_tolerance": "Meld uitgesloten herinneringen waarvan de score binnen deze afstand van het laagst geselecteerde resultaat ligt. Laat leeg om uit te schakelen. Voer een getal groter dan 0 in om in te schakelen. Scorebereiken hangen af van het actieve embedding- of rerankermodel.",
@@ -201,7 +203,7 @@
                         "mcp_permanent_tools_placement": "Plaatsing van permanente MCP-hulpmiddelen",
                         "mcp_default_prompt_placement": "Plaatsing van de standaard MCP-prompt",
                         "context_threshold": "Contextdrempel",
-                        "context_truncate_strategy": "Strategie wanneer de contextdrempel wordt overschreden",
+                        "context_truncate_strategy": "Aanvullende methoden voor contextbehoud",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -222,7 +224,8 @@
                         "clear_intra_turn_embeddings": "Tijdelijke intra-beurt-embeddings wissen bij opslaan",
                         "context_compaction_recent_turns": "Recente beurten om te behouden",
                         "context_compaction_prompt": "Compactieprompt",
-                        "embedding_history_retention": "Bewaartermijn embeddinggeschiedenis",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Bewaartermijn gearchiveerde gesprekken",
                         "context_recall_max_tokens": "Maximale actieve opgehaalde context (geschatte tokens)",
                         "context_recall_max_results": "Maximaal aantal context_recall-resultaten",
                         "context_recall_close_match_tolerance": "Tolerantie voor vergelijkbare herinneringen",
@@ -239,7 +242,8 @@
                         "clear_intra_turn_embeddings": "Deze actie wordt nooit als instelling opgeslagen. Wanneer deze is geselecteerd, worden alle tijdelijke intra-beurt-embeddings van deze agent verwijderd wanneer de agentconfiguratie wordt opgeslagen.",
                         "context_compaction_recent_turns": "Aantal volledige recente gespreksbeurten dat na compactie ongewijzigd blijft. Toolaanroepen en resultaten blijven bij elkaar.",
                         "context_compaction_prompt": "Instructies voor het samenvatten van oudere gespreksgeschiedenis. Het transcript en de tokenlimiet worden afzonderlijk aangeleverd.",
-                        "embedding_history_retention": "Positief geheel getal gevolgd door m voor minuten, h voor uren of d voor dagen. Zonder achtervoegsel worden dagen gebruikt.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "Gedeelde bewaartermijn voor semantisch ophalen met embeddings en letterlijk tekstzoeken. Voer een positief geheel getal in gevolgd door m, h of d.",
                         "context_recall_max_tokens": "Maximaal geschat totaal aantal tokens aan uit embeddings afgeleide context dat in een modelaanvraag wordt behouden, inclusief automatisch ophalen, context_recall-resultaten en bekeken snapshotpagina’s.",
                         "context_recall_max_results": "Maximaal aantal herinneringen dat het model via context_recall mag opvragen. Het model mag er minder opvragen. Standaard 20.",
                         "context_recall_close_match_tolerance": "Meld uitgesloten herinneringen waarvan de score binnen deze afstand van het laagst geselecteerde resultaat ligt. Laat leeg om uit te schakelen. Voer een getal groter dan 0 in om in te schakelen. Scorebereiken hangen af van het actieve embedding- of rerankermodel.",

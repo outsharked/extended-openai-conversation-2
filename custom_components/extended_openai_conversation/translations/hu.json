@@ -4,6 +4,7 @@
             "invalid_embeddings": "A beágyazási végpont nem adott vissza érvényes beágyazást.",
             "invalid_reranker": "Az újrarangsoroló végpont nem adott vissza érvényes eredményeket.",
             "invalid_embedding_history_retention": "Adjon meg pozitív egész számot m, h vagy d utótaggal. Utótag nélkül napokat használunk.",
+            "invalid_context_keyword_recall_max_tokens": "Adjon meg pozitív egész tokenkorlátot.",
             "invalid_context_recall_snapshot_ttl_time": "Adjon meg pozitív egész számot m, h vagy d utótaggal. A nulla nem engedélyezett. Utótag nélkül napokat használunk.",
             "invalid_context_recall_max_results": "Adjon meg pozitív egész számot.",
             "invalid_context_recall_close_match_tolerance": "Adjon meg 0-nál nagyobb tizedes számot, vagy hagyja üresen a mezőt.",
@@ -106,10 +107,9 @@
         },
         "context_truncate_strategy": {
             "options": {
-                "clear": "Összes üzenet törlése",
-                "compact": "Üzenetek összegzése és tömörítése",
-                "retrieve": "Beágyazásalapú visszakeresési memória",
-                "retrieve_compact": "Beágyazásalapú visszakeresés gördülő összegzéssel"
+                "compact": "Gördülő összegzés",
+                "embeddings": "Szemantikus beágyazásalapú visszakeresés",
+                "keyword": "Szó szerinti szövegkeresés"
             }
         }
     },
@@ -134,7 +134,7 @@
                         "functions": "Funkciók",
                         "attach_username": "Felhasználónév hozzácsatolása az üzenethez",
                         "context_threshold": "Context Threshold",
-                        "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+                        "context_truncate_strategy": "További kontextusmegőrzési módszerek",
                         "advanced_options": "Advanced Options"
                     },
                     "data_description": {
@@ -155,7 +155,8 @@
                         "clear_intra_turn_embeddings": "Ideiglenes körön belüli beágyazások törlése mentéskor",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
-                        "embedding_history_retention": "Beágyazási előzmények megőrzése",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Archivált beszélgetések megőrzése",
                         "context_recall_max_tokens": "Aktív visszahívott kontextus maximuma (becsült tokenek)",
                         "context_recall_max_results": "Context_recall eredmények maximális száma",
                         "context_recall_close_match_tolerance": "Hasonló emlékek tűrése",
@@ -172,7 +173,8 @@
                         "clear_intra_turn_embeddings": "Ez a művelet soha nem kerül mentésre beállításként. Kiválasztásakor az ügynök konfigurációjának mentésekor az ügynök összes ideiglenes körön belüli beágyazása törlődik.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
-                        "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "A szemantikus beágyazásalapú és a szó szerinti szöveges visszakeresés közös megőrzési ideje. Adjon meg pozitív egész számot m, h vagy d utótaggal.",
                         "context_recall_max_tokens": "A modellkérésekben megtartott, beágyazásokból származó kontextus becsült tokenjeinek maximális összesített száma, beleértve az automatikus visszahívást, a context_recall eredményeit és a megtekintett pillanatképlapokat.",
                         "context_recall_max_results": "A context_recall segítségével kérhető emlékek maximális száma. A modell kevesebbet is kérhet. Alapérték: 20.",
                         "context_recall_close_match_tolerance": "Jelzi azokat a kizárt emlékeket, amelyek pontszáma ezen az eltérésen belül van a legalacsonyabb kiválasztott eredményhez képest. A kikapcsoláshoz hagyja üresen, a bekapcsoláshoz adjon meg 0-nál nagyobb számot. A pontszámtartomány az aktív embedding- vagy reranker-modelltől függ.",
@@ -201,7 +203,7 @@
                         "mcp_permanent_tools_placement": "Állandó MCP-eszközök elhelyezése",
                         "mcp_default_prompt_placement": "Alapértelmezett MCP-prompt elhelyezése",
                         "context_threshold": "Kontextusküszöb",
-                        "context_truncate_strategy": "Stratégia a kontextusküszöb túllépésekor",
+                        "context_truncate_strategy": "További kontextusmegőrzési módszerek",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -222,7 +224,8 @@
                         "clear_intra_turn_embeddings": "Ideiglenes körön belüli beágyazások törlése mentéskor",
                         "context_compaction_recent_turns": "Megőrzendő legutóbbi fordulók",
                         "context_compaction_prompt": "Tömörítési utasítás",
-                        "embedding_history_retention": "Beágyazási előzmények megőrzése",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Archivált beszélgetések megőrzése",
                         "context_recall_max_tokens": "Aktív visszahívott kontextus maximuma (becsült tokenek)",
                         "context_recall_max_results": "Context_recall eredmények maximális száma",
                         "context_recall_close_match_tolerance": "Hasonló emlékek tűrése",
@@ -239,7 +242,8 @@
                         "clear_intra_turn_embeddings": "Ez a művelet soha nem kerül mentésre beállításként. Kiválasztásakor az ügynök konfigurációjának mentésekor az ügynök összes ideiglenes körön belüli beágyazása törlődik.",
                         "context_compaction_recent_turns": "A tömörítés után változatlanul megőrzendő teljes legutóbbi beszélgetési fordulók száma. Az eszközhívások és eredményeik együtt maradnak.",
                         "context_compaction_prompt": "A korábbi beszélgetési előzmények összegzéséhez használt utasítások. Az átirat és a tokenkorlát külön kerül átadásra.",
-                        "embedding_history_retention": "Pozitív egész szám m (perc), h (óra) vagy d (nap) utótaggal. Utótag nélkül napokat használunk.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "A szemantikus beágyazásalapú és a szó szerinti szöveges visszakeresés közös megőrzési ideje. Adjon meg pozitív egész számot m, h vagy d utótaggal.",
                         "context_recall_max_tokens": "A modellkérésekben megtartott, beágyazásokból származó kontextus becsült tokenjeinek maximális összesített száma, beleértve az automatikus visszahívást, a context_recall eredményeit és a megtekintett pillanatképlapokat.",
                         "context_recall_max_results": "A context_recall segítségével kérhető emlékek maximális száma. A modell kevesebbet is kérhet. Alapérték: 20.",
                         "context_recall_close_match_tolerance": "Jelzi azokat a kizárt emlékeket, amelyek pontszáma ezen az eltérésen belül van a legalacsonyabb kiválasztott eredményhez képest. A kikapcsoláshoz hagyja üresen, a bekapcsoláshoz adjon meg 0-nál nagyobb számot. A pontszámtartomány az aktív embedding- vagy reranker-modelltől függ.",

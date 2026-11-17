@@ -4,6 +4,7 @@
             "invalid_embeddings": "Le point de terminaison d'embeddings n'a pas renvoyé d'embedding valide.",
             "invalid_reranker": "Le point de terminaison de reclassement n'a pas renvoyé de résultats valides.",
             "invalid_embedding_history_retention": "Saisissez un entier positif suivi de m, h ou d. Sans suffixe, la valeur est exprimée en jours.",
+            "invalid_context_keyword_recall_max_tokens": "Saisissez une limite de jetons entière positive.",
             "invalid_context_recall_snapshot_ttl_time": "Saisissez un entier positif suivi de m, h ou d. Zéro n’est pas autorisé. Sans suffixe, la valeur est exprimée en jours.",
             "invalid_context_recall_max_results": "Saisissez un entier positif.",
             "invalid_context_recall_close_match_tolerance": "Saisissez un nombre décimal supérieur à 0 ou laissez le champ vide.",
@@ -106,10 +107,9 @@
         },
         "context_truncate_strategy": {
             "options": {
-                "clear": "Effacer tous les messages",
-                "compact": "Résumer et compacter les messages",
-                "retrieve": "Mémoire de récupération par embeddings",
-                "retrieve_compact": "Récupération par embeddings avec résumé évolutif"
+                "compact": "Résumé évolutif",
+                "embeddings": "Rappel sémantique par embeddings",
+                "keyword": "Recherche textuelle littérale"
             }
         }
     },
@@ -134,7 +134,7 @@
                         "functions": "Fonctions",
                         "attach_username": "Joindre le nom d'utilisateur au message",
                         "context_threshold": "Context Threshold",
-                        "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+                        "context_truncate_strategy": "Méthodes supplémentaires de préservation du contexte",
                         "advanced_options": "Advanced Options"
                     },
                     "data_description": {
@@ -155,7 +155,8 @@
                         "clear_intra_turn_embeddings": "Effacer les plongements temporaires intra-tour lors de l’enregistrement",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
-                        "embedding_history_retention": "Conservation de l’historique d’embeddings",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Conservation des conversations archivées",
                         "context_recall_max_tokens": "Contexte rappelé actif maximal (jetons estimés)",
                         "context_recall_max_results": "Nombre maximal de résultats context_recall",
                         "context_recall_close_match_tolerance": "Tolérance des souvenirs proches",
@@ -172,7 +173,8 @@
                         "clear_intra_turn_embeddings": "Cette action n’est jamais enregistrée en tant que paramètre. Lorsqu’elle est sélectionnée, tous les plongements temporaires intra-tour de cet agent sont supprimés lors de l’enregistrement de sa configuration.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
-                        "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "Durée de conservation commune au rappel sémantique par embeddings et à la recherche textuelle littérale. Saisissez un entier positif suivi de m, h ou d.",
                         "context_recall_max_tokens": "Nombre total maximal estimé de jetons de contexte issu des embeddings conservés dans une requête au modèle, y compris le rappel automatique, les résultats context_recall et les pages d’instantané consultées.",
                         "context_recall_max_results": "Nombre maximal de souvenirs que le modèle peut demander à context_recall. Il peut en demander moins. La valeur par défaut est 20.",
                         "context_recall_close_match_tolerance": "Signale les souvenirs exclus dont le score se situe dans cet intervalle par rapport au résultat sélectionné le moins bien classé. Laissez vide pour désactiver. Saisissez un nombre supérieur à 0 pour activer. Les plages de scores dépendent du modèle d'embedding ou de reclassement actif.",
@@ -201,7 +203,7 @@
                         "mcp_permanent_tools_placement": "Emplacement des outils MCP permanents",
                         "mcp_default_prompt_placement": "Emplacement de l'invite MCP par défaut",
                         "context_threshold": "Seuil de contexte",
-                        "context_truncate_strategy": "Stratégie lorsque le seuil de contexte est dépassé",
+                        "context_truncate_strategy": "Méthodes supplémentaires de préservation du contexte",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -222,7 +224,8 @@
                         "clear_intra_turn_embeddings": "Effacer les plongements temporaires intra-tour lors de l’enregistrement",
                         "context_compaction_recent_turns": "Tours récents à conserver",
                         "context_compaction_prompt": "Instruction de compaction",
-                        "embedding_history_retention": "Conservation de l’historique d’embeddings",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Conservation des conversations archivées",
                         "context_recall_max_tokens": "Contexte rappelé actif maximal (jetons estimés)",
                         "context_recall_max_results": "Nombre maximal de résultats context_recall",
                         "context_recall_close_match_tolerance": "Tolérance des souvenirs proches",
@@ -239,7 +242,8 @@
                         "clear_intra_turn_embeddings": "Cette action n’est jamais enregistrée en tant que paramètre. Lorsqu’elle est sélectionnée, tous les plongements temporaires intra-tour de cet agent sont supprimés lors de l’enregistrement de sa configuration.",
                         "context_compaction_recent_turns": "Nombre de tours de conversation récents complets à conserver à l’identique après la compaction. Les appels d’outils et leurs résultats restent groupés.",
                         "context_compaction_prompt": "Instructions utilisées pour résumer l’historique ancien. La transcription et la limite de jetons sont fournies séparément.",
-                        "embedding_history_retention": "Entier positif suivi de m pour les minutes, h pour les heures ou d pour les jours. Sans suffixe, les jours sont utilisés.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "Durée de conservation commune au rappel sémantique par embeddings et à la recherche textuelle littérale. Saisissez un entier positif suivi de m, h ou d.",
                         "context_recall_max_tokens": "Nombre total maximal estimé de jetons de contexte issu des embeddings conservés dans une requête au modèle, y compris le rappel automatique, les résultats context_recall et les pages d’instantané consultées.",
                         "context_recall_max_results": "Nombre maximal de souvenirs que le modèle peut demander à context_recall. Il peut en demander moins. La valeur par défaut est 20.",
                         "context_recall_close_match_tolerance": "Signale les souvenirs exclus dont le score se situe dans cet intervalle par rapport au résultat sélectionné le moins bien classé. Laissez vide pour désactiver. Saisissez un nombre supérieur à 0 pour activer. Les plages de scores dépendent du modèle d'embedding ou de reclassement actif.",

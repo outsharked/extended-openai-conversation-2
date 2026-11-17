@@ -205,6 +205,7 @@
       "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
       "invalid_reranker": "The reranker endpoint did not return valid results.",
       "invalid_embedding_history_retention": "Enter a positive whole number followed by m, h, or d. A value without a suffix uses days.",
+      "invalid_context_keyword_recall_max_tokens": "Enter a positive whole-number token limit.",
       "invalid_context_recall_snapshot_ttl_time": "Enter a positive whole number followed by m, h, or d. Zero is not allowed. A value without a suffix uses days.",
       "invalid_context_recall_max_results": "Enter a positive whole number.",
       "invalid_context_recall_close_match_tolerance": "Enter a decimal number greater than 0 or leave the field empty.",
@@ -254,10 +255,9 @@
     },
     "context_truncate_strategy": {
       "options": {
-        "clear": "Clear all messages",
-        "compact": "Summarize and compact messages",
-        "retrieve": "Embedding retrieval memory",
-        "retrieve_compact": "Embedding retrieval with rolling summary"
+        "compact": "Rolling summary",
+        "embeddings": "Semantic embedding recall",
+        "keyword": "Literal text recall"
       }
     }
   },
@@ -282,7 +282,7 @@
             "functions": "Functions",
             "attach_username": "Attach Username to Message",
             "context_threshold": "Context Threshold",
-            "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+            "context_truncate_strategy": "Additional context preservation methods",
             "advanced_options": "Advanced Options"
           },
           "data_description": {
@@ -305,7 +305,8 @@
             "clear_intra_turn_embeddings": "Clear temporary intra-turn embeddings when saving",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
-            "embedding_history_retention": "Embedding history retention",
+            "embedding_history_retention": "Archived conversation retention",
+            "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
             "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
             "context_recall_max_results": "Maximum context recall results",
             "context_recall_close_match_tolerance": "Recall close-match tolerance",
@@ -322,7 +323,8 @@
             "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn embeddings for this agent are removed when the agent configuration is saved.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",
-            "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "embedding_history_retention": "Retention shared by semantic embedding and literal text recall archives. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
             "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
             "context_recall_max_results": "Maximum number of memories the model may request from context_recall. The model may request fewer. Defaults to 20.",
             "context_recall_close_match_tolerance": "Report excluded memories whose score is within this amount of the lowest selected result. Leave empty to disable. Enter a number greater than 0 to enable. Score ranges depend on the active embedding or reranker model.",
@@ -351,7 +353,7 @@
             "mcp_permanent_tools_placement": "Permanent MCP tools placement",
             "mcp_default_prompt_placement": "Default MCP prompt placement",
             "context_threshold": "Context Threshold",
-            "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+            "context_truncate_strategy": "Additional context preservation methods",
             "advanced_options": "Advanced options"
           },
           "data_description": {
@@ -373,7 +375,8 @@
             "clear_intra_turn_embeddings": "Clear temporary intra-turn embeddings when saving",
             "context_compaction_recent_turns": "Recent turns to preserve",
             "context_compaction_prompt": "Compaction prompt",
-            "embedding_history_retention": "Embedding history retention",
+            "embedding_history_retention": "Archived conversation retention",
+            "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
             "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
             "context_recall_max_results": "Maximum context recall results",
             "context_recall_close_match_tolerance": "Recall close-match tolerance",
@@ -390,7 +393,8 @@
             "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn embeddings for this agent are removed when the agent configuration is saved.",
             "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction.",
             "context_compaction_prompt": "Instructions used to summarize older conversation history.",
-            "embedding_history_retention": "Positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "embedding_history_retention": "Retention shared by semantic embedding and literal text recall archives. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
             "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
             "context_recall_max_results": "Maximum number of memories the model may request from context_recall. The model may request fewer. Defaults to 20.",
             "context_recall_close_match_tolerance": "Report excluded memories whose score is within this amount of the lowest selected result. Leave empty to disable. Enter a number greater than 0 to enable. Score ranges depend on the active embedding or reranker model.",

@@ -79,6 +79,7 @@ from .const import (
     CONF_CONTEXT_COMPACTION_PROMPT,
     CONF_CONTEXT_COMPACTION_RECENT_TURNS,
     CONF_CONTEXT_COMPACTION_TARGET,
+    CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
     CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     CONF_CONTEXT_RECALL_MAX_RESULTS,
     CONF_CONTEXT_RECALL_MAX_TOKENS,
@@ -118,11 +119,10 @@ from .const import (
     CONF_SKIP_AUTHENTICATION,
     CONF_TEMPERATURE,
     CONF_TOP_P,
-    CONTEXT_TRUNCATE_COMPACTION_STRATEGIES,
-    CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES,
-    CONTEXT_TRUNCATE_STRATEGIES,
-    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
-    CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
+    CONTEXT_PRESERVATION_METHOD_COMPACT,
+    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+    CONTEXT_PRESERVATION_METHOD_KEYWORD,
+    CONTEXT_PRESERVATION_METHODS,
     DEFAULT_ADVANCED_OPTIONS,
     DEFAULT_AI_TASK_NAME,
     DEFAULT_AI_TASK_OPTIONS,
@@ -134,6 +134,8 @@ from .const import (
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
     DEFAULT_CONTEXT_COMPACTION_TARGET,
+    DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+    DEFAULT_CONTEXT_PRESERVATION_METHODS,
     DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
@@ -143,7 +145,6 @@ from .const import (
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
     DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
     DEFAULT_CONTEXT_THRESHOLD,
-    DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
     DEFAULT_CONVERSATION_NAME,
     DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -418,6 +419,9 @@ DEFAULT_OPTIONS = types.MappingProxyType(
         CONF_CONTEXT_COMPACTION_PROMPT: DEFAULT_CONTEXT_COMPACTION_PROMPT,
         CONF_CONTEXT_COMPACTION_RECENT_TURNS: DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
         CONF_CONTEXT_COMPACTION_TARGET: DEFAULT_CONTEXT_COMPACTION_TARGET,
+        CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS: (
+            DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS
+        ),
         CONF_CONTEXT_RECALL_MAX_TOKENS: DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
         CONF_CONTEXT_RECALL_MAX_RESULTS: DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
         CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE: (
@@ -437,7 +441,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
             DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
         ),
         CONF_CONTEXT_THRESHOLD: DEFAULT_CONTEXT_THRESHOLD,
-        CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+        CONF_CONTEXT_TRUNCATE_STRATEGY: DEFAULT_CONTEXT_PRESERVATION_METHODS,
         CONF_EMBEDDING_HISTORY_RETENTION: DEFAULT_EMBEDDING_HISTORY_RETENTION,
         CONF_SHORTEN_TOOL_CALL_ID: DEFAULT_SHORTEN_TOOL_CALL_ID,
         CONF_ADVANCED_OPTIONS: DEFAULT_ADVANCED_OPTIONS,
@@ -458,17 +462,36 @@ def _mcp_server_options(hass: HomeAssistant) -> list[SelectOptionDict]:
     ]
 
 
-def _context_truncate_strategies(entry: ConfigEntry) -> list[str]:
-    """Return context strategies supported by an AI endpoint entry."""
-    strategies = list(CONTEXT_TRUNCATE_STRATEGIES)
+def _context_preservation_methods(entry: ConfigEntry) -> list[str]:
+    """Return optional context-preservation methods supported by an endpoint."""
+    methods = [
+        CONTEXT_PRESERVATION_METHOD_COMPACT,
+        CONTEXT_PRESERVATION_METHOD_KEYWORD,
+    ]
     if isinstance(entry.data.get(CONF_EMBEDDINGS), Mapping):
-        strategies.extend(
-            (
-                CONTEXT_TRUNCATE_STRATEGY_RETRIEVE,
-                CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT,
-            )
-        )
-    return strategies
+        methods.insert(1, CONTEXT_PRESERVATION_METHOD_EMBEDDINGS)
+    return methods
+
+
+def _selected_context_methods(value: Any) -> frozenset[str]:
+    """Normalize the multi-select value used by the agent flows."""
+    if isinstance(value, str):
+        return {
+            "clear": frozenset(),
+            "compact": frozenset({CONTEXT_PRESERVATION_METHOD_COMPACT}),
+            "retrieve": frozenset({CONTEXT_PRESERVATION_METHOD_EMBEDDINGS}),
+            "retrieve_compact": frozenset(
+                {
+                    CONTEXT_PRESERVATION_METHOD_COMPACT,
+                    CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+                }
+            ),
+        }.get(value, frozenset())
+    if not isinstance(value, (list, tuple, set, frozenset)):
+        return frozenset()
+    return frozenset(
+        method for method in value if method in CONTEXT_PRESERVATION_METHODS
+    )
 
 
 def _entry_has_reranker(entry: ConfigEntry) -> bool:
@@ -489,7 +512,7 @@ async def _async_clear_intra_turn_embeddings(
 
 
 def _validate_retrieval_duration_input(
-    strategy: Any,
+    methods: Any,
     user_input: dict[str, Any],
     *,
     field: str,
@@ -497,7 +520,12 @@ def _validate_retrieval_duration_input(
     error: str,
 ) -> dict[str, str]:
     """Normalize a positive retrieval duration or return its field error."""
-    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+    if not _selected_context_methods(methods).intersection(
+        {
+            CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+            CONTEXT_PRESERVATION_METHOD_KEYWORD,
+        }
+    ):
         return {}
     try:
         user_input[field] = normalize_embedding_history_retention(
@@ -509,11 +537,11 @@ def _validate_retrieval_duration_input(
 
 
 def _validate_embedding_history_retention_input(
-    strategy: Any, user_input: dict[str, Any]
+    methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Normalize retrieval retention or return its field error."""
     return _validate_retrieval_duration_input(
-        strategy,
+        methods,
         user_input,
         field=CONF_EMBEDDING_HISTORY_RETENTION,
         default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
@@ -522,11 +550,11 @@ def _validate_embedding_history_retention_input(
 
 
 def _validate_context_recall_snapshot_ttl_time_input(
-    strategy: Any, user_input: dict[str, Any]
+    methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Normalize snapshot time expiry or return its field error."""
     return _validate_retrieval_duration_input(
-        strategy,
+        methods,
         user_input,
         field=CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
         default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
@@ -535,10 +563,15 @@ def _validate_context_recall_snapshot_ttl_time_input(
 
 
 def _validate_context_recall_snapshot_ttl_turns_input(
-    strategy: Any, user_input: dict[str, Any]
+    methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Normalize optional turn expiry or return its field error."""
-    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+    if not _selected_context_methods(methods).intersection(
+        {
+            CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+            CONTEXT_PRESERVATION_METHOD_KEYWORD,
+        }
+    ):
         return {}
     try:
         user_input[CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS] = (
@@ -559,10 +592,12 @@ def _validate_context_recall_snapshot_ttl_turns_input(
 
 
 def _validate_context_recall_max_results_input(
-    strategy: Any, user_input: dict[str, Any]
+    methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate and normalize an agent's context-recall result ceiling."""
-    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(
+        methods
+    ):
         return {}
 
     max_results = user_input.get(
@@ -584,11 +619,38 @@ def _validate_context_recall_max_results_input(
     return {}
 
 
+def _validate_context_keyword_recall_max_tokens_input(
+    methods: Any, user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Validate and normalize the literal-recall page token budget."""
+    if CONTEXT_PRESERVATION_METHOD_KEYWORD not in _selected_context_methods(methods):
+        return {}
+    value = user_input.get(
+        CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+        DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+    )
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or int(value) != value
+        or value < MIN_CONTEXT_RECALL_MAX_TOKENS
+    ):
+        return {
+            CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS: (
+                "invalid_context_keyword_recall_max_tokens"
+            )
+        }
+    user_input[CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS] = int(value)
+    return {}
+
+
 def _validate_context_recall_close_match_tolerance_input(
-    strategy: Any, user_input: dict[str, Any]
+    methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate and normalize an agent's close-match score tolerance."""
-    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(
+        methods
+    ):
         return {}
 
     value = str(
@@ -615,12 +677,16 @@ def _validate_context_recall_close_match_tolerance_input(
 
 
 def _validate_context_recall_reranker_input(
-    strategy: Any,
+    methods: Any,
     has_reranker: bool,
     user_input: dict[str, Any],
 ) -> dict[str, str]:
     """Validate and normalize per-agent reranker settings."""
-    if strategy not in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES or not has_reranker:
+    if (
+        CONTEXT_PRESERVATION_METHOD_EMBEDDINGS
+        not in _selected_context_methods(methods)
+        or not has_reranker
+    ):
         return {}
 
     errors: dict[str, str] = {}
@@ -695,12 +761,14 @@ def _add_context_recall_reranker_schema(schema: dict[Any, Any]) -> None:
 
 
 def _validate_context_compaction_target_input(
-    strategy: Any,
+    methods: Any,
     options: Mapping[str, Any],
     user_input: dict[str, Any],
 ) -> dict[str, str]:
     """Validate the compacted prompt target against the request token budget."""
-    if strategy not in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
+    if CONTEXT_PRESERVATION_METHOD_COMPACT not in _selected_context_methods(
+        methods
+    ):
         return {}
 
     value = user_input.get(CONF_CONTEXT_COMPACTION_TARGET)
@@ -2301,7 +2369,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             self.options,
             self._available_skills,
             _mcp_server_options(self.hass),
-            _context_truncate_strategies(self._get_entry()),
+            _context_preservation_methods(self._get_entry()),
         )
 
         if self._is_new:
@@ -2313,7 +2381,18 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(schema), self.options
+                vol.Schema(schema),
+                {
+                    **self.options,
+                    CONF_CONTEXT_TRUNCATE_STRATEGY: list(
+                        _selected_context_methods(
+                            self.options.get(
+                                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                                DEFAULT_CONTEXT_PRESERVATION_METHODS,
+                            )
+                        )
+                    ),
+                },
             ),
         )
 
@@ -2326,41 +2405,46 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             self._clear_intra_turn_embeddings_requested = bool(
                 user_input.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
             )
-            strategy = (self._temp_data or {}).get(
+            methods = (self._temp_data or {}).get(
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
-                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_PRESERVATION_METHODS,
             )
             errors = _validate_embedding_history_retention_input(
-                strategy, user_input
+                methods, user_input
             )
             errors.update(
                 _validate_context_recall_snapshot_ttl_time_input(
-                    strategy, user_input
+                    methods, user_input
                 )
             )
             errors.update(
                 _validate_context_recall_snapshot_ttl_turns_input(
-                    strategy, user_input
+                    methods, user_input
                 )
             )
             errors.update(
-                _validate_context_recall_max_results_input(strategy, user_input)
+                _validate_context_recall_max_results_input(methods, user_input)
+            )
+            errors.update(
+                _validate_context_keyword_recall_max_tokens_input(
+                    methods, user_input
+                )
             )
             errors.update(
                 _validate_context_recall_close_match_tolerance_input(
-                    strategy, user_input
+                    methods, user_input
                 )
             )
             errors.update(
                 _validate_context_recall_reranker_input(
-                    strategy,
+                    methods,
                     _entry_has_reranker(self._get_entry()),
                     user_input,
                 )
             )
             errors.update(
                 _validate_context_compaction_target_input(
-                    strategy, self._temp_data or {}, user_input
+                    methods, self._temp_data or {}, user_input
                 )
             )
 
@@ -2465,10 +2549,12 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             )
         ] = BooleanSelector()
 
-        strategy = (self._temp_data or {}).get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        methods = _selected_context_methods(
+            (self._temp_data or {}).get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_PRESERVATION_METHODS
+            )
         )
-        if strategy != "clear":
+        if methods:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_COMPACTION_INTRA_TURN,
@@ -2476,7 +2562,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = BooleanSelector()
 
-        if strategy in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
+        if CONTEXT_PRESERVATION_METHOD_COMPACT in methods:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_COMPACTION_TARGET,
@@ -2511,7 +2597,46 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = BooleanSelector()
 
-        if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        if methods.intersection(
+            {
+                CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+                CONTEXT_PRESERVATION_METHOD_KEYWORD,
+            }
+        ):
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                )
+            ] = TextSelector()
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                )
+            ] = TextSelector()
+            schema[
+                vol.Optional(
+                    CONF_EMBEDDING_HISTORY_RETENTION,
+                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
+                )
+            ] = TextSelector()
+
+        if CONTEXT_PRESERVATION_METHOD_KEYWORD in methods:
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+                    default=DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_CONTEXT_RECALL_MAX_TOKENS,
+                    step=1,
+                    unit_of_measurement="tokens",
+                )
+            )
+
+        if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS in methods:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_RECALL_MAX_TOKENS,
@@ -2533,24 +2658,6 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 vol.Optional(
                     CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
                     default=DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
-                )
-            ] = TextSelector()
-            schema[
-                vol.Optional(
-                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                )
-            ] = TextSelector()
-            schema[
-                vol.Optional(
-                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
-                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
-                )
-            ] = TextSelector()
-            schema[
-                vol.Optional(
-                    CONF_EMBEDDING_HISTORY_RETENTION,
-                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
             ] = TextSelector()
             if _entry_has_reranker(self._get_entry()):
@@ -2580,7 +2687,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
         options: dict[str, Any],
         skills: list[dict[str, Any]] | None = None,
         mcp_servers: list[SelectOptionDict] | None = None,
-        context_strategies: list[str] | None = None,
+        context_methods: list[str] | None = None,
     ) -> dict:
         """Return a schema for OpenAI completion options."""
         # If creating a new subentry and no skills in options, default to all loaded skills
@@ -2654,12 +2761,12 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
             ): int,
             vol.Optional(
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
-                default=DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                default=DEFAULT_CONTEXT_PRESERVATION_METHODS,
             ): SelectSelector(
                 SelectSelectorConfig(
-                    options=context_strategies
-                    or list(CONTEXT_TRUNCATE_STRATEGIES),
+                    options=context_methods or list(CONTEXT_PRESERVATION_METHODS),
                     mode=SelectSelectorMode.DROPDOWN,
+                    multiple=True,
                     translation_key="context_truncate_strategy",
                 )
             ),
@@ -2799,12 +2906,13 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     CONF_CONTEXT_TRUNCATE_STRATEGY,
                     default=self.options.get(
                         CONF_CONTEXT_TRUNCATE_STRATEGY,
-                        DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                        DEFAULT_CONTEXT_PRESERVATION_METHODS,
                     ),
                 ): SelectSelector(
                     SelectSelectorConfig(
-                        options=_context_truncate_strategies(self._get_entry()),
+                        options=_context_preservation_methods(self._get_entry()),
                         mode=SelectSelectorMode.DROPDOWN,
+                        multiple=True,
                         translation_key="context_truncate_strategy",
                     )
                 ),
@@ -2818,7 +2926,18 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(schema), self.options
+                vol.Schema(schema),
+                {
+                    **self.options,
+                    CONF_CONTEXT_TRUNCATE_STRATEGY: list(
+                        _selected_context_methods(
+                            self.options.get(
+                                CONF_CONTEXT_TRUNCATE_STRATEGY,
+                                DEFAULT_CONTEXT_PRESERVATION_METHODS,
+                            )
+                        )
+                    ),
+                },
             ),
         )
 
@@ -2831,41 +2950,46 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             self._clear_intra_turn_embeddings_requested = bool(
                 user_input.pop(CONF_CLEAR_INTRA_TURN_EMBEDDINGS, False)
             )
-            strategy = (self._temp_data or {}).get(
+            methods = (self._temp_data or {}).get(
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
-                DEFAULT_CONTEXT_TRUNCATE_STRATEGY,
+                DEFAULT_CONTEXT_PRESERVATION_METHODS,
             )
             errors = _validate_embedding_history_retention_input(
-                strategy, user_input
+                methods, user_input
             )
             errors.update(
                 _validate_context_recall_snapshot_ttl_time_input(
-                    strategy, user_input
+                    methods, user_input
                 )
             )
             errors.update(
                 _validate_context_recall_snapshot_ttl_turns_input(
-                    strategy, user_input
+                    methods, user_input
                 )
             )
             errors.update(
-                _validate_context_recall_max_results_input(strategy, user_input)
+                _validate_context_recall_max_results_input(methods, user_input)
+            )
+            errors.update(
+                _validate_context_keyword_recall_max_tokens_input(
+                    methods, user_input
+                )
             )
             errors.update(
                 _validate_context_recall_close_match_tolerance_input(
-                    strategy, user_input
+                    methods, user_input
                 )
             )
             errors.update(
                 _validate_context_recall_reranker_input(
-                    strategy,
+                    methods,
                     _entry_has_reranker(self._get_entry()),
                     user_input,
                 )
             )
             errors.update(
                 _validate_context_compaction_target_input(
-                    strategy, self._temp_data or {}, user_input
+                    methods, self._temp_data or {}, user_input
                 )
             )
 
@@ -2970,10 +3094,12 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
             )
         ] = BooleanSelector()
 
-        strategy = (self._temp_data or {}).get(
-            CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_TRUNCATE_STRATEGY
+        methods = _selected_context_methods(
+            (self._temp_data or {}).get(
+                CONF_CONTEXT_TRUNCATE_STRATEGY, DEFAULT_CONTEXT_PRESERVATION_METHODS
+            )
         )
-        if strategy != "clear":
+        if methods:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_COMPACTION_INTRA_TURN,
@@ -2981,7 +3107,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = BooleanSelector()
 
-        if strategy in CONTEXT_TRUNCATE_COMPACTION_STRATEGIES:
+        if CONTEXT_PRESERVATION_METHOD_COMPACT in methods:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_COMPACTION_TARGET,
@@ -3016,7 +3142,46 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 )
             ] = BooleanSelector()
 
-        if strategy in CONTEXT_TRUNCATE_RETRIEVAL_STRATEGIES:
+        if methods.intersection(
+            {
+                CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
+                CONTEXT_PRESERVATION_METHOD_KEYWORD,
+            }
+        ):
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
+                )
+            ] = TextSelector()
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
+                )
+            ] = TextSelector()
+            schema[
+                vol.Optional(
+                    CONF_EMBEDDING_HISTORY_RETENTION,
+                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
+                )
+            ] = TextSelector()
+
+        if CONTEXT_PRESERVATION_METHOD_KEYWORD in methods:
+            schema[
+                vol.Optional(
+                    CONF_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+                    default=DEFAULT_CONTEXT_KEYWORD_RECALL_MAX_TOKENS,
+                )
+            ] = NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_CONTEXT_RECALL_MAX_TOKENS,
+                    step=1,
+                    unit_of_measurement="tokens",
+                )
+            )
+
+        if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS in methods:
             schema[
                 vol.Optional(
                     CONF_CONTEXT_RECALL_MAX_TOKENS,
@@ -3038,24 +3203,6 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 vol.Optional(
                     CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
                     default=DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE,
-                )
-            ] = TextSelector()
-            schema[
-                vol.Optional(
-                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS,
-                )
-            ] = TextSelector()
-            schema[
-                vol.Optional(
-                    CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
-                    default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
-                )
-            ] = TextSelector()
-            schema[
-                vol.Optional(
-                    CONF_EMBEDDING_HISTORY_RETENTION,
-                    default=DEFAULT_EMBEDDING_HISTORY_RETENTION,
                 )
             ] = TextSelector()
             if _entry_has_reranker(self._get_entry()):

@@ -4,6 +4,7 @@
             "invalid_embeddings": "임베딩 엔드포인트가 유효한 임베딩을 반환하지 않았습니다.",
             "invalid_reranker": "리랭커 엔드포인트가 유효한 결과를 반환하지 않았습니다.",
             "invalid_embedding_history_retention": "양의 정수 뒤에 m, h 또는 d를 입력하세요. 접미사가 없으면 일 단위가 사용됩니다.",
+            "invalid_context_keyword_recall_max_tokens": "양의 정수 토큰 한도를 입력하세요.",
             "invalid_context_recall_snapshot_ttl_time": "m, h 또는 d가 뒤따르는 양의 정수를 입력하세요. 0은 허용되지 않습니다. 접미사가 없으면 일 단위가 사용됩니다.",
             "invalid_context_recall_max_results": "양의 정수를 입력하세요.",
             "invalid_context_recall_close_match_tolerance": "0보다 큰 소수를 입력하거나 필드를 비워 두세요.",
@@ -106,10 +107,9 @@
         },
         "context_truncate_strategy": {
             "options": {
-                "clear": "모든 메시지 지우기",
-                "compact": "메시지 요약 및 압축",
-                "retrieve": "임베딩 검색 메모리",
-                "retrieve_compact": "임베딩 검색 및 누적 요약"
+                "compact": "누적 요약",
+                "embeddings": "의미 기반 임베딩 검색",
+                "keyword": "리터럴 텍스트 검색"
             }
         }
     },
@@ -134,7 +134,7 @@
                         "functions": "Functions",
                         "attach_username": "Attach Username to Message",
                         "context_threshold": "Context Threshold",
-                        "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+                        "context_truncate_strategy": "추가 컨텍스트 보존 방법",
                         "advanced_options": "Advanced Options"
                     },
                     "data_description": {
@@ -155,7 +155,8 @@
                         "clear_intra_turn_embeddings": "저장할 때 임시 턴 내 임베딩 삭제",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
                         "context_compaction_prompt": "압축 프롬프트",
-                        "embedding_history_retention": "임베딩 기록 보존 기간",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "보관된 대화 유지 기간",
                         "context_recall_max_tokens": "최대 활성 회상 컨텍스트(예상 토큰)",
                         "context_recall_max_results": "최대 context_recall 결과",
                         "context_recall_close_match_tolerance": "유사 메모리 허용 오차",
@@ -172,7 +173,8 @@
                         "clear_intra_turn_embeddings": "이 작업은 설정으로 저장되지 않습니다. 선택하면 에이전트 구성을 저장할 때 이 에이전트의 모든 임시 턴 내 임베딩이 제거됩니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
-                        "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "의미 기반 임베딩 검색과 리터럴 텍스트 검색에 공통으로 적용되는 보존 기간입니다. 양의 정수 뒤에 m, h 또는 d를 입력하세요.",
                         "context_recall_max_tokens": "자동 회상, context_recall 결과 및 조회한 스냅샷 페이지를 포함하여 모델 요청에 유지되는 임베딩 기반 컨텍스트의 최대 총 예상 토큰 수입니다.",
                         "context_recall_max_results": "모델이 context_recall에서 요청할 수 있는 최대 메모리 수입니다. 더 적게 요청할 수 있습니다. 기본값은 20입니다.",
                         "context_recall_close_match_tolerance": "점수가 선택된 결과 중 가장 낮은 점수와 이 값 이내인 제외된 메모리를 알립니다. 비활성화하려면 비워 두고, 활성화하려면 0보다 큰 수를 입력하세요. 점수 범위는 활성 임베딩 또는 리랭커 모델에 따라 다릅니다.",
@@ -201,7 +203,7 @@
                         "mcp_permanent_tools_placement": "영구 MCP 도구 배치",
                         "mcp_default_prompt_placement": "기본 MCP 프롬프트 배치",
                         "context_threshold": "컨텍스트 임계값",
-                        "context_truncate_strategy": "컨텍스트 임계값 초과 시 전략",
+                        "context_truncate_strategy": "추가 컨텍스트 보존 방법",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -222,7 +224,8 @@
                         "clear_intra_turn_embeddings": "저장할 때 임시 턴 내 임베딩 삭제",
                         "context_compaction_recent_turns": "보존할 최근 대화 턴",
                         "context_compaction_prompt": "압축 프롬프트",
-                        "embedding_history_retention": "임베딩 기록 보존 기간",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "보관된 대화 유지 기간",
                         "context_recall_max_tokens": "최대 활성 회상 컨텍스트(예상 토큰)",
                         "context_recall_max_results": "최대 context_recall 결과",
                         "context_recall_close_match_tolerance": "유사 메모리 허용 오차",
@@ -239,7 +242,8 @@
                         "clear_intra_turn_embeddings": "이 작업은 설정으로 저장되지 않습니다. 선택하면 에이전트 구성을 저장할 때 이 에이전트의 모든 임시 턴 내 임베딩이 제거됩니다.",
                         "context_compaction_recent_turns": "압축 후 원문 그대로 보존할 완전한 최근 대화 턴 수입니다. 도구 호출과 결과는 함께 유지됩니다.",
                         "context_compaction_prompt": "이전 대화 기록을 요약하는 데 사용하는 지침입니다. 대화 내용과 토큰 제한은 별도로 제공됩니다.",
-                        "embedding_history_retention": "양의 정수와 분은 m, 시간은 h, 일은 d를 사용합니다. 접미사가 없으면 일 단위가 사용됩니다.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "의미 기반 임베딩 검색과 리터럴 텍스트 검색에 공통으로 적용되는 보존 기간입니다. 양의 정수 뒤에 m, h 또는 d를 입력하세요.",
                         "context_recall_max_tokens": "자동 회상, context_recall 결과 및 조회한 스냅샷 페이지를 포함하여 모델 요청에 유지되는 임베딩 기반 컨텍스트의 최대 총 예상 토큰 수입니다.",
                         "context_recall_max_results": "모델이 context_recall에서 요청할 수 있는 최대 메모리 수입니다. 더 적게 요청할 수 있습니다. 기본값은 20입니다.",
                         "context_recall_close_match_tolerance": "점수가 선택된 결과 중 가장 낮은 점수와 이 값 이내인 제외된 메모리를 알립니다. 비활성화하려면 비워 두고, 활성화하려면 0보다 큰 수를 입력하세요. 점수 범위는 활성 임베딩 또는 리랭커 모델에 따라 다릅니다.",

@@ -4,6 +4,7 @@
             "invalid_embeddings": "O endpoint de embeddings não retornou um embedding válido.",
             "invalid_reranker": "O endpoint de reordenação não retornou resultados válidos.",
             "invalid_embedding_history_retention": "Insira um número inteiro positivo seguido de m, h ou d. Sem sufixo, o valor usa dias.",
+            "invalid_context_keyword_recall_max_tokens": "Insira um limite inteiro positivo de tokens.",
             "invalid_context_recall_snapshot_ttl_time": "Insira um número inteiro positivo seguido de m, h ou d. Zero não é permitido. Sem sufixo, o valor usa dias.",
             "invalid_context_recall_max_results": "Insira um número inteiro positivo.",
             "invalid_context_recall_close_match_tolerance": "Insira um número decimal maior que 0 ou deixe o campo vazio.",
@@ -106,10 +107,9 @@
         },
         "context_truncate_strategy": {
             "options": {
-                "clear": "Limpar todas as mensagens",
-                "compact": "Resumir e compactar mensagens",
-                "retrieve": "Memória de recuperação por embeddings",
-                "retrieve_compact": "Recuperação por embeddings com resumo contínuo"
+                "compact": "Resumo contínuo",
+                "embeddings": "Recuperação semântica por embeddings",
+                "keyword": "Pesquisa literal de texto"
             }
         }
     },
@@ -134,7 +134,7 @@
                         "functions": "Funções",
                         "attach_username": "Anexar nome do usuário na mensagem",
                         "context_threshold": "Limite do contexto",
-                        "context_truncate_strategy": "Estratégia de truncamento de contexto quando o limite é excedido",
+                        "context_truncate_strategy": "Métodos adicionais de preservação de contexto",
                         "advanced_options": "Advanced Options"
                     },
                     "data_description": {
@@ -155,7 +155,8 @@
                         "clear_intra_turn_embeddings": "Limpar embeddings temporários durante o turno ao salvar",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Prompt de compactação",
-                        "embedding_history_retention": "Retenção do histórico de embeddings",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Retenção de conversas arquivadas",
                         "context_recall_max_tokens": "Contexto recuperado ativo máximo (tokens estimados)",
                         "context_recall_max_results": "Máximo de resultados de context_recall",
                         "context_recall_close_match_tolerance": "Tolerância de memórias semelhantes",
@@ -172,7 +173,8 @@
                         "clear_intra_turn_embeddings": "Esta ação nunca é salva como configuração. Quando selecionada, todos os embeddings temporários durante o turno deste agente são removidos ao salvar a configuração do agente.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções usadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
-                        "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo, o valor usa dias.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "Retenção compartilhada pela recuperação semântica por embeddings e pela pesquisa literal de texto. Insira um número inteiro positivo seguido de m, h ou d.",
                         "context_recall_max_tokens": "Número total máximo estimado de tokens de contexto derivado de embeddings mantidos em qualquer solicitação ao modelo, incluindo recuperação automática, resultados de context_recall e páginas de snapshot consultadas.",
                         "context_recall_max_results": "Número máximo de memórias que o modelo pode solicitar ao context_recall. O modelo pode solicitar menos. O padrão é 20.",
                         "context_recall_close_match_tolerance": "Informa memórias excluídas cuja pontuação esteja dentro deste valor do resultado selecionado com menor pontuação. Deixe vazio para desativar. Insira um número maior que 0 para ativar. Os intervalos dependem do modelo de embeddings ou reranker ativo.",
@@ -201,7 +203,7 @@
                         "mcp_permanent_tools_placement": "Posicionamento das ferramentas MCP permanentes",
                         "mcp_default_prompt_placement": "Posicionamento do prompt MCP padrão",
                         "context_threshold": "Limite do contexto",
-                        "context_truncate_strategy": "Estratégia ao exceder o limite do contexto",
+                        "context_truncate_strategy": "Métodos adicionais de preservação de contexto",
                         "advanced_options": "Advanced options"
                     },
                     "data_description": {
@@ -222,7 +224,8 @@
                         "clear_intra_turn_embeddings": "Limpar embeddings temporários durante o turno ao salvar",
                         "context_compaction_recent_turns": "Turnos recentes a preservar",
                         "context_compaction_prompt": "Prompt de compactação",
-                        "embedding_history_retention": "Retenção do histórico de embeddings",
+                        "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "embedding_history_retention": "Retenção de conversas arquivadas",
                         "context_recall_max_tokens": "Contexto recuperado ativo máximo (tokens estimados)",
                         "context_recall_max_results": "Máximo de resultados de context_recall",
                         "context_recall_close_match_tolerance": "Tolerância de memórias semelhantes",
@@ -239,7 +242,8 @@
                         "clear_intra_turn_embeddings": "Esta ação nunca é salva como configuração. Quando selecionada, todos os embeddings temporários durante o turno deste agente são removidos ao salvar a configuração do agente.",
                         "context_compaction_recent_turns": "Número de turnos recentes completos da conversa a preservar sem alterações após a compactação. As chamadas de ferramentas e os resultados permanecem juntos.",
                         "context_compaction_prompt": "Instruções usadas para resumir o histórico anterior da conversa. A transcrição e o limite de tokens são fornecidos separadamente.",
-                        "embedding_history_retention": "Número inteiro positivo seguido de m para minutos, h para horas ou d para dias. Sem sufixo, o valor usa dias.",
+                        "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "embedding_history_retention": "Retenção compartilhada pela recuperação semântica por embeddings e pela pesquisa literal de texto. Insira um número inteiro positivo seguido de m, h ou d.",
                         "context_recall_max_tokens": "Número total máximo estimado de tokens de contexto derivado de embeddings mantidos em qualquer solicitação ao modelo, incluindo recuperação automática, resultados de context_recall e páginas de snapshot consultadas.",
                         "context_recall_max_results": "Número máximo de memórias que o modelo pode solicitar ao context_recall. O modelo pode solicitar menos. O padrão é 20.",
                         "context_recall_close_match_tolerance": "Informa memórias excluídas cuja pontuação esteja dentro deste valor do resultado selecionado com menor pontuação. Deixe vazio para desativar. Insira um número maior que 0 para ativar. Os intervalos dependem do modelo de embeddings ou reranker ativo.",
