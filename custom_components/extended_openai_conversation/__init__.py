@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from functools import partial
 import logging
-from typing import cast
+from typing import Any, cast
 
 from openai import AsyncClient
 from openai._exceptions import AuthenticationError, OpenAIError
@@ -60,7 +62,15 @@ async def async_setup_entry(
             else None
         )
         entry.runtime_data = MCPClient(config, auth=auth)
-        entry.async_on_unload(entry.add_update_listener(update_listener))
+        entry.async_on_unload(
+            entry.add_update_listener(
+                partial(
+                    _mcp_update_listener,
+                    previous_data=dict(entry.data),
+                    previous_title=entry.title,
+                )
+            )
+        )
         return True
 
     try:
@@ -103,6 +113,31 @@ async def async_unload_entry(
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _mcp_update_listener(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    *,
+    previous_data: Mapping[str, Any],
+    previous_title: str,
+) -> None:
+    """Reload an MCP entry unless only its existing OAuth token changed."""
+    previous_without_token = {
+        key: value for key, value in previous_data.items() if key != CONF_TOKEN
+    }
+    current_without_token = {
+        key: value for key, value in entry.data.items() if key != CONF_TOKEN
+    }
+    token_only_update = (
+        CONF_TOKEN in previous_data
+        and CONF_TOKEN in entry.data
+        and previous_title == entry.title
+        and previous_without_token == current_without_token
+    )
+    if token_only_update:
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 

@@ -70,6 +70,76 @@ async def test_mcp_oauth_entry_injects_persisted_auth_provider(hass):
     assert entry.runtime_data._auth is auth
 
 
+async def test_mcp_oauth_token_refresh_does_not_reload_entry(hass):
+    """Refreshing an existing OAuth token preserves the active MCP client."""
+    hass.config_entries.async_reload = AsyncMock()
+    entry = MagicMock()
+    entry.entry_id = "mcp-entry"
+    entry.data = {
+        CONF_SERVICE_TYPE: SERVICE_TYPE_MCP,
+        CONF_MCP_SERVER_ID: "vault",
+        CONF_MCP_SERVER_URL: "https://mcp.example.com/api",
+        CONF_MCP_USE_OAUTH: True,
+        CONF_MCP_AUTHORIZATION_URL: "https://auth.example.com/authorize",
+        CONF_MCP_TOKEN_URL: "https://auth.example.com/token",
+        CONF_TOKEN: {"access_token": "old-token"},
+    }
+    entry.title = "Vault MCP"
+    entry.add_update_listener.return_value = MagicMock()
+
+    with patch(
+        "custom_components.extended_openai_conversation.async_get_mcp_oauth_auth",
+        new=AsyncMock(return_value=MagicMock()),
+    ):
+        assert await async_setup_entry(hass, entry)
+
+    client = entry.runtime_data
+    listener = entry.add_update_listener.call_args.args[0]
+    entry.data = {
+        **entry.data,
+        CONF_TOKEN: {"access_token": "refreshed-token"},
+    }
+
+    await listener(hass, entry)
+
+    hass.config_entries.async_reload.assert_not_awaited()
+    assert entry.runtime_data is client
+
+
+async def test_mcp_oauth_non_token_update_reloads_entry(hass):
+    """Changing MCP connection configuration still reloads the entry."""
+    hass.config_entries.async_reload = AsyncMock()
+    entry = MagicMock()
+    entry.entry_id = "mcp-entry"
+    entry.data = {
+        CONF_SERVICE_TYPE: SERVICE_TYPE_MCP,
+        CONF_MCP_SERVER_ID: "vault",
+        CONF_MCP_SERVER_URL: "https://mcp.example.com/api",
+        CONF_MCP_USE_OAUTH: True,
+        CONF_MCP_AUTHORIZATION_URL: "https://auth.example.com/authorize",
+        CONF_MCP_TOKEN_URL: "https://auth.example.com/token",
+        CONF_TOKEN: {"access_token": "access-token"},
+    }
+    entry.title = "Vault MCP"
+    entry.add_update_listener.return_value = MagicMock()
+
+    with patch(
+        "custom_components.extended_openai_conversation.async_get_mcp_oauth_auth",
+        new=AsyncMock(return_value=MagicMock()),
+    ):
+        assert await async_setup_entry(hass, entry)
+
+    listener = entry.add_update_listener.call_args.args[0]
+    entry.data = {
+        **entry.data,
+        CONF_MCP_SERVER_URL: "https://new-mcp.example.com/api",
+    }
+
+    await listener(hass, entry)
+
+    hass.config_entries.async_reload.assert_awaited_once_with("mcp-entry")
+
+
 async def test_mcp_oauth_entry_without_token_still_loads(hass):
     """A deliberately saved incomplete OAuth entry does not crash setup."""
     entry = MagicMock()
