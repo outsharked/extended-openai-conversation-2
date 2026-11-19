@@ -203,6 +203,26 @@ async def test_list_servers_searches_only_discoverable_non_permanent_tools():
     storage.client.list_tools.assert_awaited_once_with()
 
 
+async def test_list_servers_retains_results_when_one_server_discovery_fails():
+    """A failed server catalogue does not hide successful server results."""
+    storage = _service("storage", tools=(_tool("upload_file", "Upload a file"),))
+    calendar = _service("calendar")
+    calendar.client.list_tools = AsyncMock(side_effect=TimeoutError("offline"))
+
+    result = await MCPToolManager.list_servers([storage, calendar], include_tools=True)
+
+    assert [server["id"] for server in result["servers"]] == ["storage"]
+    assert result["failed_servers"] == [
+        {
+            "server_id": "calendar",
+            "error": {
+                "code": "tool_discovery_failed",
+                "message": "Unable to retrieve tools from this MCP server",
+            },
+        }
+    ]
+
+
 async def test_list_servers_controls_tool_descriptions_and_schemas():
     """Tool descriptions and schemas are independently optional."""
     output_schema = {
@@ -356,6 +376,26 @@ async def test_list_tools_scopes_query_to_selected_authorized_servers():
     ]
     storage.client.list_tools.assert_awaited_once_with()
     calendar.client.list_tools.assert_not_awaited()
+
+
+async def test_list_tools_retains_results_when_one_server_discovery_fails():
+    """A failed catalogue is reported without discarding other tools."""
+    storage = _service("storage", tools=(_tool("upload_file", "Upload a file"),))
+    calendar = _service("calendar")
+    calendar.client.list_tools = AsyncMock(side_effect=RuntimeError("offline"))
+
+    result = await MCPToolManager.list_tools([storage, calendar])
+
+    assert [tool["tool_name"] for tool in result["tools"]] == ["upload_file"]
+    assert result["failed_servers"] == [
+        {
+            "server_id": "calendar",
+            "error": {
+                "code": "tool_discovery_failed",
+                "message": "Unable to retrieve tools from this MCP server",
+            },
+        }
+    ]
 
 
 async def test_list_tools_returns_empty_for_unassigned_server():

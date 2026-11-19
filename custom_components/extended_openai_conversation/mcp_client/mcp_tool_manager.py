@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable, Mapping, Sequence
+import logging
 from typing import Any
 
 import regex
@@ -10,6 +11,8 @@ import regex
 from .mcp_datatypes import MCPTool, MCPToolResult
 from .mcp_service import MCPService
 from .service_config import MCPServiceConfig
+
+_LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_ENTRIES_PER_PAGE = 20
 _MAX_ENTRIES_PER_PAGE = 100
@@ -33,6 +36,10 @@ _SCHEMA_BOILERPLATE_KEYS = frozenset(
         "type",
     }
 )
+
+
+class _ToolDiscoveryError(Exception):
+    """Wrap a live tools/list failure for one server."""
 
 
 class MCPToolManager:
@@ -87,17 +94,20 @@ class MCPToolManager:
             return MCPToolManager._error("invalid_regex", str(err))
 
         matches: list[dict[str, Any]] = []
-        try:
-            for service in services:
-                server_matches, tools, matching_tools = (
-                    await MCPToolManager._match_server(
-                        service,
-                        query=query,
-                        fields=fields,
-                        pattern=pattern,
-                        search_case_sensitive=search_case_sensitive,
-                        include_tools=include_tools,
-                    )
+        failed_servers: list[dict[str, Any]] = []
+        for service in services:
+            try:
+                (
+                    server_matches,
+                    tools,
+                    matching_tools,
+                ) = await MCPToolManager._match_server(
+                    service,
+                    query=query,
+                    fields=fields,
+                    pattern=pattern,
+                    search_case_sensitive=search_case_sensitive,
+                    include_tools=include_tools,
                 )
                 if not server_matches and not matching_tools:
                     continue
@@ -115,8 +125,16 @@ class MCPToolManager:
                         tool_limit=entries_per_page,
                     )
                 )
-        except TimeoutError:
-            return MCPToolManager._error("regex_timeout", "The MCP catalogue search timed out")
+            except TimeoutError:
+                return MCPToolManager._error(
+                    "regex_timeout", "The MCP catalogue search timed out"
+                )
+            except _ToolDiscoveryError:
+                failed_servers.append(MCPToolManager._tool_discovery_failure(service))
+                _LOGGER.exception(
+                    "Unable to discover tools from MCP server %s",
+                    service.config.server.server_id,
+                )
 
         page = MCPToolManager._paginate(
             matches,
@@ -131,6 +149,8 @@ class MCPToolManager:
             await MCPToolManager._add_server_information(
                 page["servers"], services_by_id, server_info
             )
+        if failed_servers:
+            page["failed_servers"] = failed_servers
         return page
 
     @staticmethod
@@ -178,14 +198,24 @@ class MCPToolManager:
             frozenset(server_ids) if server_ids is not None else None
         )
         matches: list[dict[str, Any]] = []
-        try:
-            for service in services:
-                if (
-                    selected_server_ids is not None
-                    and service.config.server.server_id not in selected_server_ids
-                ):
-                    continue
-                for tool in await MCPToolManager._discoverable_tools(service):
+        failed_servers: list[dict[str, Any]] = []
+        for service in services:
+            if (
+                selected_server_ids is not None
+                and service.config.server.server_id not in selected_server_ids
+            ):
+                continue
+            try:
+                tools = await MCPToolManager._discoverable_tools_for_listing(service)
+            except _ToolDiscoveryError:
+                failed_servers.append(MCPToolManager._tool_discovery_failure(service))
+                _LOGGER.exception(
+                    "Unable to discover tools from MCP server %s",
+                    service.config.server.server_id,
+                )
+                continue
+            try:
+                for tool in tools:
                     if query is not None and not MCPToolManager._matches(
                         MCPToolManager._tool_search_values(tool, fields),
                         query,
@@ -201,17 +231,20 @@ class MCPToolManager:
                     )
                     result["server_id"] = service.config.server.server_id
                     matches.append(result)
-        except TimeoutError:
-            return MCPToolManager._error(
-                "regex_timeout", "The MCP catalogue search timed out"
-            )
+            except TimeoutError:
+                return MCPToolManager._error(
+                    "regex_timeout", "The MCP catalogue search timed out"
+                )
 
-        return MCPToolManager._paginate(
+        page = MCPToolManager._paginate(
             matches,
             result_key="tools",
             current_page=current_page,
             entries_per_page=entries_per_page,
         )
+        if failed_servers:
+            page["failed_servers"] = failed_servers
+        return page
 
     @staticmethod
     async def get_tool_details(
@@ -307,7 +340,9 @@ class MCPToolManager:
             query is not None and bool(set(fields) & _TOOL_SEARCH_FIELDS)
         )
         tools: tuple[MCPTool, ...] = (
-            await MCPToolManager._discoverable_tools(service) if requires_tools else ()
+            await MCPToolManager._discoverable_tools_for_listing(service)
+            if requires_tools
+            else ()
         )
         matching_tools = (
             tools
@@ -442,6 +477,16 @@ class MCPToolManager:
         return service.config.filter_on_demand_tools(await service.client.list_tools())
 
     @staticmethod
+    async def _discoverable_tools_for_listing(
+        service: MCPService,
+    ) -> tuple[MCPTool, ...]:
+        """Wrap one server's live catalogue failure for partial listing results."""
+        try:
+            return await MCPToolManager._discoverable_tools(service)
+        except Exception as err:
+            raise _ToolDiscoveryError from err
+
+    @staticmethod
     async def _find_tool(service: MCPService, tool_name: str) -> MCPTool | None:
         """Find an exact permanent or discoverable tool allowed by policy."""
         permanent_tool = next(
@@ -514,6 +559,17 @@ class MCPToolManager:
     def _tool_not_found() -> dict[str, Any]:
         """Return a generic result that does not reveal authorization state."""
         return MCPToolManager._error("tool_not_found", "Tool was not found")
+
+    @staticmethod
+    def _tool_discovery_failure(service: MCPService) -> dict[str, Any]:
+        """Return a safe partial-failure result for one authorized server."""
+        return {
+            "server_id": service.config.server.server_id,
+            "error": {
+                "code": "tool_discovery_failed",
+                "message": "Unable to retrieve tools from this MCP server",
+            },
+        }
 
     @staticmethod
     def _server_search_values(config: MCPServiceConfig, fields: Collection[str]) -> tuple[str, ...]:
