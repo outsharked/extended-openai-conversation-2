@@ -42,7 +42,11 @@ class HomeAssistantOAuthAuth(httpx.Auth):
         request.headers["Authorization"] = (
             f"Bearer {self._session.token[CONF_ACCESS_TOKEN]}"
         )
-        yield request
+        response = yield request
+        if response.status_code == 401:
+            self._session.config_entry.async_start_reauth_if_available(
+                self._session.hass
+            )
 
 
 class StaticOAuthAuth(httpx.Auth):
