@@ -130,16 +130,13 @@ class MCPServiceConfig:
                 tool.name, config.permanent_tool_selection, config.permanent_tool_mode
             )
         )
-        disabled_tool_names = (
-           {
-                tool.name
-                for tool in available_tools
-                if config._selection_matches(
-                    tool.name, config.disabled_tools, config.disabled_tool_mode
-                )
-            }
-            if config.disabled_tools else set()
-        )
+        disabled_tool_names = {
+            tool.name
+            for tool in available_tools
+            if config._selection_matches(
+                tool.name, config.disabled_tools, config.disabled_tool_mode
+            )
+        }
         if disabled_tool_names & {tool.name for tool in permanent_tools}:
             raise MCPConfigError("disabled_tools", "permanent_disabled_tool_conflict")
         return replace(config, permanent_tools=permanent_tools)
@@ -157,8 +154,7 @@ class MCPServiceConfig:
 
     def tool_allowed(self, tool_name: str) -> bool:
         """Return whether a canonical tool name passes on-demand filters."""
-        # if no explicitly disabled tools then allow falling through to the regex
-        disabled: bool = bool(self.disabled_tools) and self._selection_matches(
+        disabled = self._selection_matches(
             tool_name, self.disabled_tools, self.disabled_tool_mode
         )
         if disabled:

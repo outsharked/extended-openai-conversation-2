@@ -9,6 +9,11 @@
             "mcp_default_prompt": {
                 "description": "Gebruik de MCP-dispatcher met list_servers om beschikbare servers te vinden, list_tools om hulpmiddelen te ontdekken, get_tool_details om alle beschikbare details van een hulpmiddel op te halen en execute_tool om het uit te voeren. get_tool_details retourneert het invoerschema en alle door de server verstrekte titels, beschrijvingen, uitvoerschema's, MCP-annotaties en taakondersteuningsstatus; niet-beschikbare details worden weggelaten. Gebruik de server_id en hulpmiddelnaam uit deze context of uit de zoekresultaten. Hulpmiddelen die al in deze context zijn beschreven, hoeven niet opnieuw te worden ontdekt en verschijnen niet in de zoekresultaten."
             },
+            "mcp_filter_tools": {
+                "data_description": {
+                    "disabled_tools": "Hulpmiddelen die zijn geselecteerd voor het filter voor uitgeschakelde hulpmiddelen. In de modus 'Geselecteerd' worden de geselecteerde hulpmiddelen uitgeschakeld. In de modus 'Niet geselecteerd' worden alle hulpmiddelen behalve de geselecteerde uitgeschakeld."
+                }
+            },
             "user": {
                 "data": {
                     "name": "Naam",

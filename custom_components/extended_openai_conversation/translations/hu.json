@@ -9,6 +9,11 @@
             "mcp_default_prompt": {
                 "description": "Az MCP-diszpécserben a list_servers művelettel keresd meg az elérhető kiszolgálókat, a list_tools művelettel fedezd fel az eszközöket, a get_tool_details művelettel kérd le egy eszköz összes elérhető adatát, az execute_tool művelettel pedig futtasd azt. A get_tool_details visszaadja a bemeneti sémát, valamint a kiszolgáló által megadott címet, leírást, kimeneti sémát, MCP-megjegyzéseket és feladattámogatási állapotot; a nem elérhető adatok kimaradnak. Használd az ebben a kontextusban megadott vagy a felderítés által visszaadott server_id értéket és eszköznevet. Az ebben a kontextusban már leírt eszközöket nem kell újra felderíteni, és nem jelennek meg a felderítési eredményekben."
             },
+            "mcp_filter_tools": {
+                "data_description": {
+                    "disabled_tools": "A letiltott eszközök szűrőjéhez kiválasztott eszközök. „Kiválasztott” módban a kiválasztott eszközök lesznek letiltva. „Nem kiválasztott” módban a kiválasztottak kivételével minden eszköz le lesz tiltva."
+                }
+            },
             "user": {
                 "data": {
                     "name": "Név",

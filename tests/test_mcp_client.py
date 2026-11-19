@@ -206,19 +206,29 @@ def test_service_config_applies_filters_only_to_on_demand_tools():
     assert config.tool_allowed("read_secret_extra_suffix")
 
 
-@pytest.mark.parametrize("disabled_mode", ["selected", "unselected"])
-def test_empty_disabled_selection_does_not_affect_regex_filter(
-    disabled_mode: str,
-):
-    """An empty exact selection is inactive regardless of its mode."""
+def test_empty_selected_disabled_selection_only_applies_regex_filter():
+    """Selecting no explicit denials leaves the independent regex active."""
     config = MCPServiceConfig(
         server=_server("tools"),
-        disabled_tool_mode=disabled_mode,
+        disabled_tool_mode="selected",
         disabled_tools=(),
         tool_name_pattern=r".*delete.*",
     )
 
     assert config.tool_allowed("read_record")
+    assert not config.tool_allowed("delete_record")
+
+
+def test_empty_unselected_disabled_selection_disables_all_tools():
+    """Allowing no exceptions disables every on-demand tool."""
+    config = MCPServiceConfig(
+        server=_server("tools"),
+        disabled_tool_mode="unselected",
+        disabled_tools=(),
+        tool_name_pattern="",
+    )
+
+    assert not config.tool_allowed("read_record")
     assert not config.tool_allowed("delete_record")
 
 
@@ -279,27 +289,29 @@ def test_service_config_rejects_permanent_disabled_tool_conflict():
     assert err.value.code == "permanent_disabled_tool_conflict"
 
 
-def test_empty_disabled_selection_does_not_conflict_with_permanent_tools():
-    """An empty inverted selection resolves to no disabled tools."""
+def test_empty_unselected_disabled_selection_conflicts_with_permanent_tools():
+    """Disabling every discovered tool conflicts with a permanent selection."""
     server = _server()
     tool = _tool("write_secret")
     discovery = _discovery(tool)
 
-    config = MCPServiceConfig.from_selection(
-        server,
-        discovery,
-        perform_tool_discovery=True,
-        permanent_tool_mode="selected",
-        selected_tool_names=["write_secret"],
-        include_permanent_schemas=False,
-        on_demand_discovery=True,
-        disabled_tool_mode="unselected",
-        disabled_tool_names=[],
-        tool_name_pattern="",
-        regex_timeout=0.1,
-    )
+    with pytest.raises(MCPConfigError) as err:
+        MCPServiceConfig.from_selection(
+            server,
+            discovery,
+            perform_tool_discovery=True,
+            permanent_tool_mode="selected",
+            selected_tool_names=["write_secret"],
+            include_permanent_schemas=False,
+            on_demand_discovery=True,
+            disabled_tool_mode="unselected",
+            disabled_tool_names=[],
+            tool_name_pattern="",
+            regex_timeout=0.1,
+        )
 
-    assert config.permanent_tools == (tool,)
+    assert err.value.field == "disabled_tools"
+    assert err.value.code == "permanent_disabled_tool_conflict"
 
 
 def test_service_config_selection_rejects_unknown_tool():

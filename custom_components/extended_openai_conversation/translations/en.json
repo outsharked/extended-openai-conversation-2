@@ -147,7 +147,7 @@
                     "permanent_tools": "Tools used by the permanent selection behavior.",
                     "include_permanent_schemas": "Include input schemas in the permanent context supplied on every request.",
                     "disabled_tool_mode": "Selected disables the tools selected below. Unselected disables every discovered tool except those selected below.",
-                    "disabled_tools": "The list of tools that are available to the AI when performing on-demand tool discovery.",
+                    "disabled_tools": "Tools selected for the disabled-tool filter. In selected mode, selected tools are disabled. In unselected mode, every tool except the selected tools is disabled.",
                     "tool_name_pattern": "Full match regular expression to filter tools during on-demand discovery. Any tools that match this regex will be unavailable and hidden from the AI agent during on demand discovery. Leave empty for no regular-expression restriction.",
                     "regex_timeout": "Maximum seconds allowed for each hard-filter regular-expression match before it returns no results."
                 }

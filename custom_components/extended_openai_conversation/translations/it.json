@@ -9,6 +9,11 @@
             "mcp_default_prompt": {
                 "description": "Usa il dispatcher MCP con list_servers per trovare i server disponibili, list_tools per scoprire gli strumenti, get_tool_details per recuperare tutti i dettagli disponibili di uno strumento ed execute_tool per eseguirlo. get_tool_details restituisce lo schema di input e gli eventuali titolo, descrizione, schema di output, annotazioni MCP e stato del supporto alle attività forniti dal server; i dettagli non disponibili vengono omessi. Usa il server_id e il nome dello strumento forniti in questo contesto o restituiti dalla ricerca. Gli strumenti già descritti in questo contesto non devono essere cercati di nuovo e non compariranno nei risultati della ricerca."
             },
+            "mcp_filter_tools": {
+                "data_description": {
+                    "disabled_tools": "Strumenti selezionati per il filtro degli strumenti disabilitati. In modalità «Selezionati», gli strumenti selezionati vengono disabilitati. In modalità «Non selezionati», vengono disabilitati tutti gli strumenti tranne quelli selezionati."
+                }
+            },
             "user": {
                 "data": {
                     "name": "Nome",

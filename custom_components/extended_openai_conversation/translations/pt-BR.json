@@ -6,6 +6,11 @@
             "unknown": "Erro desconhecido"
         },
         "step": {
+            "mcp_filter_tools": {
+                "data_description": {
+                    "disabled_tools": "Ferramentas selecionadas para o filtro de ferramentas desativadas. No modo 'Selecionadas', as ferramentas selecionadas são desativadas. No modo 'Não selecionadas', todas as ferramentas, exceto as selecionadas, são desativadas."
+                }
+            },
             "mcp_default_prompt": {
                 "description": "Use o dispatcher MCP com list_servers para encontrar servidores disponíveis, list_tools para descobrir ferramentas, get_tool_details para obter todos os detalhes disponíveis de uma ferramenta e execute_tool para executá-la. get_tool_details retorna o esquema de entrada e qualquer título, descrição, esquema de saída, anotações MCP e estado de suporte a tarefas fornecidos pelo servidor; detalhes indisponíveis são omitidos. Use o server_id e o nome da ferramenta fornecidos neste contexto ou retornados pela descoberta. As ferramentas já descritas neste contexto não precisam ser descobertas novamente e não aparecerão nos resultados da descoberta."
             },
