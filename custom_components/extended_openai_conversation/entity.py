@@ -71,6 +71,35 @@ MAX_TOOL_ITERATIONS = 20
 
 _NATIVE_TOOL_CALL_EXTRA_CONTENT_KEY = "tool_call_extra_content_by_id"
 
+# Reserved function argument: the reply the model wants spoken once the call
+# succeeds. When every tool call of a turn carries one and none fails, it is
+# used as the final answer and the follow-up request to the LLM is skipped.
+FINAL_RESPONSE_ARG = "final_response"
+
+
+def _get_final_response(tool_input: llm.ToolInput) -> str | None:
+    """Return the model's pre-written reply for a tool call, if it gave one."""
+    args = tool_input.tool_args
+    if not isinstance(args, dict):
+        return None
+    value = args.get(FINAL_RESPONSE_ARG)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return value.strip()
+
+
+def _result_has_error(result: Any) -> bool:
+    """Return True if a function result reports a failure.
+
+    Native service calls report failures as {"error": ...} entries instead of
+    raising, so look for that key in the result or in any item of a list.
+    """
+    if isinstance(result, dict):
+        return "error" in result
+    if isinstance(result, list):
+        return any(_result_has_error(item) for item in result)
+    return False
+
 
 def _shorten_tool_call_id(tool_call_id: str) -> str:
     """Shorten tool call ID to exactly 9 alphanumeric characters as Mistral requires."""
@@ -512,7 +541,11 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             if pending_tool_calls:
                 _LOGGER.info("Response Tool Calls %s", pending_tool_calls)
 
-            # Execute custom functions
+            # Execute custom functions. Collect the replies the model wrote in
+            # advance; they stand in for the follow-up request only if every
+            # call carries one and succeeds.
+            final_responses: list[str] = []
+            use_final_responses = bool(pending_tool_calls)
             for tool_input in pending_tool_calls:
                 function_tool = next(
                     (
@@ -526,7 +559,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 if function_tool is None:
                     raise FunctionNotFound(tool_input.tool_name)
 
-                tool_result_content = await self._execute_function_tool(
+                tool_result_content, failed = await self._execute_function_tool(
                     function_tool,
                     tool_input,
                     llm_context,
@@ -534,6 +567,25 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 )
 
                 chat_log.async_add_assistant_content_without_tools(tool_result_content)
+
+                final_response = _get_final_response(tool_input)
+                if final_response is None or failed:
+                    use_final_responses = False
+                else:
+                    final_responses.append(final_response)
+
+            if use_final_responses:
+                _LOGGER.debug(
+                    "All tool calls succeeded with a final_response; "
+                    "skipping the follow-up request"
+                )
+                chat_log.async_add_assistant_content_without_tools(
+                    conversation.AssistantContent(
+                        agent_id=self.entity_id,
+                        content=" ".join(final_responses),
+                    )
+                )
+                break
 
             # Update messages for next iteration
             messages = _convert_content_to_param(
@@ -675,9 +727,15 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
         tool_input: llm.ToolInput,
         llm_context: llm.LLMContext | None,
         exposed_entities: list[dict[str, Any]],
-    ) -> conversation.ToolResultContent:
-        """Execute a custom function."""
+    ) -> tuple[conversation.ToolResultContent, bool]:
+        """Execute a custom function.
+
+        Return the tool result and whether the function reported a failure.
+        """
         arguments: dict[str, Any] = tool_input.tool_args
+        if isinstance(arguments, dict) and FINAL_RESPONSE_ARG in arguments:
+            # Reserved for the conversation loop; never pass it to functions
+            arguments = {k: v for k, v in arguments.items() if k != FINAL_RESPONSE_ARG}
         function_config = function_tool["function"]
         function = get_function(function_config["type"])
 
@@ -703,11 +761,14 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 self.hass, function_config, arguments, llm_context, exposed_entities
             )
 
-        return _make_tool_result_content(
-            agent_id=self.entity_id,
-            tool_call_id=tool_input.id,
-            tool_name=tool_input.tool_name,
-            data={"result": str(result)},
+        return (
+            _make_tool_result_content(
+                agent_id=self.entity_id,
+                tool_call_id=tool_input.id,
+                tool_name=tool_input.tool_name,
+                data={"result": str(result)},
+            ),
+            _result_has_error(result),
         )
 
     def should_run_in_background(self, arguments: dict[str, Any]) -> bool:
