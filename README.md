@@ -273,6 +273,21 @@ Reserved Parameters:
           type: integer
           minimum: 0
     ```
+- `final_response`: The reply to give the user once the function succeeds,
+  written by the model in the same call. When every tool call in a turn carries
+  one and none of them fails, it becomes the final answer and the follow-up
+  request to the LLM is skipped, which saves a full round trip (tokens and
+  latency) on simple commands like turning off a light. If a call fails, for
+  example a native service call returns an `error`, the model is asked as usual
+  so it can explain what went wrong. The argument is never passed to the
+  function itself.
+  Only add it to functions whose result the model does not need to read, such
+  as `execute_services`: the model writes the reply before it sees the result.
+  - ```yaml
+    final_response:
+      type: string
+      description: Short reply for the user, written as if the action already succeeded
+    ```
 
 ### Skills
 
