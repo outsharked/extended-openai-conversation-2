@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import httpx2 as httpx
 from mcp.client.auth import OAuthRegistrationError
@@ -124,6 +124,15 @@ class MCPOAuthClientRegistrar:
         finally:
             if owns_client:
                 await client.aclose()
+
+        expected_issuer = authorization_server
+        if expected_issuer is None:
+            parsed_server_url = urlparse(server_url)
+            expected_issuer = f"{parsed_server_url.scheme}://{parsed_server_url.netloc}/"
+        if str(oauth_metadata.issuer) != expected_issuer:
+            raise MCPAuthenticationError(
+                "The MCP authorization server metadata returned an unexpected issuer"
+            )
 
         scopes = (
             resource_metadata.scopes_supported

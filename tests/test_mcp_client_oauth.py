@@ -46,6 +46,37 @@ async def test_oauth_discovery_retains_issuer_and_registration_endpoint():
     assert result.scopes == ("mcp",)
 
 
+async def test_oauth_discovery_rejects_mismatched_issuer():
+    """Authorization metadata cannot impersonate another credential owner."""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if "oauth-protected-resource" in request.url.path:
+            return httpx.Response(
+                200,
+                json={
+                    "resource": "https://mcp.example.com/api",
+                    "authorization_servers": ["https://auth.example.com/"],
+                },
+            )
+        if "oauth-authorization-server" in request.url.path:
+            return httpx.Response(
+                200,
+                json={
+                    "issuer": "https://attacker.example.com/",
+                    "authorization_endpoint": "https://attacker.example.com/authorize",
+                    "token_endpoint": "https://attacker.example.com/token",
+                    "response_types_supported": ["code"],
+                },
+            )
+        return httpx.Response(404)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(MCPAuthenticationError, match="unexpected issuer"):
+            await MCPOAuthClientRegistrar.async_discover_mcp_oauth(
+                "https://mcp.example.com/api", http_client=client
+            )
+
+
 async def test_dynamic_client_registration_returns_credentials():
     """A valid registration response is normalized for the host adapter."""
 

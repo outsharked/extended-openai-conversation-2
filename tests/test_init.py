@@ -2,6 +2,8 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from custom_components.extended_openai_conversation import (
     async_setup_entry,
     async_unload_entry,
@@ -19,6 +21,7 @@ from custom_components.extended_openai_conversation.mcp_client import (
     MCPClient,
 )
 from homeassistant.const import CONF_TOKEN
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 
 async def test_mcp_entry_does_not_create_openai_client(hass):
@@ -160,6 +163,56 @@ async def test_mcp_oauth_entry_without_token_still_loads(hass):
 
     get_auth.assert_not_awaited()
     assert entry.runtime_data._auth is None
+
+
+async def test_mcp_oauth_setup_preserves_home_assistant_failure_types(hass):
+    """Native OAuth retry and reauth exceptions retain their HA semantics."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_SERVICE_TYPE: SERVICE_TYPE_MCP,
+        CONF_MCP_SERVER_ID: "vault",
+        CONF_MCP_SERVER_URL: "https://mcp.example.com/api",
+        CONF_MCP_USE_OAUTH: True,
+        CONF_TOKEN: {"access_token": "access-token"},
+    }
+    entry.title = "Vault MCP"
+
+    for error in (
+        ConfigEntryAuthFailed("reauth required"),
+        ConfigEntryNotReady("provider unavailable"),
+    ):
+        with (
+            patch(
+                "custom_components.extended_openai_conversation."
+                "async_get_mcp_oauth_auth",
+                new=AsyncMock(side_effect=error),
+            ),
+            pytest.raises(type(error)),
+        ):
+            await async_setup_entry(hass, entry)
+
+
+async def test_mcp_oauth_setup_maps_invalid_stored_data_to_reauth(hass):
+    """Malformed persisted OAuth data starts repair instead of crashing setup."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_SERVICE_TYPE: SERVICE_TYPE_MCP,
+        CONF_MCP_SERVER_ID: "vault",
+        CONF_MCP_SERVER_URL: "https://mcp.example.com/api",
+        CONF_MCP_USE_OAUTH: True,
+        CONF_TOKEN: {"access_token": "access-token"},
+    }
+    entry.title = "Vault MCP"
+
+    with (
+        patch(
+            "custom_components.extended_openai_conversation."
+            "async_get_mcp_oauth_auth",
+            new=AsyncMock(side_effect=KeyError("authorization_url")),
+        ),
+        pytest.raises(ConfigEntryAuthFailed, match="configuration is invalid"),
+    ):
+        await async_setup_entry(hass, entry)
 
 
 async def test_mcp_entry_unloads_without_ai_platforms(hass):
