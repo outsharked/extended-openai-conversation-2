@@ -18,6 +18,10 @@ pytest-homeassistant-custom-component>=0.12.0
 # Schema validation
 probatio>=0.11.4
 
+# Integration runtime dependencies needed during test collection
+mcp>=2.3.0
+regex>=2024.11.6
+
 # ai_task -> camera -> img_util imports this at module load time (not an
 # extra/optional import), needed for our ai_task.py tests to even collect
 PyTurboJPEG>=1.8.3

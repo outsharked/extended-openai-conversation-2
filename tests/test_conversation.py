@@ -8,7 +8,10 @@ from custom_components.extended_openai_conversation.conversation import (
     ExtendedOpenAIAgentEntity,
     async_setup_entry,
 )
-from custom_components.extended_openai_conversation.exceptions import FunctionNotFound
+from custom_components.extended_openai_conversation.exceptions import (
+    FunctionNotFound,
+    InvalidFunction,
+)
 
 
 def _mock_subentry(subentry_type: str, subentry_id: str) -> MagicMock:
@@ -109,6 +112,30 @@ def test_get_function_tools_returns_default_when_unconfigured():
     assert tools == DEFAULT_CONF_FUNCTION_TOOLS
 
 
+def test_get_function_tools_adds_mcp_for_assigned_servers():
+    """Assigned MCP servers add one scoped dispatcher to the agent tools."""
+    from custom_components.extended_openai_conversation.const import (
+        CONF_FUNCTION_TOOLS,
+        CONF_MCP_SERVERS,
+    )
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_FUNCTION_TOOLS: "[]",
+        CONF_MCP_SERVERS: ["weather", "home"],
+    }
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    tools = entity._get_function_tools()
+
+    assert len(tools) == 1
+    assert tools[0]["spec"]["name"] == "mcp"
+    assert tools[0]["function"] == {
+        "type": "mcp",
+        "server_ids": ["weather", "home"],
+    }
+
+
 def test_get_function_tools_parses_custom_yaml():
     """A custom function_tools YAML string is parsed and validated."""
     from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
@@ -156,6 +183,53 @@ def test_get_function_tools_unknown_function_type_raises():
         entity._get_function_tools()
 
 
+def test_get_function_tools_rejects_reserved_mcp_name():
+    """A custom function cannot replace the generated MCP dispatcher."""
+    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
+
+    custom_yaml = """
+- spec:
+    name: mcp
+    description: A conflicting custom function
+    parameters:
+      type: object
+      properties: {}
+  function:
+    type: template
+    value_template: "conflict"
+"""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    with pytest.raises(InvalidFunction, match="mcp"):
+        entity._get_function_tools()
+
+
+def test_get_function_tools_rejects_custom_mcp_type_alias():
+    """A renamed custom function cannot alias the internal MCP dispatcher."""
+    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
+
+    custom_yaml = """
+- spec:
+    name: custom_dispatcher
+    description: A renamed MCP dispatcher
+    parameters:
+      type: object
+      properties: {}
+  function:
+    type: mcp
+    server_ids:
+      - unassigned-server
+"""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    with pytest.raises(InvalidFunction, match="mcp"):
+        entity._get_function_tools()
+
+
 def test_build_system_prompt_renders_template_with_context(hass):
     """The system prompt template renders with ha_name/exposed_entities/etc."""
     from custom_components.extended_openai_conversation.const import CONF_PROMPT
@@ -177,3 +251,55 @@ def test_build_system_prompt_renders_template_with_context(hass):
     result = entity._build_system_prompt([], llm_context, user_input)
 
     assert result == "You manage Test Home."
+
+
+def test_build_system_prompt_renders_mcp_template_variables(hass):
+    """MCP template values can be placed directly in the main system prompt."""
+    from custom_components.extended_openai_conversation.const import CONF_PROMPT
+    from custom_components.extended_openai_conversation.skills import SkillManager
+    from homeassistant.helpers.template import TemplateEnvironment
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_PROMPT: "{{ default_mcp_prompt }}\n\n{{ permanent_mcp_tools }}"
+    }
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+    entity.hass = hass
+    entity.skill_manager = MagicMock(spec=SkillManager)
+    entity.skill_manager.get_all_skills.return_value = []
+    hass.data["template.environment"] = TemplateEnvironment(hass)
+
+    result = entity._build_system_prompt(
+        [],
+        MagicMock(device_id=None),
+        MagicMock(),
+        {
+            "default_mcp_prompt": "MCP instructions",
+            "permanent_mcp_tools": '{"server_id":"vault"}',
+        },
+    )
+
+    assert result == 'MCP instructions\n\n{"server_id":"vault"}'
+
+
+def test_build_system_prompt_uses_empty_mcp_template_defaults(hass):
+    """Missing MCP content renders as empty strings rather than template errors."""
+    from custom_components.extended_openai_conversation.const import CONF_PROMPT
+    from custom_components.extended_openai_conversation.skills import SkillManager
+    from homeassistant.helpers.template import TemplateEnvironment
+
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {
+        CONF_PROMPT: "before{{ permanent_mcp_tools }}{{ default_mcp_prompt }}after"
+    }
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+    entity.hass = hass
+    entity.skill_manager = MagicMock(spec=SkillManager)
+    entity.skill_manager.get_all_skills.return_value = []
+    hass.data["template.environment"] = TemplateEnvironment(hass)
+
+    result = entity._build_system_prompt(
+        [], MagicMock(device_id=None), MagicMock()
+    )
+
+    assert result == "beforeafter"

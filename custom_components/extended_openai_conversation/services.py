@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from openai._exceptions import OpenAIError
 import probatio as vol
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import (
     HomeAssistant,
@@ -36,11 +37,13 @@ from .const import (
     SERVICE_DOWNLOAD_SKILL,
     SERVICE_QUERY_IMAGE,
     SERVICE_RELOAD_SKILLS,
+    SERVICE_TYPE_AI_ENDPOINT,
 )
 from .helpers import (
     async_create_chat_completion,
     get_authenticated_client,
     get_model_config,
+    get_service_type,
 )
 
 QUERY_IMAGE_SCHEMA = vol.Schema(
@@ -84,6 +87,16 @@ DOWNLOAD_SKILL_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger(__package__)
 
 
+def _get_ai_endpoint_entry(hass: HomeAssistant, entry_id: str) -> ConfigEntry:
+    """Return a selected AI endpoint or reject an incompatible entry."""
+    entry = hass.config_entries.async_get_entry(entry_id)
+    if entry is None or entry.domain != DOMAIN:
+        raise HomeAssistantError(f"Config entry {entry_id} not found")
+    if get_service_type(entry) != SERVICE_TYPE_AI_ENDPOINT:
+        raise HomeAssistantError(f"Config entry {entry_id} is not an AI endpoint")
+    return entry
+
+
 async def async_setup_services(hass: HomeAssistant, config: ConfigType) -> None:
     """Set up services for the extended openai conversation component."""
 
@@ -104,9 +117,7 @@ async def async_setup_services(hass: HomeAssistant, config: ConfigType) -> None:
             ]
             _LOGGER.info("Prompt for %s: %s", model, messages)
 
-            entry = hass.config_entries.async_get_entry(call.data["config_entry"])
-            if entry is None:
-                raise HomeAssistantError("Config entry not found")
+            entry = _get_ai_endpoint_entry(hass, call.data["config_entry"])
 
             client = entry.runtime_data
 
@@ -134,9 +145,7 @@ async def async_setup_services(hass: HomeAssistant, config: ConfigType) -> None:
     async def change_config(call: ServiceCall) -> None:
         """Change configuration."""
         entry_id = call.data["config_entry"]
-        entry = hass.config_entries.async_get_entry(entry_id)
-        if not entry or entry.domain != DOMAIN:
-            raise HomeAssistantError(f"Config entry {entry_id} not found")
+        entry = _get_ai_endpoint_entry(hass, entry_id)
 
         updates = {}
         for key in (

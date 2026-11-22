@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from functools import partial
 import logging
+from typing import Any, cast
 
 from openai import AsyncClient
 from openai._exceptions import AuthenticationError, OpenAIError
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.const import CONF_API_KEY, Platform
+from homeassistant.const import CONF_API_KEY, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
@@ -23,8 +26,11 @@ from .const import (
     DEFAULT_API_PROVIDER,
     DEFAULT_SKIP_AUTHENTICATION,
     DOMAIN,
+    SERVICE_TYPE_MCP,
 )
-from .helpers import get_authenticated_client
+from .helpers import get_authenticated_client, get_service_type
+from .mcp_client import MCPClient, MCPServerConfig
+from .mcp_oauth import async_get_mcp_oauth_auth
 from .services import async_setup_services
 from .template import async_setup_templates, async_unload_templates
 
@@ -33,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.AI_TASK, Platform.CONVERSATION]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-type ExtendedOpenAIConfigEntry = ConfigEntry[AsyncClient]
+type ExtendedOpenAIConfigEntry = ConfigEntry[AsyncClient | MCPClient]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -47,6 +53,32 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ExtendedOpenAIConfigEntry
 ) -> bool:
     """Set up OpenAI Conversation from a config entry."""
+
+    if get_service_type(entry) == SERVICE_TYPE_MCP:
+        config = MCPServerConfig.from_dict({**entry.data, "name": entry.title})
+        try:
+            auth = (
+                await async_get_mcp_oauth_auth(hass, entry)
+                if config.use_oauth and CONF_TOKEN in entry.data
+                else None
+            )
+        except ConfigEntryAuthFailed, ConfigEntryNotReady:
+            raise
+        except (KeyError, TypeError, ValueError) as err:
+            raise ConfigEntryAuthFailed(
+                "Stored MCP OAuth configuration is invalid"
+            ) from err
+        entry.runtime_data = MCPClient(config, auth=auth)
+        entry.async_on_unload(
+            entry.add_update_listener(
+                partial(
+                    _mcp_update_listener,
+                    previous_data=dict(entry.data),
+                    previous_title=entry.title,
+                )
+            )
+        )
+        return True
 
     try:
         client = await get_authenticated_client(
@@ -75,14 +107,44 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: ExtendedOpenAIConfigEntry
+) -> bool:
     """Unload OpenAI."""
+    if get_service_type(entry) == SERVICE_TYPE_MCP:
+        await cast(MCPClient, entry.runtime_data).aclose()
+        return True
     await async_unload_templates(hass)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return bool(await hass.config_entries.async_unload_platforms(entry, PLATFORMS))
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _mcp_update_listener(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    *,
+    previous_data: Mapping[str, Any],
+    previous_title: str,
+) -> None:
+    """Reload an MCP entry unless only its existing OAuth token changed."""
+    previous_without_token = {
+        key: value for key, value in previous_data.items() if key != CONF_TOKEN
+    }
+    current_without_token = {
+        key: value for key, value in entry.data.items() if key != CONF_TOKEN
+    }
+    token_only_update = (
+        CONF_TOKEN in previous_data
+        and CONF_TOKEN in entry.data
+        and previous_title == entry.title
+        and previous_without_token == current_without_token
+    )
+    if token_only_update:
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 
@@ -91,7 +153,11 @@ async def async_migrate_integration(hass: HomeAssistant) -> None:
 
     # Make sure we get enabled config entries first
     entries = sorted(
-        hass.config_entries.async_entries(DOMAIN),
+        (
+            entry
+            for entry in hass.config_entries.async_entries(DOMAIN)
+            if get_service_type(entry) != SERVICE_TYPE_MCP
+        ),
         key=lambda e: e.disabled_by is not None,
     )
     if not any(entry.version == 1 for entry in entries):
