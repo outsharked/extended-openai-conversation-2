@@ -394,7 +394,6 @@ def _extract_mcp_media_content(
 
         summary.pop("data", None)
         summary["mimeType"] = mime_type
-        summary["attached_to_model"] = True
         serialized_content.append(summary)
         if content_type == "image":
             media_parts.append(

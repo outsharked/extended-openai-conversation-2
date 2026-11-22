@@ -466,7 +466,6 @@ def test_extract_mcp_media_content_builds_native_image_part():
         {
             "type": "image",
             "mimeType": "image/png",
-            "attached_to_model": True,
         },
     ]
     assert media_parts == [
@@ -552,7 +551,6 @@ def test_extract_mcp_media_content_builds_native_audio_part():
             {
                 "type": "audio",
                 "mimeType": "audio/mpeg",
-                "attached_to_model": True,
             }
         ]
     }
