@@ -42,6 +42,10 @@ class _ToolDiscoveryError(Exception):
     """Wrap a live tools/list failure for one server."""
 
 
+class _RegexSearchTimeout(Exception):
+    """Identify a timeout raised specifically by regex evaluation."""
+
+
 class MCPToolManager:
     """Implement model-facing MCP operations over authorized service inputs."""
 
@@ -127,7 +131,7 @@ class MCPToolManager:
                         tool_limit=entries_per_page,
                     )
                 )
-            except TimeoutError:
+            except _RegexSearchTimeout:
                 return MCPToolManager._error(
                     "regex_timeout", "The MCP catalogue search timed out"
                 )
@@ -233,7 +237,7 @@ class MCPToolManager:
                     )
                     result["server_id"] = service.config.server.server_id
                     matches.append(result)
-            except TimeoutError:
+            except _RegexSearchTimeout:
                 return MCPToolManager._error(
                     "regex_timeout", "The MCP catalogue search timed out"
                 )
@@ -642,9 +646,13 @@ class MCPToolManager:
     ) -> bool:
         """Return whether any independently searched field matches the query."""
         if pattern is not None:
-            return any(
-                pattern.search(value, timeout=timeout) is not None for value in values
-            )
+            try:
+                return any(
+                    pattern.search(value, timeout=timeout) is not None
+                    for value in values
+                )
+            except TimeoutError as err:
+                raise _RegexSearchTimeout from err
         if not case_sensitive:
             query = query.casefold()
             return any(query in value.casefold() for value in values)

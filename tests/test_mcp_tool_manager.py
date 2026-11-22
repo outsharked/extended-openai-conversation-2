@@ -418,10 +418,10 @@ async def test_list_tools_scopes_query_to_selected_authorized_servers():
 
 
 async def test_list_tools_retains_results_when_one_server_discovery_fails():
-    """A failed catalogue is reported without discarding other tools."""
+    """A transport timeout is not misreported as a regex timeout."""
     storage = _service("storage", tools=(_tool("upload_file", "Upload a file"),))
     calendar = _service("calendar")
-    calendar.client.list_tools = AsyncMock(side_effect=RuntimeError("offline"))
+    calendar.client.list_tools = AsyncMock(side_effect=TimeoutError("offline"))
 
     result = await MCPToolManager.list_tools([storage, calendar])
 

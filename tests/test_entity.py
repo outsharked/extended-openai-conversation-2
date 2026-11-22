@@ -242,6 +242,50 @@ def test_place_mcp_agent_context_uses_independent_placements():
     ]
 
 
+def test_place_mcp_agent_context_combines_both_values_into_selected_role():
+    """Both MCP values can share either the system or user message."""
+    system_messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    user_messages = [
+        {"role": "system", "content": "Existing system"},
+        {"role": "user", "content": "Do the task"},
+    ]
+    context = MCPAgentContext(
+        default_prompt="MCP instructions",
+        permanent_tools="Permanent tools",
+    )
+
+    _place_mcp_agent_context(
+        system_messages,
+        context,
+        permanent_tools_placement="combined_system",
+        default_prompt_placement="combined_system",
+    )
+    _place_mcp_agent_context(
+        user_messages,
+        context,
+        permanent_tools_placement="user",
+        default_prompt_placement="user",
+    )
+
+    assert system_messages == [
+        {
+            "role": "system",
+            "content": "MCP instructions\n\nPermanent tools\n\nExisting system",
+        },
+        {"role": "user", "content": "Do the task"},
+    ]
+    assert user_messages == [
+        {"role": "system", "content": "Existing system"},
+        {
+            "role": "user",
+            "content": "MCP instructions\n\nPermanent tools\n\nDo the task",
+        },
+    ]
+
+
 def test_place_mcp_context_uses_dedicated_system_message():
     """AI Task MCP context can use an additional system message."""
     messages = [
