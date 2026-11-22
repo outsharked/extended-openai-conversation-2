@@ -8,7 +8,10 @@ from custom_components.extended_openai_conversation.conversation import (
     ExtendedOpenAIAgentEntity,
     async_setup_entry,
 )
-from custom_components.extended_openai_conversation.exceptions import FunctionNotFound
+from custom_components.extended_openai_conversation.exceptions import (
+    FunctionNotFound,
+    InvalidFunction,
+)
 
 
 def _mock_subentry(subentry_type: str, subentry_id: str) -> MagicMock:
@@ -177,6 +180,53 @@ def test_get_function_tools_unknown_function_type_raises():
     entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
 
     with pytest.raises(FunctionNotFound):
+        entity._get_function_tools()
+
+
+def test_get_function_tools_rejects_reserved_mcp_name():
+    """A custom function cannot replace the generated MCP dispatcher."""
+    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
+
+    custom_yaml = """
+- spec:
+    name: mcp
+    description: A conflicting custom function
+    parameters:
+      type: object
+      properties: {}
+  function:
+    type: template
+    value_template: "conflict"
+"""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    with pytest.raises(InvalidFunction, match="mcp"):
+        entity._get_function_tools()
+
+
+def test_get_function_tools_rejects_custom_mcp_type_alias():
+    """A renamed custom function cannot alias the internal MCP dispatcher."""
+    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
+
+    custom_yaml = """
+- spec:
+    name: custom_dispatcher
+    description: A renamed MCP dispatcher
+    parameters:
+      type: object
+      properties: {}
+  function:
+    type: mcp
+    server_ids:
+      - unassigned-server
+"""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    with pytest.raises(InvalidFunction, match="mcp"):
         entity._get_function_tools()
 
 

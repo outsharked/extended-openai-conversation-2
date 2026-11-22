@@ -16,6 +16,7 @@ from ..mcp_service_manager import MCPServiceManager
 from .base import Function
 
 _LOGGER = logging.getLogger(__name__)
+MCP_FUNCTION_NAME = "mcp"
 
 _LIST_SERVERS_ARGUMENTS = (
     "query",
@@ -94,7 +95,7 @@ def build_mcp_function_tool(server_ids: list[str]) -> dict[str, Any]:
     """Build the model-facing MCP dispatcher definition for an agent."""
     return {
         "spec": {
-            "name": "mcp",
+            "name": MCP_FUNCTION_NAME,
             "description": (
                 "Use list_servers to discover servers, list_tools to search "
                 "discoverable tools, get_tool_details to retrieve all available "

@@ -40,6 +40,7 @@ from .const import (
 from .entity import ExtendedOpenAIBaseLLMEntity
 from .exceptions import FunctionLoadFailed, FunctionNotFound, InvalidFunction
 from .functions import get_function
+from .functions.mcp import MCP_FUNCTION_NAME
 from .helpers import get_exposed_entities
 from .skills import Skill, SkillManager
 
@@ -250,6 +251,15 @@ class ExtendedOpenAIAgentEntity(
                 for function_tool in function_tools:
                     if isinstance(function_tool, dict) and "function" in function_tool:
                         function_config = function_tool["function"]
+                        function_spec = function_tool.get("spec")
+                        if (
+                            isinstance(function_spec, dict)
+                            and function_spec.get("name") == MCP_FUNCTION_NAME
+                        ) or (
+                            isinstance(function_config, dict)
+                            and function_config.get("type") == MCP_FUNCTION_NAME
+                        ):
+                            raise InvalidFunction(MCP_FUNCTION_NAME)
                         if (
                             isinstance(function_config, dict)
                             and "type" in function_config
