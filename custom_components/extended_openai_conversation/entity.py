@@ -120,6 +120,7 @@ class MCPAgentContext:
     permanent_tools: str = ""
     permanent_tool_messages: tuple[str, ...] = ()
 
+
 def _place_mcp_context(
     messages: list[ChatCompletionMessageParam],
     content: str,
@@ -130,10 +131,14 @@ def _place_mcp_context(
         return
 
     if placement == MCP_CONTEXT_PLACEMENT_DEDICATED_SYSTEM:
-        messages.insert(0,ChatCompletionSystemMessageParam(role="system", content=content))
+        messages.insert(
+            0, ChatCompletionSystemMessageParam(role="system", content=content)
+        )
         return
 
-    target_role = ("system" if placement == MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM else "user")
+    target_role = (
+        "system" if placement == MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM else "user"
+    )
     if placement not in (
         MCP_CONTEXT_PLACEMENT_COMBINED_SYSTEM,
         MCP_CONTEXT_PLACEMENT_USER,
@@ -309,8 +314,7 @@ def _extract_mcp_media_content(
 ) -> tuple[
     Any,
     list[
-        ChatCompletionContentPartImageParam
-        | ChatCompletionContentPartInputAudioParam
+        ChatCompletionContentPartImageParam | ChatCompletionContentPartInputAudioParam
     ],
 ]:
     """Extract standard MCP image and audio blocks for native model input."""
@@ -319,8 +323,7 @@ def _extract_mcp_media_content(
 
     enabled_media_types = frozenset(supported_media_types)
     media_parts: list[
-        ChatCompletionContentPartImageParam
-        | ChatCompletionContentPartInputAudioParam
+        ChatCompletionContentPartImageParam | ChatCompletionContentPartInputAudioParam
     ] = []
     serialized_content: list[Any] = []
     for item in result["content"]:
@@ -378,7 +381,7 @@ def _extract_mcp_media_content(
             continue
         try:
             base64.b64decode(data, validate=True)
-        except (binascii.Error, ValueError):
+        except binascii.Error, ValueError:
             summary["media_error"] = {
                 "code": "invalid_base64_data",
                 "message": (
@@ -426,8 +429,7 @@ def _messages_contain_media(messages: list[ChatCompletionMessageParam]) -> bool:
         if not isinstance(content, list):
             continue
         if any(
-            isinstance(part, dict)
-            and part.get("type") in {"image_url", "input_audio"}
+            isinstance(part, dict) and part.get("type") in {"image_url", "input_audio"}
             for part in content
         ):
             return True
@@ -667,9 +669,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             return []
         return [build_mcp_function_tool(server_ids)]
 
-    async def _async_get_mcp_agent_context(
-        self, language: str
-    ) -> MCPAgentContext:
+    async def _async_get_mcp_agent_context(self, language: str) -> MCPAgentContext:
         """Build template values and automatic context for assigned MCP services."""
         server_ids = self.subentry.data.get(CONF_MCP_SERVERS, []) or []
         if not server_ids:
@@ -780,8 +780,7 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             _place_mcp_agent_context(
                 converted_messages,
                 mcp_context,
-                permanent_tools_placement
-                or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                permanent_tools_placement or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
                 default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
             )
             messages = converted_messages
@@ -937,17 +936,13 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
                 attachment_parts,
                 tool_media_parts,
             )
-            if (
-                permanent_tools_placement is None
-                and default_prompt_placement is None
-            ):
+            if permanent_tools_placement is None and default_prompt_placement is None:
                 messages = [*mcp_context_messages, *converted_messages]
             else:
                 _place_mcp_agent_context(
                     converted_messages,
                     mcp_context,
-                    permanent_tools_placement
-                    or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                    permanent_tools_placement or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
                     default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
                 )
                 messages = converted_messages

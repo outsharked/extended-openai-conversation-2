@@ -95,9 +95,15 @@ class MCPServiceConfig:
         server_information: MCPServerInformation | None = None,
     ) -> MCPServiceConfig:
         """Validate, apply hard filters, and normalize a policy selection."""
-        permanent_names: set[str] = cls._validate_names(selected_tool_names, "permanent_tools")
-        disabled_names: set[str] = cls._validate_names(disabled_tool_names, "disabled_tools")
-        available_tools: tuple[MCPTool, ...] = discovery.tools if discovery is not None else ()
+        permanent_names: set[str] = cls._validate_names(
+            selected_tool_names, "permanent_tools"
+        )
+        disabled_names: set[str] = cls._validate_names(
+            disabled_tool_names, "disabled_tools"
+        )
+        available_tools: tuple[MCPTool, ...] = (
+            discovery.tools if discovery is not None else ()
+        )
         available_names: set[str] = {tool.name for tool in available_tools}
         if not on_demand_discovery:
             disabled_tool_mode = DEFAULT_MCP_DISABLED_TOOL_MODE
@@ -165,7 +171,9 @@ class MCPServiceConfig:
             return (
                 # this disabled filter is to say any tools that match should be disabled,
                 # so if it returns None then that means the tool is allowed
-                regex.fullmatch(self.tool_name_pattern, tool_name, timeout=self.regex_timeout)
+                regex.fullmatch(
+                    self.tool_name_pattern, tool_name, timeout=self.regex_timeout
+                )
                 is None
             )
         except TimeoutError:
@@ -189,7 +197,9 @@ class MCPServiceConfig:
         """Build a service configuration from its persisted mapping."""
         server_information = data.get(CONF_MCP_SERVER_INFORMATION)
         catalogue = data.get(CONF_MCP_PERMANENT_TOOL_CATALOGUE, ())
-        permanent_tools: tuple[MCPTool, ...] = tuple(MCPTool.from_dict(tool) for tool in catalogue)
+        permanent_tools: tuple[MCPTool, ...] = tuple(
+            MCPTool.from_dict(tool) for tool in catalogue
+        )
         return cls(
             server=MCPServerConfig.from_dict(data),
             perform_tool_discovery=data.get(

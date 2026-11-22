@@ -209,6 +209,7 @@ support one system message, `User input` prepends it to the existing user
 message, and `Disabled` omits its automatic insertion.
 
 **NOTES:**
+- `mcp` is a reserved function name and cannot be used by any other custom functions with this integration
 - If `On-Demand Discovery` is disabled and no permanent tools are provided, then the Agent will not be able to call any MCP tool.
 - Setting permanent and specific disabled tools is only possible if `Perform initial tool discovery` was enabled. Setting specific disabled tools also requires `On-Demand Discovery` to be enabled. Regex based disabling of tools is only available if `On-Demand Discovery` is enabled.
 - If a tool is in the disabled tool selection but would be excluded from the regex, the tool will still be unavailable to the agent. The regex search does not override the manually specified disabled tools.

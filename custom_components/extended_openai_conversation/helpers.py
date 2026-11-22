@@ -44,9 +44,7 @@ MCP_DEFAULT_PROMPT_TRANSLATION_KEY = (
 )
 
 
-async def async_get_mcp_default_prompt(
-    hass: HomeAssistant, language: str
-) -> str:
+async def async_get_mcp_default_prompt(hass: HomeAssistant, language: str) -> str:
     """Return localized model guidance for the MCP dispatcher."""
     translations = await async_get_translations(
         hass,

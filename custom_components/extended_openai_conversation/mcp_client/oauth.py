@@ -41,8 +41,8 @@ class MCPOAuthClientRegistration:
     client_id: str
     client_secret: str = ""
 
-class MCPOAuthClientRegistrar:
 
+class MCPOAuthClientRegistrar:
     @staticmethod
     async def async_register_mcp_oauth_client(
         oauth_config: MCPOAuthConfiguration,
@@ -53,7 +53,9 @@ class MCPOAuthClientRegistrar:
     ) -> MCPOAuthClientRegistration:
         """Dynamically register a public PKCE client with an MCP auth server."""
         if oauth_config.registration_url is None:
-            raise MCPAuthenticationError("The MCP authorization server does not advertise client registration")
+            raise MCPAuthenticationError(
+                "The MCP authorization server does not advertise client registration"
+            )
 
         metadata = OAuthClientMetadata.model_validate(
             {
@@ -110,16 +112,21 @@ class MCPOAuthClientRegistrar:
         owns_client = http_client is None
         client = http_client or httpx.AsyncClient(follow_redirects=False)
         try:
-            resource_metadata = await MCPOAuthClientRegistrar._async_discover_resource_metadata(
-                client, server_url, resource_metadata_url
+            resource_metadata = (
+                await MCPOAuthClientRegistrar._async_discover_resource_metadata(
+                    client, server_url, resource_metadata_url
+                )
             )
             authorization_server = (
                 str(resource_metadata.authorization_servers[0])
-                if resource_metadata is not None and resource_metadata.authorization_servers
+                if resource_metadata is not None
+                and resource_metadata.authorization_servers
                 else None
             )
-            oauth_metadata = await MCPOAuthClientRegistrar._async_discover_authorization_metadata(
-                client, server_url, authorization_server
+            oauth_metadata = (
+                await MCPOAuthClientRegistrar._async_discover_authorization_metadata(
+                    client, server_url, authorization_server
+                )
             )
         finally:
             if owns_client:
@@ -128,7 +135,9 @@ class MCPOAuthClientRegistrar:
         expected_issuer = authorization_server
         if expected_issuer is None:
             parsed_server_url = urlparse(server_url)
-            expected_issuer = f"{parsed_server_url.scheme}://{parsed_server_url.netloc}/"
+            expected_issuer = (
+                f"{parsed_server_url.scheme}://{parsed_server_url.netloc}/"
+            )
         if str(oauth_metadata.issuer) != expected_issuer:
             raise MCPAuthenticationError(
                 "The MCP authorization server metadata returned an unexpected issuer"
@@ -210,11 +219,15 @@ class MCPOAuthClientRegistrar:
             "Unable to discover the MCP authorization server"
         )
         if failures:
-            raise error from MCPOAuthClientRegistrar._preferred_discovery_failure(failures)
+            raise error from MCPOAuthClientRegistrar._preferred_discovery_failure(
+                failures
+            )
         raise error
 
     @staticmethod
-    def _preferred_discovery_failure(failures: list[httpx.HTTPError]) -> httpx.HTTPError:
+    def _preferred_discovery_failure(
+        failures: list[httpx.HTTPError],
+    ) -> httpx.HTTPError:
         """Choose the most useful failed discovery response for the host UI."""
         priorities = {401: 0, 403: 1, 500: 2, 404: 3}
 

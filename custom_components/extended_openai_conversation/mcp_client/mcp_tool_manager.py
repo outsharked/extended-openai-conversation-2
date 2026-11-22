@@ -63,12 +63,14 @@ class MCPToolManager:
     ) -> dict[str, Any]:
         """Return authorized MCP servers matching the requested criteria."""
 
-        validation_error: dict[str, Any] | None = MCPToolManager._validate_search_request(
-            query=query,
-            search_fields=search_fields,
-            supported_search_fields=_SERVER_SEARCH_FIELDS,
-            current_page=current_page,
-            entries_per_page=entries_per_page,
+        validation_error: dict[str, Any] | None = (
+            MCPToolManager._validate_search_request(
+                query=query,
+                search_fields=search_fields,
+                supported_search_fields=_SERVER_SEARCH_FIELDS,
+                current_page=current_page,
+                entries_per_page=entries_per_page,
+            )
         )
         if validation_error is not None:
             return validation_error
@@ -181,7 +183,9 @@ class MCPToolManager:
             isinstance(server_ids, str)
             or not all(isinstance(server_id, str) for server_id in server_ids)
         ):
-            return MCPToolManager._error("invalid_server_ids", "server_ids must be a list of strings")
+            return MCPToolManager._error(
+                "invalid_server_ids", "server_ids must be a list of strings"
+            )
 
         try:
             fields, pattern = MCPToolManager._prepare_search(
@@ -194,9 +198,7 @@ class MCPToolManager:
         except regex.error as err:
             return MCPToolManager._error("invalid_regex", str(err))
 
-        selected_server_ids = (
-            frozenset(server_ids) if server_ids is not None else None
-        )
+        selected_server_ids = frozenset(server_ids) if server_ids is not None else None
         matches: list[dict[str, Any]] = []
         failed_servers: list[dict[str, Any]] = []
         for service in services:
@@ -255,9 +257,13 @@ class MCPToolManager:
     ) -> dict[str, Any]:
         """Return all available details for one authorized MCP tool."""
         if not isinstance(server_id, str) or not server_id:
-            return MCPToolManager._error("invalid_server_id", "server_id must be a non-empty string")
+            return MCPToolManager._error(
+                "invalid_server_id", "server_id must be a non-empty string"
+            )
         if not isinstance(tool_name, str) or not tool_name:
-            return MCPToolManager._error("invalid_tool_name", "tool_name must be a non-empty string")
+            return MCPToolManager._error(
+                "invalid_tool_name", "tool_name must be a non-empty string"
+            )
 
         service = MCPToolManager._service_by_id(services, server_id)
         if service is None:
@@ -282,12 +288,16 @@ class MCPToolManager:
                 "invalid_server_id", "server_id must be a non-empty string"
             )
         if not isinstance(tool_name, str) or not tool_name:
-            return MCPToolManager._error("invalid_tool_name", "tool_name must be a non-empty string")
+            return MCPToolManager._error(
+                "invalid_tool_name", "tool_name must be a non-empty string"
+            )
         if arguments is not None and (
             not isinstance(arguments, Mapping)
             or not all(isinstance(key, str) for key in arguments)
         ):
-            return MCPToolManager._error("invalid_arguments", "arguments must be an object with string keys")
+            return MCPToolManager._error(
+                "invalid_arguments", "arguments must be an object with string keys"
+            )
 
         service: MCPService | None = MCPToolManager._service_by_id(services, server_id)
         if service is None:
@@ -310,7 +320,9 @@ class MCPToolManager:
     ) -> tuple[frozenset[str], regex.Pattern[str] | None]:
         """Resolve default fields and compile an optional search expression."""
         fields = (
-            frozenset(search_fields) if search_fields is not None else frozenset(default_fields)
+            frozenset(search_fields)
+            if search_fields is not None
+            else frozenset(default_fields)
         )
         if query is None or not search_regex:
             return fields, None
@@ -346,7 +358,8 @@ class MCPToolManager:
         )
         matching_tools = (
             tools
-            if query is None else tuple(
+            if query is None
+            else tuple(
                 tool
                 for tool in tools
                 if MCPToolManager._matches(
@@ -490,11 +503,7 @@ class MCPToolManager:
     async def _find_tool(service: MCPService, tool_name: str) -> MCPTool | None:
         """Find an exact permanent or discoverable tool allowed by policy."""
         permanent_tool = next(
-            (
-                tool
-                for tool in service.config.permanent_tools
-                if tool.name == tool_name
-            ),
+            (tool for tool in service.config.permanent_tools if tool.name == tool_name),
             None,
         )
         if permanent_tool is not None:
@@ -572,7 +581,9 @@ class MCPToolManager:
         }
 
     @staticmethod
-    def _server_search_values(config: MCPServiceConfig, fields: Collection[str]) -> tuple[str, ...]:
+    def _server_search_values(
+        config: MCPServiceConfig, fields: Collection[str]
+    ) -> tuple[str, ...]:
         """Return selected searchable values from server metadata."""
         server = config.server
         values: list[str] = []
@@ -624,7 +635,9 @@ class MCPToolManager:
     ) -> bool:
         """Return whether any independently searched field matches the query."""
         if pattern is not None:
-            return any(pattern.search(value, timeout=timeout) is not None for value in values)
+            return any(
+                pattern.search(value, timeout=timeout) is not None for value in values
+            )
         if not case_sensitive:
             query = query.casefold()
             return any(query in value.casefold() for value in values)
@@ -665,7 +678,9 @@ class MCPToolManager:
                 or not search_fields
                 or not all(isinstance(field, str) for field in search_fields)
             ):
-                return MCPToolManager._error("invalid_search_fields", "search_fields must be a non-empty list")
+                return MCPToolManager._error(
+                    "invalid_search_fields", "search_fields must be a non-empty list"
+                )
             invalid_fields = set(search_fields) - set(supported_search_fields)
             if invalid_fields:
                 return MCPToolManager._error(
@@ -677,7 +692,9 @@ class MCPToolManager:
             or not isinstance(current_page, int)
             or current_page < 1
         ):
-            return MCPToolManager._error("invalid_current_page", "current_page must be at least 1" )
+            return MCPToolManager._error(
+                "invalid_current_page", "current_page must be at least 1"
+            )
         if (
             isinstance(entries_per_page, bool)
             or not isinstance(entries_per_page, int)

@@ -16,6 +16,7 @@ DEFAULT_MCP_PROMPT = (
     "context do not need to be discovered again."
 )
 
+
 @dataclass(frozen=True, slots=True)
 class MCPRenderedContext:
     """Model-facing context rendered from one MCP service configuration."""
@@ -43,6 +44,7 @@ class MCPContextEstimate:
             byte_count=byte_count,
             estimated_tokens=math.ceil(byte_count / 4),
         )
+
 
 class MCPContextRenderer:
     @staticmethod

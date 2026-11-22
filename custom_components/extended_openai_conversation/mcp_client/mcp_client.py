@@ -84,8 +84,12 @@ class MCPClient:
         http_client: httpx.AsyncClient = self._get_http_client()
 
         async with (
-            streamable_http_client(url=self.config.url, http_client=http_client) as streams,
-            ClientSession(streams[0], streams[1], read_timeout_seconds=self._session_read_timeout) as session
+            streamable_http_client(
+                url=self.config.url, http_client=http_client
+            ) as streams,
+            ClientSession(
+                streams[0], streams[1], read_timeout_seconds=self._session_read_timeout
+            ) as session,
         ):
             initialization = await session.initialize()
             yield session, initialization
@@ -169,7 +173,9 @@ class MCPClient:
             if next_cursor is None:
                 return tuple(tools)
             if next_cursor in seen_cursors:
-                raise MCPProtocolError("MCP server repeated a tools/list pagination cursor")
+                raise MCPProtocolError(
+                    "MCP server repeated a tools/list pagination cursor"
+                )
 
             seen_cursors.add(next_cursor)
             cursor = next_cursor
@@ -198,7 +204,9 @@ class MCPClient:
             async with self._session() as (session, _):
                 return await self._list_session_tools(session)
 
-    async def call_tool(self, tool_name: str, arguments: Mapping[str, Any] | None = None) -> MCPToolResult:
+    async def call_tool(
+        self, tool_name: str, arguments: Mapping[str, Any] | None = None
+    ) -> MCPToolResult:
         """Invoke a tool once without automatically retrying side effects."""
         async with self._operation_lock:
             self._ensure_open()

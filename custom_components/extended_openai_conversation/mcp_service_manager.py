@@ -24,6 +24,7 @@ class MCPServiceScope:
         """Return allowed MCP services that are currently loaded."""
         return self._manager._list_loaded(self._server_ids)
 
+
 class MCPServiceManager:
     """Create agent-scoped views of Home Assistant MCP config entries."""
 

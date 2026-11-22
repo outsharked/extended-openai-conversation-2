@@ -50,7 +50,9 @@ class MCPClientConfigFlow:
             suffix += 1
         return candidate
 
-    def process(self, user_input: Mapping[str, Any] | None = None) -> MCPClientConfigFlowResult:
+    def process(
+        self, user_input: Mapping[str, Any] | None = None
+    ) -> MCPClientConfigFlowResult:
         """Return initial form values or process submitted connection data."""
         if user_input is None:
             return MCPClientConfigFlowResult(
@@ -92,12 +94,16 @@ class MCPClientConfigFlow:
             config=config,
         )
 
-    async def discover(self, config: MCPServerConfig, *, auth: Any | None = None) -> MCPDiscoveryResult:
+    async def discover(
+        self, config: MCPServerConfig, *, auth: Any | None = None
+    ) -> MCPDiscoveryResult:
         """Retrieve the server and tools catalogue."""
         async with MCPClient(config, auth=auth) as client:
             return await client.discover()
 
-    async def check_connection(self, config: MCPServerConfig, *, auth: Any | None = None) -> MCPServerInformation:
+    async def check_connection(
+        self, config: MCPServerConfig, *, auth: Any | None = None
+    ) -> MCPServerInformation:
         """Initialize the server without retrieving its tool catalogue."""
         async with MCPClient(config, auth=auth) as client:
             return await client.check_connection()

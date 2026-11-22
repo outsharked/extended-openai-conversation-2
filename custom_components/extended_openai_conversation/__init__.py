@@ -62,7 +62,7 @@ async def async_setup_entry(
                 if config.use_oauth and CONF_TOKEN in entry.data
                 else None
             )
-        except (ConfigEntryAuthFailed, ConfigEntryNotReady):
+        except ConfigEntryAuthFailed, ConfigEntryNotReady:
             raise
         except (KeyError, TypeError, ValueError) as err:
             raise ConfigEntryAuthFailed(

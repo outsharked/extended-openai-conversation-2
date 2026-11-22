@@ -93,9 +93,7 @@ def _get_ai_endpoint_entry(hass: HomeAssistant, entry_id: str) -> ConfigEntry:
     if entry is None or entry.domain != DOMAIN:
         raise HomeAssistantError(f"Config entry {entry_id} not found")
     if get_service_type(entry) != SERVICE_TYPE_AI_ENDPOINT:
-        raise HomeAssistantError(
-            f"Config entry {entry_id} is not an AI endpoint"
-        )
+        raise HomeAssistantError(f"Config entry {entry_id} is not an AI endpoint")
     return entry
 
 

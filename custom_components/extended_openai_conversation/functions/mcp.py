@@ -298,9 +298,11 @@ class MCPFunction(Function):
             }
 
         try:
-            services = MCPServiceManager(hass).scope(
-                function_config["server_ids"]
-            ).list_loaded()
+            services = (
+                MCPServiceManager(hass)
+                .scope(function_config["server_ids"])
+                .list_loaded()
+            )
 
             if action == "list_servers":
                 return await MCPToolManager.list_servers(

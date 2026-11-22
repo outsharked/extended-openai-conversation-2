@@ -262,17 +262,17 @@ class NativeFunction(Function):
         start_time = dt_util.as_utc(start_time_parsed)
         end_time = dt_util.as_utc(end_time_parsed)
 
-        statistics: dict[str, Any] = (
-            await recorder.get_instance(hass).async_add_executor_job(
-                recorder.statistics.statistics_during_period,
-                hass,
-                start_time,
-                end_time,
-                statistic_ids,
-                arguments.get("period", "day"),
-                arguments.get("units"),
-                arguments.get("types", {"change"}),
-            )
+        statistics: dict[str, Any] = await recorder.get_instance(
+            hass
+        ).async_add_executor_job(
+            recorder.statistics.statistics_during_period,
+            hass,
+            start_time,
+            end_time,
+            statistic_ids,
+            arguments.get("period", "day"),
+            arguments.get("units"),
+            arguments.get("types", {"change"}),
         )
         if not isinstance(statistics, dict):
             raise HomeAssistantError("Unexpected statistics result")
