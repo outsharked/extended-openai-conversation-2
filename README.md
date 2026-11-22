@@ -223,6 +223,7 @@ message, and `Disabled` omits its automatic insertion.
 - Both Conversation Agents and Task Agents can have access to MCP servers but they must be assigned an MCP server to be able to use it
 - You can also manually specify a tool to manually expose to a conversation Agent in the prompt settings by telling it the server ID and tool name however, this method will not bypass any disabled tool filtering
 - The integration will always check for MCP server connectivity during configuration even if `Perform initial tool discovery` is disabled.
+- **SECURITY:** Only connect to MCP servers you trust and ensure their instructions do not contain malicious prompt injections
 ### Functions
 
 #### Supported function types

@@ -226,6 +226,75 @@ async def test_call_tool_returns_serializable_public_result():
     assert not result.is_error
 
 
+async def test_discover_and_call_tool_reuses_one_initialized_session():
+    """Live authorization lookup and invocation share one MCP session."""
+    session = _Session()
+    session.list_tools.return_value = ListToolsResult(
+        tools=[
+            Tool(
+                name="upload_file",
+                description="Upload a file.",
+                inputSchema={"type": "object"},
+            )
+        ]
+    )
+    session.call_tool.return_value = CallToolResult(
+        content=[TextContent(type="text", text="uploaded")],
+        isError=False,
+    )
+
+    with (
+        patch(f"{MODULE}.streamable_http_client", _transport),
+        patch(f"{MODULE}.ClientSession", return_value=session),
+    ):
+        result = await MCPClient(
+            _config(), http_client=MagicMock()
+        ).discover_and_call_tool(
+            "upload_file",
+            {"path": "/tmp/report.pdf"},
+            tool_filter=lambda tools: tools,
+        )
+
+    session.initialize.assert_awaited_once_with()
+    session.list_tools.assert_awaited_once_with(params=None)
+    session.call_tool.assert_awaited_once_with(
+        "upload_file",
+        {"path": "/tmp/report.pdf"},
+        read_timeout_seconds=300.0,
+    )
+    assert result is not None
+    assert result.content == ({"type": "text", "text": "uploaded"},)
+
+
+async def test_discover_and_call_tool_does_not_invoke_filtered_tool():
+    """A tool rejected by host policy is not invoked after discovery."""
+    session = _Session()
+    session.list_tools.return_value = ListToolsResult(
+        tools=[
+            Tool(
+                name="delete_file",
+                description="Delete a file.",
+                inputSchema={"type": "object"},
+            )
+        ]
+    )
+
+    with (
+        patch(f"{MODULE}.streamable_http_client", _transport),
+        patch(f"{MODULE}.ClientSession", return_value=session),
+    ):
+        result = await MCPClient(
+            _config(), http_client=MagicMock()
+        ).discover_and_call_tool(
+            "delete_file",
+            tool_filter=lambda tools: (),
+        )
+
+    assert result is None
+    session.list_tools.assert_awaited_once_with(params=None)
+    session.call_tool.assert_not_awaited()
+
+
 async def test_close_does_not_close_injected_http_client():
     """The caller retains ownership of an injected HTTP client."""
     http_client = MagicMock(aclose=AsyncMock())

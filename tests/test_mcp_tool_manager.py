@@ -622,15 +622,20 @@ async def test_execute_tool_discovers_non_permanent_tool():
     """A non-permanent tool must pass live discovery before execution."""
     upload = _tool("upload_file", "Upload a file")
     storage = _service("storage", tools=(upload,))
-    storage.client.call_tool.return_value = MCPToolResult((), None, False)
+    storage.client.discover_and_call_tool.return_value = MCPToolResult((), None, False)
 
     result = await MCPToolManager.execute_tool(
         [storage], server_id="storage", tool_name="upload_file"
     )
 
     assert result["is_error"] is False
-    storage.client.list_tools.assert_awaited_once_with()
-    storage.client.call_tool.assert_awaited_once_with("upload_file", None)
+    storage.client.list_tools.assert_not_awaited()
+    storage.client.call_tool.assert_not_awaited()
+    storage.client.discover_and_call_tool.assert_awaited_once_with(
+        "upload_file",
+        None,
+        tool_filter=storage.config.filter_on_demand_tools,
+    )
 
 
 async def test_execute_tool_hides_unassigned_server():
@@ -644,6 +649,7 @@ async def test_execute_tool_hides_unassigned_server():
     assert result["error"]["code"] == "tool_not_found"
     storage.client.list_tools.assert_not_awaited()
     storage.client.call_tool.assert_not_awaited()
+    storage.client.discover_and_call_tool.assert_not_awaited()
 
 
 async def test_execute_tool_rejects_undiscoverable_tool():
@@ -661,6 +667,25 @@ async def test_execute_tool_rejects_undiscoverable_tool():
     assert result["error"]["code"] == "tool_not_found"
     storage.client.list_tools.assert_not_awaited()
     storage.client.call_tool.assert_not_awaited()
+    storage.client.discover_and_call_tool.assert_not_awaited()
+
+
+async def test_execute_tool_hides_tool_rejected_by_live_policy_filter():
+    """A tool filtered from the live catalogue remains indistinguishable."""
+    storage = _service("storage", disabled_tools=("upload_file",))
+    storage.client.discover_and_call_tool.return_value = None
+
+    result = await MCPToolManager.execute_tool(
+        [storage], server_id="storage", tool_name="upload_file"
+    )
+
+    assert result["error"]["code"] == "tool_not_found"
+    storage.client.discover_and_call_tool.assert_awaited_once_with(
+        "upload_file",
+        None,
+        tool_filter=storage.config.filter_on_demand_tools,
+    )
+    storage.client.call_tool.assert_not_awaited()
 
 
 async def test_execute_tool_validates_arguments():
@@ -677,3 +702,4 @@ async def test_execute_tool_validates_arguments():
     assert result["error"]["code"] == "invalid_arguments"
     storage.client.list_tools.assert_not_awaited()
     storage.client.call_tool.assert_not_awaited()
+    storage.client.discover_and_call_tool.assert_not_awaited()

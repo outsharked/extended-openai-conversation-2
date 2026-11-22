@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Callable, Collection, Mapping
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -213,6 +213,27 @@ class MCPClient:
         async with self._session() as (session, _):
             result = await session.call_tool(
                 tool_name,
+                dict(arguments) if arguments is not None else {},
+                read_timeout_seconds=self._session_read_timeout,
+            )
+            return self._tool_result(result)
+
+    async def discover_and_call_tool(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, Any] | None = None,
+        *,
+        tool_filter: Callable[[Collection[MCPTool]], Collection[MCPTool]],
+    ) -> MCPToolResult | None:
+        """Discover and invoke an allowed tool within one initialized session."""
+        self._ensure_open()
+        async with self._session() as (session, _):
+            tools = tool_filter(await self._list_session_tools(session))
+            tool = next((tool for tool in tools if tool.name == tool_name), None)
+            if tool is None:
+                return None
+            result = await session.call_tool(
+                tool.name,
                 dict(arguments) if arguments is not None else {},
                 read_timeout_seconds=self._session_read_timeout,
             )

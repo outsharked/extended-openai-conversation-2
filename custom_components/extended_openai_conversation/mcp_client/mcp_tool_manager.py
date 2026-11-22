@@ -306,12 +306,25 @@ class MCPToolManager:
         service: MCPService | None = MCPToolManager._service_by_id(services, server_id)
         if service is None:
             return MCPToolManager._tool_not_found()
-        tool = await MCPToolManager._find_tool(service, tool_name)
-        if tool is None:
+
+        permanent_tool = next(
+            (tool for tool in service.config.permanent_tools if tool.name == tool_name),
+            None,
+        )
+        if permanent_tool is not None:
+            result = await service.client.call_tool(permanent_tool.name, arguments)
+            return MCPToolManager._tool_result(server_id, permanent_tool.name, result)
+        if not service.config.on_demand_discovery:
             return MCPToolManager._tool_not_found()
 
-        result = await service.client.call_tool(tool.name, arguments)
-        return MCPToolManager._tool_result(server_id, tool.name, result)
+        discovered_result = await service.client.discover_and_call_tool(
+            tool_name,
+            arguments,
+            tool_filter=service.config.filter_on_demand_tools,
+        )
+        if discovered_result is None:
+            return MCPToolManager._tool_not_found()
+        return MCPToolManager._tool_result(server_id, tool_name, discovered_result)
 
     @staticmethod
     def _prepare_search(
