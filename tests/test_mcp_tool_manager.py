@@ -19,6 +19,7 @@ def _tool(
     name: str,
     description: str,
     *,
+    input_schema: dict[str, Any] | None = None,
     output_schema: dict[str, Any] | None = None,
     annotations: dict[str, Any] | None = None,
     task_support: str | None = None,
@@ -27,10 +28,14 @@ def _tool(
         name=name,
         title=None,
         description=description,
-        input_schema={
-            "type": "object",
-            "properties": {"file_path": {"type": "string"}},
-        },
+        input_schema=(
+            input_schema
+            if input_schema is not None
+            else {
+                "type": "object",
+                "properties": {"file_path": {"type": "string"}},
+            }
+        ),
         output_schema=output_schema,
         annotations=annotations,
         task_support=task_support,
@@ -344,6 +349,40 @@ async def test_list_servers_regex_searches_schema_values():
 
     assert result["servers"][0]["id"] == "storage"
     assert result["servers"][0]["tools"][0]["tool_name"] == "upload_file"
+
+
+async def test_schema_search_includes_properties_named_like_schema_keywords():
+    """Structural keyword names remain searchable when used as properties."""
+    storage = _service(
+        "storage",
+        tools=(
+            _tool(
+                "inspect_value",
+                "Inspect a value.",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string"},
+                        "items": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            ),
+        ),
+    )
+
+    type_result = await MCPToolManager.list_tools(
+        [storage], query="type", search_fields=["schema"]
+    )
+    items_result = await MCPToolManager.list_tools(
+        [storage], query="items", search_fields=["schema"]
+    )
+    structural_value_result = await MCPToolManager.list_tools(
+        [storage], query="object", search_fields=["schema"]
+    )
+
+    assert type_result["max_matches"] == 1
+    assert items_result["max_matches"] == 1
+    assert structural_value_result["max_matches"] == 0
 
 
 async def test_list_tools_scopes_query_to_selected_authorized_servers():

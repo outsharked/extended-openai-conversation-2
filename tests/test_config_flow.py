@@ -87,7 +87,7 @@ from custom_components.extended_openai_conversation.mcp_client.mcp_const import 
     CONF_MCP_USE_OAUTH,
 )
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_API_KEY, CONF_TOKEN
+from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import SelectOptionDict
@@ -260,6 +260,42 @@ async def test_ai_endpoint_can_be_saved_without_review(hass):
     assert result == {"type": "create_entry"}
     assert flow.async_create_entry.call_args.kwargs["data"] == flow._ai_endpoint_data
     assert len(flow.async_create_entry.call_args.kwargs["subentries"]) == 2
+
+
+async def test_ai_endpoint_reconfigure_preserves_custom_entry_title(hass):
+    """Saving endpoint settings does not reset a customized entry title."""
+    flow = _config_flow(hass)
+    entry = MagicMock(
+        title="My customized title",
+        data={
+            CONF_NAME: "Original endpoint name",
+            CONF_API_KEY: "test-key",
+            CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT,
+        },
+    )
+    flow._get_reconfigure_entry = MagicMock(return_value=entry)
+    flow.async_step_service_menu = AsyncMock(return_value={"type": "menu"})
+
+    with patch(
+        "custom_components.extended_openai_conversation.config_flow.validate_input",
+        new=AsyncMock(),
+    ):
+        result = await flow.async_step_reconfigure()
+
+    assert result == {"type": "menu"}
+    assert flow._ai_endpoint_data is not None
+    assert flow._ai_endpoint_data[CONF_NAME] == "My customized title"
+
+    flow.async_update_reload_and_abort = MagicMock(return_value={"type": "abort"})
+
+    result = await flow.async_step_service_save()
+
+    assert result == {"type": "abort"}
+    flow.async_update_reload_and_abort.assert_called_once_with(
+        entry,
+        title="My customized title",
+        data=flow._ai_endpoint_data,
+    )
 
 
 def test_ai_endpoint_enables_supported_mcp_media_by_default():

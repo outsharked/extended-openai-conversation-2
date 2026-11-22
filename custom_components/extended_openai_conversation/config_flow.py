@@ -1463,7 +1463,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 self._mcp_oauth_status = True if self._mcp_oauth_authenticated else None
                 self._mcp_oauth_from_entry = self._mcp_oauth_authenticated
         else:
-            self._ai_endpoint_data = dict(entry.data)
+            self._ai_endpoint_data = {**entry.data, CONF_NAME: entry.title}
             try:
                 await validate_input(self.hass, dict(self._ai_endpoint_data))
             except AuthenticationError:

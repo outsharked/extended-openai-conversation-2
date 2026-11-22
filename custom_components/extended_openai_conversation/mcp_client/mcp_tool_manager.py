@@ -613,6 +613,13 @@ class MCPToolManager:
         values: list[str] = []
         if isinstance(value, dict):
             for key, child in value.items():
+                if key == "properties" and isinstance(child, Mapping):
+                    for property_name, property_schema in child.items():
+                        values.append(str(property_name))
+                        values.extend(
+                            MCPToolManager._schema_search_values(property_schema)
+                        )
+                    continue
                 if key not in _SCHEMA_BOILERPLATE_KEYS:
                     values.append(str(key))
                 if key != "type":
