@@ -63,7 +63,7 @@ class MCPClient:
             pool=connect_timeout,
         )
         self._session_read_timeout: float = read_timeout
-        self._operation_lock: asyncio.Lock = asyncio.Lock()
+        self._http_client_lock: asyncio.Lock = asyncio.Lock()
         self._closed: bool = False
 
     async def __aenter__(self) -> MCPClient:
@@ -81,7 +81,7 @@ class MCPClient:
     @asynccontextmanager
     async def _session(self) -> AsyncIterator[tuple[ClientSession, InitializeResult]]:
         """Open and initialize one short-lived MCP protocol session."""
-        http_client: httpx.AsyncClient = self._get_http_client()
+        http_client: httpx.AsyncClient = await self._get_http_client()
 
         async with (
             streamable_http_client(
@@ -94,15 +94,19 @@ class MCPClient:
             initialization = await session.initialize()
             yield session, initialization
 
-    def _get_http_client(self) -> httpx.AsyncClient:
-        if self._http_client is None:
-            self._http_client = httpx.AsyncClient(
-                headers=dict(self.config.headers),
-                auth=self._auth,
-                timeout=self._http_timeout,
-                follow_redirects=False,
-            )
-        return self._http_client
+    async def _get_http_client(self) -> httpx.AsyncClient:
+        """Return the shared HTTP client without blocking the event loop."""
+        async with self._http_client_lock:
+            self._ensure_open()
+            if self._http_client is None:
+                self._http_client = await asyncio.to_thread(
+                    httpx.AsyncClient,
+                    headers=dict(self.config.headers),
+                    auth=self._auth,
+                    timeout=self._http_timeout,
+                    follow_redirects=True,
+                )
+            return self._http_client
 
     def _ensure_open(self) -> None:
         """Reject operations after the client has been closed."""
@@ -182,45 +186,41 @@ class MCPClient:
 
     async def discover(self) -> MCPDiscoveryResult:
         """Initialize once and return server metadata and its complete catalogue."""
-        async with self._operation_lock:
-            self._ensure_open()
-            async with self._session() as (session, initialization):
-                return MCPDiscoveryResult(
-                    server=self._server_information(initialization),
-                    tools=await self._list_session_tools(session),
-                )
+        self._ensure_open()
+        async with self._session() as (session, initialization):
+            return MCPDiscoveryResult(
+                server=self._server_information(initialization),
+                tools=await self._list_session_tools(session),
+            )
 
     async def check_connection(self) -> MCPServerInformation:
         """Connect, initialize once, and return information about the server."""
-        async with self._operation_lock:
-            self._ensure_open()
-            async with self._session() as (_, initialization):
-                return self._server_information(initialization)
+        self._ensure_open()
+        async with self._session() as (_, initialization):
+            return self._server_information(initialization)
 
     async def list_tools(self) -> tuple[MCPTool, ...]:
         """Return the complete advertised tool catalogue."""
-        async with self._operation_lock:
-            self._ensure_open()
-            async with self._session() as (session, _):
-                return await self._list_session_tools(session)
+        self._ensure_open()
+        async with self._session() as (session, _):
+            return await self._list_session_tools(session)
 
     async def call_tool(
         self, tool_name: str, arguments: Mapping[str, Any] | None = None
     ) -> MCPToolResult:
         """Invoke a tool once without automatically retrying side effects."""
-        async with self._operation_lock:
-            self._ensure_open()
-            async with self._session() as (session, _):
-                result = await session.call_tool(
-                    tool_name,
-                    dict(arguments) if arguments is not None else {},
-                    read_timeout_seconds=self._session_read_timeout,
-                )
-                return self._tool_result(result)
+        self._ensure_open()
+        async with self._session() as (session, _):
+            result = await session.call_tool(
+                tool_name,
+                dict(arguments) if arguments is not None else {},
+                read_timeout_seconds=self._session_read_timeout,
+            )
+            return self._tool_result(result)
 
     async def aclose(self) -> None:
-        """Close the owned HTTP client after any active operation completes."""
-        async with self._operation_lock:
+        """Close the owned HTTP client and reject subsequent operations."""
+        async with self._http_client_lock:
             if self._closed:
                 return
             self._closed = True

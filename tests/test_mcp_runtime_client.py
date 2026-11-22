@@ -1,5 +1,6 @@
 """Tests for the Streamable HTTP MCP client public API."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -85,6 +86,42 @@ async def test_check_connection_initializes_once_and_returns_public_model():
     assert information.version == "1.2.3"
     assert information.protocol_version == "2025-03-26"
     assert information.instructions == "Use tools carefully."
+
+
+async def test_operations_can_run_concurrently():
+    """One slow MCP operation does not block another on the same server."""
+    both_entered = asyncio.Event()
+    release = asyncio.Event()
+    entered = 0
+
+    async def initialize():
+        nonlocal entered
+        entered += 1
+        if entered == 2:
+            both_entered.set()
+        await release.wait()
+        return _initialization()
+
+    first_session = _Session()
+    first_session.initialize.side_effect = initialize
+    second_session = _Session()
+    second_session.initialize.side_effect = initialize
+
+    with (
+        patch(f"{MODULE}.streamable_http_client", _transport),
+        patch(
+            f"{MODULE}.ClientSession",
+            side_effect=[first_session, second_session],
+        ),
+    ):
+        client = MCPClient(_config(), http_client=MagicMock())
+        operations = [
+            asyncio.create_task(client.check_connection()),
+            asyncio.create_task(client.check_connection()),
+        ]
+        await asyncio.wait_for(both_entered.wait(), timeout=1)
+        release.set()
+        await asyncio.gather(*operations)
 
 
 async def test_list_tools_exhausts_sdk_cursor_pages():
@@ -233,3 +270,4 @@ async def test_created_http_client_receives_injected_auth_provider():
         await MCPClient(_config(), auth=auth).check_connection()
 
     assert client_class.call_args.kwargs["auth"] is auth
+    assert client_class.call_args.kwargs["follow_redirects"] is True

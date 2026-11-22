@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from urllib.parse import urljoin, urlparse
 
@@ -68,7 +69,11 @@ class MCPOAuthClientRegistrar:
             }
         )
         owns_client = http_client is None
-        client = http_client or httpx.AsyncClient(follow_redirects=False)
+        client = (
+            await asyncio.to_thread(httpx.AsyncClient, follow_redirects=True)
+            if http_client is None
+            else http_client
+        )
         try:
             response = await client.post(
                 oauth_config.registration_url,
@@ -110,7 +115,11 @@ class MCPOAuthClientRegistrar:
     ) -> MCPOAuthConfiguration:
         """Discover OAuth metadata using the MCP authorization specification."""
         owns_client = http_client is None
-        client = http_client or httpx.AsyncClient(follow_redirects=False)
+        client = (
+            await asyncio.to_thread(httpx.AsyncClient, follow_redirects=True)
+            if http_client is None
+            else http_client
+        )
         try:
             resource_metadata = (
                 await MCPOAuthClientRegistrar._async_discover_resource_metadata(
