@@ -24,6 +24,14 @@
                     "skip_authentication": "Ignorer l'authentification",
                     "api_provider": "Api Provider"
                 }
+            },
+            "ai_endpoint": {
+                "data": {
+                    "mcp_media_types": "Médias MCP pris en charge"
+                },
+                "data_description": {
+                    "mcp_media_types": "Sélectionnez les types de médias MCP que ce point de terminaison d’IA peut traiter nativement. Les médias non sélectionnés restent disponibles en Base64 dans le résultat de l’outil."
+                }
             }
         }
     },
@@ -34,6 +42,12 @@
                 "combined_system": "Invite système combinée",
                 "user": "Entrée utilisateur",
                 "disabled": "Désactivé"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Images",
+                "audio": "Audio"
             }
         }
     },

@@ -23,6 +23,7 @@ from custom_components.extended_openai_conversation.config_flow import (
     MCP_ERROR_CANNOT_CONNECT,
     MCP_ERROR_SERVER_ERROR,
     MCP_ERROR_SERVER_NOT_FOUND,
+    STEP_AI_ENDPOINT_DATA_SCHEMA,
     ExtendedOpenAIAITaskSubentryFlowHandler,
     ExtendedOpenAIConversationConfigFlow,
     ExtendedOpenAISubentryFlowHandler,
@@ -38,6 +39,7 @@ from custom_components.extended_openai_conversation.const import (
     CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
     CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
+    CONF_MCP_MEDIA_TYPES,
     CONF_MCP_OAUTH_ACTION,
     CONF_MCP_OAUTH_TIMEOUT,
     CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
@@ -47,8 +49,10 @@ from custom_components.extended_openai_conversation.const import (
     CONF_SKILLS,
     CONF_SKIP_AUTHENTICATION,
     DEFAULT_CONF_BASE_URL,
+    DEFAULT_MCP_MEDIA_TYPES,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
+    MCP_MEDIA_TYPES,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     SERVICE_TYPE_AI_ENDPOINT,
@@ -256,6 +260,21 @@ async def test_ai_endpoint_can_be_saved_without_review(hass):
     assert result == {"type": "create_entry"}
     assert flow.async_create_entry.call_args.kwargs["data"] == flow._ai_endpoint_data
     assert len(flow.async_create_entry.call_args.kwargs["subentries"]) == 2
+
+
+def test_ai_endpoint_enables_supported_mcp_media_by_default():
+    """New endpoints advertise both currently supported MCP media types."""
+    data = STEP_AI_ENDPOINT_DATA_SCHEMA({"api_key": "test-key"})
+
+    assert data[CONF_MCP_MEDIA_TYPES] == list(DEFAULT_MCP_MEDIA_TYPES)
+    schema = STEP_AI_ENDPOINT_DATA_SCHEMA.schema
+    media_key = next(
+        key for key in schema if getattr(key, "schema", key) == CONF_MCP_MEDIA_TYPES
+    )
+    selector = schema[media_key]
+    assert selector.config["options"] == list(MCP_MEDIA_TYPES)
+    assert selector.config["multiple"] is True
+    assert selector.config["translation_key"] == "mcp_media_type"
 
 
 async def test_mcp_step_keeps_config_and_returns_to_service_menu(hass):

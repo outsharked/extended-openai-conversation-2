@@ -80,6 +80,7 @@ from .const import (
     CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
     CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
+    CONF_MCP_MEDIA_TYPES,
     CONF_MCP_OAUTH_ACTION,
     CONF_MCP_OAUTH_TIMEOUT,
     CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
@@ -111,6 +112,7 @@ from .const import (
     DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
     DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
     DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
+    DEFAULT_MCP_MEDIA_TYPES,
     DEFAULT_MCP_OAUTH_TIMEOUT,
     DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
     DEFAULT_NAME,
@@ -123,6 +125,7 @@ from .const import (
     DEFAULT_TOP_P,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
+    MCP_MEDIA_TYPES,
     MCP_OAUTH_ACTION_PROCEED,
     MCP_OAUTH_ACTION_RETURN,
     REASONING_EFFORT_OPTIONS,
@@ -296,6 +299,17 @@ STEP_AI_ENDPOINT_DATA_SCHEMA = vol.Schema(
                     for api_provider in API_PROVIDERS
                 ],
                 mode=SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Optional(
+            CONF_MCP_MEDIA_TYPES,
+            default=list(DEFAULT_MCP_MEDIA_TYPES),
+        ): SelectSelector(
+            SelectSelectorConfig(
+                options=list(MCP_MEDIA_TYPES),
+                mode=SelectSelectorMode.DROPDOWN,
+                multiple=True,
+                translation_key="mcp_media_type",
             )
         ),
     }

@@ -24,6 +24,14 @@
                     "skip_authentication": "Pular autenticação",
                     "api_provider": "Api Provider"
                 }
+            },
+            "ai_endpoint": {
+                "data": {
+                    "mcp_media_types": "Mídia MCP compatível"
+                },
+                "data_description": {
+                    "mcp_media_types": "Selecione os tipos de mídia MCP que este endpoint de IA pode processar nativamente. A mídia não selecionada permanece disponível como Base64 no resultado da ferramenta."
+                }
             }
         }
     },
@@ -34,6 +42,12 @@
                 "combined_system": "Prompt de sistema combinado",
                 "user": "Entrada do usuário",
                 "disabled": "Desativado"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Imagens",
+                "audio": "Áudio"
             }
         }
     },

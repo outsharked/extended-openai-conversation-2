@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Collection
 from dataclasses import dataclass
 import json
 import logging
@@ -46,6 +46,7 @@ from .const import (
     CONF_MCP_AUTO_ADD_DEFAULT_PROMPT,
     CONF_MCP_AUTO_ADD_PERMANENT_TOOLS,
     CONF_MCP_DEFAULT_PROMPT_PLACEMENT,
+    CONF_MCP_MEDIA_TYPES,
     CONF_MCP_PERMANENT_TOOLS_PLACEMENT,
     CONF_MCP_SERVERS,
     CONF_REASONING_EFFORT,
@@ -62,6 +63,7 @@ from .const import (
     DEFAULT_MCP_AUTO_ADD_DEFAULT_PROMPT,
     DEFAULT_MCP_AUTO_ADD_PERMANENT_TOOLS,
     DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
+    DEFAULT_MCP_MEDIA_TYPES,
     DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
     DEFAULT_REASONING_EFFORT,
     DEFAULT_SERVICE_TIER,
@@ -303,6 +305,7 @@ def _tool_result_data(content: conversation.ToolResultContent) -> Any:
 
 def _extract_mcp_media_content(
     result: Any,
+    supported_media_types: Collection[str] = DEFAULT_MCP_MEDIA_TYPES,
 ) -> tuple[
     Any,
     list[
@@ -314,6 +317,7 @@ def _extract_mcp_media_content(
     if not isinstance(result, dict) or not isinstance(result.get("content"), list):
         return result, []
 
+    enabled_media_types = frozenset(supported_media_types)
     media_parts: list[
         ChatCompletionContentPartImageParam
         | ChatCompletionContentPartInputAudioParam
@@ -331,6 +335,16 @@ def _extract_mcp_media_content(
             mime_type = "image/jpeg"
 
         summary = dict(item)
+        if content_type not in enabled_media_types:
+            summary["media_error"] = {
+                "code": "media_not_enabled",
+                "message": (
+                    "This media type is not enabled for the AI endpoint. The "
+                    "original base64 media data is included in this tool result."
+                ),
+            }
+            serialized_content.append(summary)
+            continue
         if not isinstance(mime_type, str):
             summary["media_error"] = {
                 "code": "unsupported_mime_type",
@@ -1112,7 +1126,10 @@ class ExtendedOpenAIBaseLLMEntity(Entity):
             | ChatCompletionContentPartInputAudioParam
         ] = []
         if function_config["type"] == "mcp":
-            result, media_parts = _extract_mcp_media_content(result)
+            result, media_parts = _extract_mcp_media_content(
+                result,
+                self.entry.data.get(CONF_MCP_MEDIA_TYPES, DEFAULT_MCP_MEDIA_TYPES),
+            )
 
         return (
             _make_tool_result_content(

@@ -24,6 +24,14 @@
                     "skip_authentication": "Authenticatie overslaan",
                     "api_provider": "Api Provider"
                 }
+            },
+            "ai_endpoint": {
+                "data": {
+                    "mcp_media_types": "Ondersteunde MCP-media"
+                },
+                "data_description": {
+                    "mcp_media_types": "Selecteer de MCP-mediatypen die dit AI-eindpunt rechtstreeks kan verwerken. Niet-geselecteerde media blijven als Base64 beschikbaar in het toolresultaat."
+                }
             }
         }
     },
@@ -34,6 +42,12 @@
                 "combined_system": "Gecombineerde systeemprompt",
                 "user": "Gebruikersinvoer",
                 "disabled": "Uitgeschakeld"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Afbeeldingen",
+                "audio": "Audio"
             }
         }
     },

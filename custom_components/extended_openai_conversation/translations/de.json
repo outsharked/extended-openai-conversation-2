@@ -24,6 +24,14 @@
                     "skip_authentication": "Authentifizierung überspringen",
                     "api_provider": "Api Provider"
                 }
+            },
+            "ai_endpoint": {
+                "data": {
+                    "mcp_media_types": "Unterstützte MCP-Medien"
+                },
+                "data_description": {
+                    "mcp_media_types": "Wähle die MCP-Medientypen aus, die dieser KI-Endpunkt nativ verarbeiten kann. Nicht ausgewählte Medien bleiben als Base64 im Werkzeugergebnis verfügbar."
+                }
             }
         }
     },
@@ -34,6 +42,12 @@
                 "combined_system": "Kombinierter System-Prompt",
                 "user": "Benutzereingabe",
                 "disabled": "Deaktiviert"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Bilder",
+                "audio": "Audio"
             }
         }
     },

@@ -44,7 +44,11 @@
           "api_version": "[%key:common::config_flow::data::api_version%]",
           "organization": "[%key:common::config_flow::data::organization%]",
           "skip_authentication": "[%key:common::config_flow::data::skip_authentication%]",
-          "api_provider": "[%key:common::config_flow::data::api_provider%]"
+          "api_provider": "[%key:common::config_flow::data::api_provider%]",
+          "mcp_media_types": "Supported MCP media"
+        },
+        "data_description": {
+          "mcp_media_types": "Select MCP media types that this AI endpoint can process natively. Unselected media remains available as base64 in the tool result."
         }
       },
       "mcp": {
@@ -184,6 +188,12 @@
         "combined_system": "Merged system prompt",
         "user": "User input",
         "disabled": "Disabled"
+      }
+    },
+    "mcp_media_type": {
+      "options": {
+        "image": "Images",
+        "audio": "Audio"
       }
     }
   },

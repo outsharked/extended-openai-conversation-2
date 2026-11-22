@@ -80,7 +80,11 @@
                     "api_version": "Api Version",
                     "organization": "Organization",
                     "skip_authentication": "Skip Authentication",
-                    "api_provider": "Api Provider"
+                    "api_provider": "Api Provider",
+                    "mcp_media_types": "Supported MCP media"
+                },
+                "data_description": {
+                    "mcp_media_types": "Select MCP media types that this AI endpoint can process natively. Unselected media remains available as base64 in the tool result."
                 }
             },
             "mcp": {
@@ -184,6 +188,12 @@
                 "combined_system": "Merged system prompt",
                 "user": "User input",
                 "disabled": "Disabled"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Images",
+                "audio": "Audio"
             }
         }
     },

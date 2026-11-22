@@ -24,6 +24,14 @@
                     "skip_authentication": "Ignora autenticazione",
                     "api_provider": "Api Provider"
                 }
+            },
+            "ai_endpoint": {
+                "data": {
+                    "mcp_media_types": "Contenuti multimediali MCP supportati"
+                },
+                "data_description": {
+                    "mcp_media_types": "Seleziona i tipi di contenuti multimediali MCP che questo endpoint IA può elaborare in modo nativo. I contenuti non selezionati restano disponibili come Base64 nel risultato dello strumento."
+                }
             }
         }
     },
@@ -34,6 +42,12 @@
                 "combined_system": "Prompt di sistema combinato",
                 "user": "Input utente",
                 "disabled": "Disabilitato"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Immagini",
+                "audio": "Audio"
             }
         }
     },

@@ -24,6 +24,14 @@
                     "skip_authentication": "Pomiń authentykację",
                     "api_provider": "Api Provider"
                 }
+            },
+            "ai_endpoint": {
+                "data": {
+                    "mcp_media_types": "Obsługiwane multimedia MCP"
+                },
+                "data_description": {
+                    "mcp_media_types": "Wybierz typy multimediów MCP, które ten punkt końcowy AI może przetwarzać natywnie. Niewybrane multimedia pozostaną dostępne jako Base64 w wyniku narzędzia."
+                }
             }
         }
     },
@@ -34,6 +42,12 @@
                 "combined_system": "Połączony monit systemowy",
                 "user": "Dane wejściowe użytkownika",
                 "disabled": "Wyłączone"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Obrazy",
+                "audio": "Dźwięk"
             }
         }
     },

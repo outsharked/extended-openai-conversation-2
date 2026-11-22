@@ -464,6 +464,34 @@ def test_extract_mcp_media_content_preserves_invalid_image_payload():
     assert media_parts == []
 
 
+def test_extract_mcp_media_content_preserves_disabled_image_payload():
+    """Endpoint-disabled media remains in the serialized MCP tool result."""
+    encoded = base64.b64encode(b"fake-png-bytes").decode()
+    result = {"content": [{"type": "image", "mimeType": "image/png", "data": encoded}]}
+
+    serialized, media_parts = _extract_mcp_media_content(
+        result, supported_media_types=("audio",)
+    )
+
+    assert serialized == {
+        "content": [
+            {
+                "type": "image",
+                "mimeType": "image/png",
+                "data": encoded,
+                "media_error": {
+                    "code": "media_not_enabled",
+                    "message": (
+                        "This media type is not enabled for the AI endpoint. The "
+                        "original base64 media data is included in this tool result."
+                    ),
+                },
+            }
+        ]
+    }
+    assert media_parts == []
+
+
 def test_extract_mcp_media_content_builds_native_audio_part():
     """Standard MCP AudioContent becomes a native model audio input."""
     encoded = base64.b64encode(b"fake-audio-bytes").decode()
