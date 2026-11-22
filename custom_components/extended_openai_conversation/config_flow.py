@@ -1368,6 +1368,8 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             and self._finalize_mcp_service_config()
         ):
             return await self.async_step_service_menu()
+        if self._selected_service_type == SERVICE_TYPE_MCP:
+            self._sync_mcp_oauth_token_from_entry()
         data = self._service_configuration()
         if data is None:
             return await self.async_step_service_menu()

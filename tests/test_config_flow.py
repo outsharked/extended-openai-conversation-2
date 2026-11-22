@@ -943,6 +943,45 @@ async def test_reconfigure_restores_discovery_with_refreshable_oauth(hass):
     assert flow._mcp_oauth_data[CONF_TOKEN] == refreshed_token
 
 
+async def test_reconfigure_save_preserves_token_refreshed_after_connection_check(hass):
+    """Saving reconfiguration cannot overwrite HA's latest OAuth token."""
+    flow = _config_flow(hass)
+    flow._selected_service_type = SERVICE_TYPE_MCP
+    flow._mcp_config = _mcp_server_config(use_oauth=True)
+    _configure_mcp_tool_policy(flow, permanent=[], disabled=[])
+    old_token = {
+        "access_token": "old-access-token",
+        "refresh_token": "old-refresh-token",
+    }
+    refreshed_token = {
+        "access_token": "refreshed-access-token",
+        "refresh_token": "refreshed-refresh-token",
+    }
+    flow._mcp_oauth_data = {
+        "authorization_url": "https://auth.example.com/authorize",
+        "token_url": "https://auth.example.com/token",
+        "oauth_scope": ["mcp"],
+        "oauth_issuer": "https://auth.example.com/",
+        "auth_implementation": "https://auth.example.com/",
+        CONF_TOKEN: old_token,
+    }
+    flow._mcp_oauth_from_entry = True
+    entry = MagicMock()
+    entry.title = "Vault MCP"
+    entry.data = {CONF_TOKEN: refreshed_token}
+    flow._reconfigure_entry = entry
+    flow.async_update_reload_and_abort = MagicMock(
+        return_value={"type": "abort"}
+    )
+
+    result = await flow.async_step_service_save()
+
+    assert result == {"type": "abort"}
+    saved_data = flow.async_update_reload_and_abort.call_args.kwargs["data"]
+    assert saved_data[CONF_TOKEN] == refreshed_token
+    assert flow._mcp_oauth_data[CONF_TOKEN] == refreshed_token
+
+
 async def test_requested_initial_discovery_caches_catalogue(hass):
     """The server submission's requested discovery retrieves one catalogue."""
     flow = _config_flow(hass)
