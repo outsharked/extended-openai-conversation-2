@@ -517,9 +517,7 @@ def test_extract_mcp_media_content_builds_native_image_part():
 def test_extract_mcp_media_content_preserves_invalid_image_payload():
     """Invalid MCP image data remains available with a model-facing error."""
     result = {
-        "content": [
-            {"type": "image", "mimeType": "image/png", "data": "not base64!"}
-        ]
+        "content": [{"type": "image", "mimeType": "image/png", "data": "not base64!"}]
     }
 
     serialized, media_parts = _extract_mcp_media_content(result)
@@ -575,11 +573,7 @@ def test_extract_mcp_media_content_preserves_disabled_image_payload():
 def test_extract_mcp_media_content_builds_native_audio_part():
     """Standard MCP AudioContent becomes a native model audio input."""
     encoded = base64.b64encode(b"fake-audio-bytes").decode()
-    result = {
-        "content": [
-            {"type": "audio", "mimeType": "audio/mpeg", "data": encoded}
-        ]
-    }
+    result = {"content": [{"type": "audio", "mimeType": "audio/mpeg", "data": encoded}]}
 
     serialized, media_parts = _extract_mcp_media_content(result)
 
@@ -602,9 +596,7 @@ def test_extract_mcp_media_content_builds_native_audio_part():
 def test_extract_mcp_media_content_preserves_unsupported_audio_payload():
     """Unsupported MCP audio remains available with a model-facing error."""
     result = {
-        "content": [
-            {"type": "audio", "mimeType": "audio/ogg", "data": "ZmFrZQ=="}
-        ]
+        "content": [{"type": "audio", "mimeType": "audio/ogg", "data": "ZmFrZQ=="}]
     }
 
     serialized, media_parts = _extract_mcp_media_content(result)
@@ -663,9 +655,7 @@ def test_convert_content_to_param_places_media_after_all_tool_results():
         ],
     }
 
-    messages = _convert_content_to_param(
-        [first, second], tool_media_parts=media_parts
-    )
+    messages = _convert_content_to_param([first, second], tool_media_parts=media_parts)
 
     assert [message["role"] for message in messages] == ["tool", "tool", "user"]
     assert messages[2]["content"] == [
@@ -1043,9 +1033,10 @@ def test_active_recalled_context_keeps_latest_page_and_releases_older_pages():
         contents,
         tool_result_overrides=overrides,
     )
-    assert json.loads(messages[2]["content"])["result"][
-        "recalled_context_released"
-    ] is True
+    assert (
+        json.loads(messages[2]["content"])["result"]["recalled_context_released"]
+        is True
+    )
     assert "memories" in json.loads(messages[3]["content"])["result"]
 
 
@@ -1192,9 +1183,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
     """Automatic recall embeds the latest user input in the saved scope."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     chat_log = _compaction_chat_log()
     chat_log.conversation_id = "conversation-1"
@@ -1224,9 +1213,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches, close_matches = await entity._async_recall_embedding_memories(
-            chat_log
-        )
+        matches, close_matches = await entity._async_recall_embedding_memories(chat_log)
 
     assert matches == [match]
     assert close_matches == []
@@ -1235,9 +1222,7 @@ async def test_embedding_recall_searches_the_current_agent_conversation():
         agent_id="agent-1",
         conversation_id="conversation-1",
     )
-    memory_store.async_has_memories.assert_awaited_once_with(
-        scope, "embedding-model"
-    )
+    memory_store.async_has_memories.assert_awaited_once_with(scope, "embedding-model")
     request = embedding_client.embeddings.create.await_args.kwargs
     assert request["model"] == "embedding-model"
     assert "What temperature do I prefer?" in request["input"][0]
@@ -1266,15 +1251,9 @@ async def test_embedding_recall_splits_oversized_query_and_merges_matches():
     embedding_client = MagicMock()
     embedding_client.embeddings.create = AsyncMock(
         side_effect=[
-            RuntimeError(
-                "request (29314 tokens) exceeds the available context size"
-            ),
-            SimpleNamespace(
-                data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]
-            ),
-            SimpleNamespace(
-                data=[SimpleNamespace(index=0, embedding=[0.0, 1.0])]
-            ),
+            RuntimeError("request (29314 tokens) exceeds the available context size"),
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]),
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[0.0, 1.0])]),
         ]
     )
     record = EmbeddingMemoryRecord(
@@ -1301,9 +1280,7 @@ async def test_embedding_recall_splits_oversized_query_and_merges_matches():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches, close_matches = await entity._async_recall_embedding_memories(
-            chat_log
-        )
+        matches, close_matches = await entity._async_recall_embedding_memories(chat_log)
 
     assert embedding_client.embeddings.create.await_count == 3
     assert memory_store.async_search.await_count == 2
@@ -1340,9 +1317,7 @@ async def test_embedding_recall_reranks_agent_candidate_pool():
     """Automatic recall reranks the configured pool before injecting results."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     entity.subentry.data.update(
         {
@@ -1380,9 +1355,7 @@ async def test_embedding_recall_reranks_agent_candidate_pool():
     memory_store.async_search = AsyncMock(return_value=matches)
     reranker_client = MagicMock()
     reranker_client.async_rerank = AsyncMock(
-        return_value=[
-            RerankerResult(index=3, score=0.99, document="memory 3")
-        ]
+        return_value=[RerankerResult(index=3, score=0.99, document="memory 3")]
     )
     entity.entry.runtime_data = OpenAIServiceRuntime(
         client=MagicMock(),
@@ -1391,9 +1364,7 @@ async def test_embedding_recall_reranks_agent_candidate_pool():
         reranker_client=reranker_client,
     )
 
-    reranked, close_matches = await entity._async_recall_embedding_memories(
-        chat_log
-    )
+    reranked, close_matches = await entity._async_recall_embedding_memories(chat_log)
 
     assert [match.record.record_id for match in reranked] == ["record-3"]
     assert reranked[0].score == 0.99
@@ -1429,9 +1400,7 @@ async def test_embedding_recall_reranker_failure_uses_embedding_order():
     """Automatic recall retains embedding results when reranking fails."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     entity.subentry.data.update(
         {
@@ -1476,9 +1445,7 @@ async def test_embedding_recall_reranker_failure_uses_embedding_order():
         reranker_client=reranker_client,
     )
 
-    recalled, close_matches = await entity._async_recall_embedding_memories(
-        chat_log
-    )
+    recalled, close_matches = await entity._async_recall_embedding_memories(chat_log)
 
     assert [match.record.record_id for match in recalled] == [
         "record-0",
@@ -1492,9 +1459,7 @@ async def test_embedding_recall_retains_close_excluded_matches():
     """Automatic recall reports candidates close to its lowest selected score."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     entity.subentry.data.update(
         {
@@ -1547,9 +1512,7 @@ async def test_embedding_recall_avoids_api_call_without_archived_history():
     """A new conversation performs no unnecessary embeddings request."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     chat_log = _compaction_chat_log()
     chat_log.conversation_id = "conversation-1"
@@ -1564,9 +1527,7 @@ async def test_embedding_recall_avoids_api_call_without_archived_history():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches, close_matches = await entity._async_recall_embedding_memories(
-            chat_log
-        )
+        matches, close_matches = await entity._async_recall_embedding_memories(chat_log)
 
     assert matches == []
     assert close_matches == []
@@ -1578,9 +1539,7 @@ async def test_embedding_recall_failure_is_non_destructive():
     """A runtime recall failure omits optional context without truncating history."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     chat_log = _compaction_chat_log()
     chat_log.conversation_id = "conversation-1"
@@ -1598,9 +1557,7 @@ async def test_embedding_recall_failure_is_non_destructive():
         new_callable=PropertyMock,
         return_value=(embedding_client, memory_store),
     ):
-        matches, close_matches = await entity._async_recall_embedding_memories(
-            chat_log
-        )
+        matches, close_matches = await entity._async_recall_embedding_memories(chat_log)
 
     assert matches == []
     assert close_matches == []
@@ -1613,9 +1570,7 @@ async def test_context_recall_execution_injects_current_conversation_id():
     entity.hass = MagicMock()
     entity._attr_entity_id = "conversation.test"
     function = MagicMock()
-    function.execute = AsyncMock(
-        return_value={"memories": [], "matches_returned": 0}
-    )
+    function.execute = AsyncMock(return_value={"memories": [], "matches_returned": 0})
     function_tool = {
         "spec": {"name": "context_recall"},
         "function": {
@@ -1719,9 +1674,7 @@ async def test_compaction_summarizes_old_history_and_keeps_latest_turn():
     chat_log = _compaction_chat_log()
     response = SimpleNamespace(
         choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="The user prefers 20 C.")
-            )
+            SimpleNamespace(message=SimpleNamespace(content="The user prefers 20 C."))
         ]
     )
 
@@ -1733,7 +1686,7 @@ async def test_compaction_summarizes_old_history_and_keeps_latest_turn():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
@@ -1796,12 +1749,12 @@ async def test_compaction_uses_configured_prompt_and_preserves_recent_turns():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_get_context_compaction_text",
             new=AsyncMock(
                 return_value=(
@@ -1849,9 +1802,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     for index in range(4):
         chat_log.content.extend(
             [
-                conversation.UserContent(
-                    content=f"Old request {index}: " + "x" * 400
-                ),
+                conversation.UserContent(content=f"Old request {index}: " + "x" * 400),
                 conversation.AssistantContent(
                     agent_id="conversation.test",
                     content=f"Old response {index}: " + "y" * 400,
@@ -1875,10 +1826,14 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
                 choices=[SimpleNamespace(message=SimpleNamespace(content="Chunk two"))]
             ),
             SimpleNamespace(
-                choices=[SimpleNamespace(message=SimpleNamespace(content="Chunk three"))]
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content="Chunk three"))
+                ]
             ),
             SimpleNamespace(
-                choices=[SimpleNamespace(message=SimpleNamespace(content="Final summary"))]
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content="Final summary"))
+                ]
             ),
         ]
     )
@@ -1891,7 +1846,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=create_completion,
         ),
@@ -1906,9 +1861,7 @@ async def test_compaction_chunks_oversized_history_by_complete_turn():
     for call in create_completion.await_args_list:
         request = call.kwargs
         request_tokens = len(json.dumps(request["messages"])) // 4
-        output_tokens = request.get(
-            "max_tokens", request.get("max_completion_tokens")
-        )
+        output_tokens = request.get("max_tokens", request.get("max_completion_tokens"))
         assert request_tokens + output_tokens <= 500
     assert chat_log.content[-2].content == "Current request"
     assert chat_log.content[-1].content == "Current response"
@@ -1956,7 +1909,7 @@ async def test_compaction_reduces_retained_tail_before_summarizing():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
@@ -1968,9 +1921,7 @@ async def test_compaction_reduces_retained_tail_before_summarizing():
 
     assert changed is True
     request = create_completion.await_args.kwargs
-    max_summary_tokens = request.get(
-        "max_tokens", request.get("max_completion_tokens")
-    )
+    max_summary_tokens = request.get("max_tokens", request.get("max_completion_tokens"))
     assert max_summary_tokens > 1
     transcript = request["messages"][1]["content"]
     assert "Old request" in transcript
@@ -1998,7 +1949,7 @@ async def test_compaction_failure_falls_back_to_clear_strategy():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(side_effect=RuntimeError("summary failed")),
         ),
@@ -2031,7 +1982,7 @@ async def test_intra_turn_compaction_preserves_latest_completed_exchange():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(return_value=response),
         ) as create_completion,
@@ -2084,7 +2035,7 @@ async def test_intra_turn_retrieval_stores_old_exchanges_temporarily():
     embedding_client.embeddings.create = AsyncMock(
         side_effect=[
             SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[1.0, 0.0])]),
-            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[0.0, 1.0])])
+            SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[0.0, 1.0])]),
         ]
     )
     memory_store = MagicMock()
@@ -2129,9 +2080,7 @@ async def test_intra_turn_retrieval_falls_back_to_compaction():
     )
 
     assert changed is True
-    assert chat_log.content[2].content == (
-        "Earlier tool context:\nFallback summary"
-    )
+    assert chat_log.content[2].content == ("Earlier tool context:\nFallback summary")
     entity._summarize_compaction_groups.assert_awaited_once()
 
 
@@ -2156,7 +2105,7 @@ async def test_compaction_rolls_previous_summary_into_next_summary():
             return_value=MagicMock(),
         ),
         patch(
-                "custom_components.extended_openai_conversation.context_management.manager."
+            "custom_components.extended_openai_conversation.context_management.manager."
             "async_create_chat_completion",
             new=AsyncMock(side_effect=responses),
         ) as create_completion,
@@ -2212,13 +2161,9 @@ async def test_clear_strategy_does_not_call_summarizer():
 
 async def test_retrieve_compact_archives_and_summarizes_the_same_history():
     """Combined retrieval preserves verbatim turns before summarizing them."""
-    entity = _entity_for_compaction(
-        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
-    )
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     chat_log = _compaction_chat_log()
     chat_log.conversation_id = "conversation-1"
@@ -2232,9 +2177,7 @@ async def test_retrieve_compact_archives_and_summarizes_the_same_history():
     memory_store.async_append = AsyncMock()
     summary_response = SimpleNamespace(
         choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="The user prefers 20 C.")
-            )
+            SimpleNamespace(message=SimpleNamespace(content="The user prefers 20 C."))
         ]
     )
 
@@ -2274,10 +2217,7 @@ async def test_retrieve_compact_archives_and_summarizes_the_same_history():
         "assistant",
     ]
     assert records[0].messages[0]["content"] == "My preferred temperature is 20 C"
-    assert (
-        records[0].messages[1]["content"]
-        == "I will remember that preference."
-    )
+    assert records[0].messages[1]["content"] == "I will remember that preference."
     assert [content.content for content in chat_log.content] == [
         "System prompt",
         "Summary of earlier conversation:\nThe user prefers 20 C.",
@@ -2334,9 +2274,7 @@ async def test_embedding_archival_batches_chunks_and_stores_messages_once():
     assert len(requests) > 1
     assert all(len(request.kwargs["input"]) == 1 for request in requests)
     embedding_inputs = [
-        value
-        for request in requests
-        for value in request.kwargs["input"]
+        value for request in requests for value in request.kwargs["input"]
     ]
     assert len(embedding_inputs) > 1
     assert all(len(value) <= 40 for value in embedding_inputs)
@@ -2386,9 +2324,7 @@ async def test_keyword_archival_survives_embedding_failure_when_both_enabled():
     """A vector outage does not discard the shared literal-search archive."""
     entity = _entity_for_compaction()
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     entity.subentry.data[CONF_CONTEXT_TRUNCATE_STRATEGY] = [
         CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
@@ -2434,9 +2370,7 @@ async def test_embedding_archival_adapts_to_endpoint_context_limit():
     embedding_client = MagicMock()
     embedding_client.embeddings.create = AsyncMock(
         side_effect=[
-            RuntimeError(
-                "request (8453 tokens) exceeds the available context size"
-            ),
+            RuntimeError("request (8453 tokens) exceeds the available context size"),
             SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[1.0])]),
             SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[2.0])]),
         ]
@@ -2466,9 +2400,7 @@ async def test_embedding_archival_excludes_generated_compaction_summaries():
     """Retrieval memory contains original history but no generated summaries."""
     entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE)
     entity.entry.entry_id = "endpoint-1"
-    entity.entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entity.entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entity.subentry.subentry_id = "agent-1"
     chat_log = MagicMock()
     chat_log.conversation_id = "conversation-1"
@@ -2495,9 +2427,7 @@ async def test_embedding_archival_excludes_generated_compaction_summaries():
     ]
     embedding_client = MagicMock()
     embedding_client.embeddings.create = AsyncMock(
-        return_value=SimpleNamespace(
-            data=[SimpleNamespace(index=0, embedding=[1.0])]
-        )
+        return_value=SimpleNamespace(data=[SimpleNamespace(index=0, embedding=[1.0])])
     )
     memory_store = MagicMock()
     memory_store.async_append = AsyncMock()
@@ -2524,9 +2454,7 @@ async def test_embedding_archival_excludes_generated_compaction_summaries():
 
 async def test_retrieve_compact_uses_archive_when_summarization_fails():
     """A safely archived segment can be removed when summarization fails."""
-    entity = _entity_for_compaction(
-        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
-    )
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT)
     entity._archive_message_history = AsyncMock(return_value=True)
     entity._compact_message_history = AsyncMock(
         side_effect=RuntimeError("summary failed")
@@ -2548,9 +2476,7 @@ async def test_retrieve_compact_uses_archive_when_summarization_fails():
 
 async def test_retrieve_compact_compacts_when_archival_fails():
     """A retrieval outage does not prevent the configured rolling summary."""
-    entity = _entity_for_compaction(
-        CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT
-    )
+    entity = _entity_for_compaction(CONTEXT_TRUNCATE_STRATEGY_RETRIEVE_COMPACT)
     entity._archive_message_history = AsyncMock(
         side_effect=RuntimeError("embedding failed")
     )
@@ -2584,8 +2510,7 @@ async def test_transform_stream_records_usage_without_compacting_mid_stream():
         )
 
     assert [
-        delta
-        async for delta in entity._transform_stream(chat_log, _stream(), usage)
+        delta async for delta in entity._transform_stream(chat_log, _stream(), usage)
     ] == [{"role": "assistant"}]
     assert usage == _RequestTokenUsage(prompt_tokens=900, total_tokens=1100)
     entity._truncate_message_history.assert_not_awaited()

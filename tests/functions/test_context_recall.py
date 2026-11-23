@@ -49,9 +49,7 @@ def _record(record_id: str, created_at: str, content: str) -> EmbeddingMemoryRec
 
 def test_context_recall_tool_keeps_scope_out_of_model_arguments():
     """Only the search query and result limit are exposed to the model."""
-    tool = build_context_recall_function_tool(
-        "endpoint-1", "agent-1", 4000, 3
-    )
+    tool = build_context_recall_function_tool("endpoint-1", "agent-1", 4000, 3)
 
     assert tool["spec"]["name"] == "context_recall"
     assert tool["spec"]["parameters"]["required"] == ["query"]
@@ -95,9 +93,7 @@ def test_browse_recalled_context_tool_keeps_scope_out_of_model_arguments():
 
 def test_context_search_tool_keeps_scope_out_of_model_arguments():
     """Literal search exposes only its query controls to the model."""
-    tool = build_context_search_function_tool(
-        "endpoint-1", "agent-1", 3000, 3
-    )
+    tool = build_context_search_function_tool("endpoint-1", "agent-1", 3000, 3)
 
     assert tool["spec"]["name"] == "context_search"
     assert tool["spec"]["parameters"]["required"] == ["query"]
@@ -160,9 +156,7 @@ async def test_context_search_returns_verbatim_messages_without_relevance(hass):
         {
             "record_id": "literal:0",
             "created_at": "2026-01-01T00:00:00+00:00",
-            "messages": [
-                {"role": "user", "content": "The exact Error-42 occurred"}
-            ],
+            "messages": [{"role": "user", "content": "The exact Error-42 occurred"}],
         }
     ]
     assert "relevance" not in result["memories"][0]
@@ -188,9 +182,7 @@ async def test_context_recall_returns_original_messages_chronologically(hass):
     )
     memory_store.async_search = AsyncMock(return_value=[newer, older])
     entry = MagicMock()
-    entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entry.runtime_data = OpenAIServiceRuntime(
         client=MagicMock(),
         embedding_client=embedding_client,
@@ -217,9 +209,7 @@ async def test_context_recall_returns_original_messages_chronologically(hass):
         agent_id="agent-1",
         conversation_id="conversation-1",
     )
-    memory_store.async_has_memories.assert_awaited_once_with(
-        scope, "embedding-model"
-    )
+    memory_store.async_has_memories.assert_awaited_once_with(scope, "embedding-model")
     embedding_client.embeddings.create.assert_awaited_once_with(
         model="embedding-model",
         input=["What temperature did I settle on?"],
@@ -233,17 +223,13 @@ async def test_context_recall_returns_original_messages_chronologically(hass):
                 "record_id": "older",
                 "created_at": "2026-01-01T00:00:00+00:00",
                 "relevance": 0.9,
-                "messages": [
-                    {"role": "user", "content": "Earlier preference"}
-                ],
+                "messages": [{"role": "user", "content": "Earlier preference"}],
             },
             {
                 "record_id": "newer",
                 "created_at": "2026-02-01T00:00:00+00:00",
                 "relevance": 0.95,
-                "messages": [
-                    {"role": "user", "content": "Later correction"}
-                ],
+                "messages": [{"role": "user", "content": "Later correction"}],
             },
         ],
         "matches_returned": 2,
@@ -289,9 +275,7 @@ async def test_context_recall_reranks_configured_candidate_pool(hass):
         ]
     )
     entry = MagicMock()
-    entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entry.runtime_data = OpenAIServiceRuntime(
         client=MagicMock(),
         embedding_client=embedding_client,
@@ -373,9 +357,7 @@ async def test_context_recall_reranker_failure_uses_embedding_order(hass):
         side_effect=RuntimeError("reranker unavailable")
     )
     entry = MagicMock()
-    entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entry.runtime_data = OpenAIServiceRuntime(
         client=MagicMock(),
         embedding_client=embedding_client,
@@ -608,9 +590,7 @@ async def test_context_recall_skips_embedding_when_archive_is_empty(hass):
     memory_store = MagicMock()
     memory_store.async_has_memories = AsyncMock(return_value=False)
     entry = MagicMock()
-    entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entry.runtime_data = OpenAIServiceRuntime(
         client=MagicMock(),
         embedding_client=embedding_client,
@@ -652,9 +632,7 @@ async def test_context_recall_returns_runtime_failures_as_tool_results(hass):
     memory_store = MagicMock()
     memory_store.async_has_memories = AsyncMock(return_value=True)
     entry = MagicMock()
-    entry.data = {
-        CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}
-    }
+    entry.data = {CONF_EMBEDDINGS: {CONF_EMBEDDINGS_MODEL: "embedding-model"}}
     entry.runtime_data = OpenAIServiceRuntime(
         client=MagicMock(),
         embedding_client=embedding_client,

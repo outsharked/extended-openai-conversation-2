@@ -54,9 +54,7 @@ def truncate_reranker_document(document: str, max_estimated_tokens: int | None) 
         return document
 
     truncated = document[:max_characters]
-    split_at = max(
-        truncated.rfind(separator) for separator in ("\n", "\t", " ")
-    )
+    split_at = max(truncated.rfind(separator) for separator in ("\n", "\t", " "))
     if split_at >= max_characters // 2:
         truncated = truncated[:split_at]
     return truncated.rstrip()
@@ -123,7 +121,9 @@ class RerankerClient:
             ]
         return parsed_results[:result_limit]
 
-    async def _async_request(self, query: str, documents: list[str], result_limit: int) -> Any:
+    async def _async_request(
+        self, query: str, documents: list[str], result_limit: int
+    ) -> Any:
         """Send one request and return its decoded JSON body."""
         try:
             async with self._session.post(
@@ -137,25 +137,41 @@ class RerankerClient:
                 },
             ) as response:
                 if response.status in {401, 403}:
-                    raise RerankerAuthenticationError("The reranker endpoint rejected the credentials.")
+                    raise RerankerAuthenticationError(
+                        "The reranker endpoint rejected the credentials."
+                    )
                 if response.status == 404 or response.status >= 500:
-                    raise RerankerConnectionError(f"The reranker endpoint returned HTTP {response.status}.")
+                    raise RerankerConnectionError(
+                        f"The reranker endpoint returned HTTP {response.status}."
+                    )
                 if response.status >= 400:
-                    raise RerankerResponseError(f"The reranker endpoint rejected the request with HTTP {response.status}.")
+                    raise RerankerResponseError(
+                        f"The reranker endpoint rejected the request with HTTP {response.status}."
+                    )
                 try:
                     return await response.json(content_type=None)
                 except ValueError as err:
-                    raise RerankerResponseError("The reranker endpoint returned invalid JSON.") from err
-        except (RerankerAuthenticationError, RerankerConnectionError, RerankerResponseError):
+                    raise RerankerResponseError(
+                        "The reranker endpoint returned invalid JSON."
+                    ) from err
+        except (
+            RerankerAuthenticationError,
+            RerankerConnectionError,
+            RerankerResponseError,
+        ):
             raise
         except (ClientError, TimeoutError) as err:
-            raise RerankerConnectionError("Unable to connect to the reranker endpoint.") from err
+            raise RerankerConnectionError(
+                "Unable to connect to the reranker endpoint."
+            ) from err
 
     @staticmethod
     def _parse_results(response: Any, documents: list[str]) -> list[RerankerResult]:
         """Validate results and map indices to the original documents."""
         if not isinstance(response, Mapping):
-            raise RerankerResponseError("The reranker endpoint returned an invalid response.")
+            raise RerankerResponseError(
+                "The reranker endpoint returned an invalid response."
+            )
         raw_results = response.get("results")
         if not isinstance(raw_results, list) or not raw_results:
             raise RerankerResponseError("The reranker endpoint returned no results.")
@@ -164,7 +180,9 @@ class RerankerClient:
         seen_indices: set[int] = set()
         for raw_result in raw_results:
             if not isinstance(raw_result, Mapping):
-                raise RerankerResponseError("The reranker endpoint returned an invalid result.")
+                raise RerankerResponseError(
+                    "The reranker endpoint returned an invalid result."
+                )
             index = raw_result.get("index")
             score = raw_result.get("relevance_score")
             if (
@@ -176,7 +194,9 @@ class RerankerClient:
                 or not isinstance(score, int | float)
                 or not math.isfinite(score)
             ):
-                raise RerankerResponseError("The reranker endpoint returned an invalid result.")
+                raise RerankerResponseError(
+                    "The reranker endpoint returned an invalid result."
+                )
             seen_indices.add(index)
             results.append(
                 RerankerResult(
@@ -193,10 +213,7 @@ class RerankerClient:
 def _reranker_memory_document(match: EmbeddingMemoryMatch) -> str:
     """Add temporal metadata to a memory candidate for reranking."""
     content = match.matched_text or match.record.searchable_text
-    return (
-        f"Recorded at: {match.record.created_at}\n"
-        f"Conversation content:\n{content}"
-    )
+    return f"Recorded at: {match.record.created_at}\nConversation content:\n{content}"
 
 
 async def async_rerank_embedding_matches(

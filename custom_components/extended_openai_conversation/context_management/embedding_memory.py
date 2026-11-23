@@ -192,7 +192,9 @@ def _embedding_context_limit_error(err: Exception) -> bool:
 def _split_embedding_chunk(text: str) -> tuple[str, str]:
     """Split an rejected embedding input without dropping any text."""
     midpoint = len(text) // 2
-    split_at = max(text.rfind(separator, 0, midpoint + 1) for separator in ("\n", "\t", " "))
+    split_at = max(
+        text.rfind(separator, 0, midpoint + 1) for separator in ("\n", "\t", " ")
+    )
     if split_at < midpoint // 2:
         split_at = midpoint
     else:
@@ -225,9 +227,7 @@ async def async_embed_text_chunks(
             or not response.data[0].embedding
         ):
             raise ValueError("The embeddings endpoint returned an incomplete response")
-        embedded.append(
-            EmbeddedTextChunk(chunk, list(response.data[0].embedding))
-        )
+        embedded.append(EmbeddedTextChunk(chunk, list(response.data[0].embedding)))
     return embedded
 
 
@@ -257,9 +257,7 @@ def split_close_embedding_matches(
         return selected, []
     cutoff = selected[-1].score
     close_matches = [
-        match
-        for match in matches[result_limit:]
-        if cutoff - match.score <= tolerance
+        match for match in matches[result_limit:] if cutoff - match.score <= tolerance
     ]
     return selected, close_matches
 
@@ -342,8 +340,7 @@ class EmbeddingMemoryStore:
         if not records:
             return
         if any(
-            record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
-            for record in records
+            record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN for record in records
         ):
             raise ValueError("Only intra-turn memories may be stored temporarily")
         async with self._lock:
@@ -384,9 +381,7 @@ class EmbeddingMemoryStore:
                 self._clear_agent, self._directory, agent_id
             )
 
-    async def async_counts(
-        self, agent_id: str | None = None
-    ) -> EmbeddingMemoryCounts:
+    async def async_counts(self, agent_id: str | None = None) -> EmbeddingMemoryCounts:
         """Count active persistent and temporary memories in one scope."""
         async with self._lock:
             now = datetime.now(UTC)
@@ -431,12 +426,8 @@ class EmbeddingMemoryStore:
             if payload is None:
                 continue
             scope = payload.get("scope")
-            if (
-                agent_id is not None
-                and (
-                    not isinstance(scope, dict)
-                    or scope.get("agent_id") != agent_id
-                )
+            if agent_id is not None and (
+                not isinstance(scope, dict) or scope.get("agent_id") != agent_id
             ):
                 continue
             records = [
@@ -550,9 +541,7 @@ class EmbeddingMemoryStore:
             scored_chunks = [
                 (score, chunk.searchable_text)
                 for chunk in record.chunks
-                if (
-                    score := _cosine_similarity(query_embedding, chunk.embedding)
-                )
+                if (score := _cosine_similarity(query_embedding, chunk.embedding))
                 is not None
             ]
             if scored_chunks:
@@ -597,9 +586,7 @@ class EmbeddingMemoryStore:
                     messages=[message],
                     additional_chunks=(),
                 )
-                matches.append(
-                    EmbeddingMemoryMatch(matching_record, 1.0, searchable)
-                )
+                matches.append(EmbeddingMemoryMatch(matching_record, 1.0, searchable))
         return matches
 
     def _active_records(self, path: Path, now: datetime) -> list[EmbeddingMemoryRecord]:
@@ -659,9 +646,7 @@ class EmbeddingMemoryStore:
             now = datetime.now(UTC)
             for scope in tuple(self._temporary_records):
                 self._active_temporary_records(scope, now)
-            await self._hass.async_add_executor_job(
-                self._cleanup_expired, now
-            )
+            await self._hass.async_add_executor_job(self._cleanup_expired, now)
 
     def _active_temporary_records(
         self, scope: EmbeddingMemoryScope, now: datetime

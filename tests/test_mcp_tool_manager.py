@@ -113,9 +113,7 @@ async def test_list_servers_returns_cached_server_information_without_calling_se
     )
     storage = _service("storage", server_information=cached)
 
-    result = await MCPToolManager.list_servers(
-        [storage], server_info="cached"
-    )
+    result = await MCPToolManager.list_servers([storage], server_info="cached")
 
     assert result["servers"][0]["server_info"] == cached.to_dict()
     assert result["servers"][0]["server_info_source"] == "cached"
@@ -162,9 +160,7 @@ async def test_list_servers_latest_retains_server_when_information_check_fails()
     storage = _service("storage")
     storage.client.check_connection = AsyncMock(side_effect=RuntimeError("offline"))
 
-    result = await MCPToolManager.list_servers(
-        [storage], server_info="latest"
-    )
+    result = await MCPToolManager.list_servers([storage], server_info="latest")
 
     assert result["servers"][0]["id"] == "storage"
     assert result["servers"][0]["server_info_error"] == {
@@ -177,9 +173,7 @@ async def test_list_servers_rejects_invalid_server_information_mode():
     """Invalid server information modes fail without contacting servers."""
     storage = _service("storage")
 
-    result = await MCPToolManager.list_servers(
-        [storage], server_info="refresh"
-    )
+    result = await MCPToolManager.list_servers([storage], server_info="refresh")
 
     assert result["error"]["code"] == "invalid_server_info"
     storage.client.check_connection.assert_not_awaited()
@@ -335,9 +329,7 @@ async def test_list_servers_paginates_with_a_hard_page_size_limit():
 
 async def test_list_servers_regex_searches_schema_values():
     """Regex search inspects meaningful schema fields using search semantics."""
-    storage = _service(
-        "storage", tools=(_tool("upload_file", "Upload a file"),)
-    )
+    storage = _service("storage", tools=(_tool("upload_file", "Upload a file"),))
 
     result = await MCPToolManager.list_servers(
         [storage],
@@ -387,12 +379,8 @@ async def test_schema_search_includes_properties_named_like_schema_keywords():
 
 async def test_list_tools_scopes_query_to_selected_authorized_servers():
     """A scoped tool search contacts only selected authorized services."""
-    storage = _service(
-        "storage", tools=(_tool("upload_file", "Upload a file"),)
-    )
-    calendar = _service(
-        "calendar", tools=(_tool("create_event", "Create an event"),)
-    )
+    storage = _service("storage", tools=(_tool("upload_file", "Upload a file"),))
+    calendar = _service("calendar", tools=(_tool("create_event", "Create an event"),))
 
     result = await MCPToolManager.list_tools(
         [storage, calendar],
@@ -439,13 +427,9 @@ async def test_list_tools_retains_results_when_one_server_discovery_fails():
 
 async def test_list_tools_returns_empty_for_unassigned_server():
     """An unknown or unassigned server is indistinguishable from no match."""
-    storage = _service(
-        "storage", tools=(_tool("upload_file", "Upload a file"),)
-    )
+    storage = _service("storage", tools=(_tool("upload_file", "Upload a file"),))
 
-    result = await MCPToolManager.list_tools(
-        [storage], server_ids=["not-assigned"]
-    )
+    result = await MCPToolManager.list_tools([storage], server_ids=["not-assigned"])
 
     assert result == {
         "tools": [],
@@ -461,9 +445,7 @@ async def test_list_tools_invalid_regex_avoids_server_calls():
     """An invalid request regex is rejected before live discovery."""
     storage = _service("storage")
 
-    result = await MCPToolManager.list_tools(
-        [storage], query="(", search_regex=True
-    )
+    result = await MCPToolManager.list_tools([storage], query="(", search_regex=True)
 
     assert result["error"]["code"] == "invalid_regex"
     storage.client.list_tools.assert_not_awaited()
@@ -576,9 +558,9 @@ async def test_get_tool_details_hides_tool_when_discovery_is_disabled():
 
 async def test_get_tool_details_validates_identifiers():
     """Invalid identifiers are rejected before examining services."""
-    assert (
-        await MCPToolManager.get_tool_details([], server_id="", tool_name="tool")
-    )["error"]["code"] == "invalid_server_id"
+    assert (await MCPToolManager.get_tool_details([], server_id="", tool_name="tool"))[
+        "error"
+    ]["code"] == "invalid_server_id"
     assert (
         await MCPToolManager.get_tool_details([], server_id="server", tool_name="")
     )["error"]["code"] == "invalid_tool_name"
@@ -613,9 +595,7 @@ async def test_execute_tool_runs_permanent_tool_without_discovery():
         "is_error": False,
     }
     storage.client.list_tools.assert_not_awaited()
-    storage.client.call_tool.assert_awaited_once_with(
-        "permanent_tool", {"value": 1}
-    )
+    storage.client.call_tool.assert_awaited_once_with("permanent_tool", {"value": 1})
 
 
 async def test_execute_tool_discovers_non_permanent_tool():

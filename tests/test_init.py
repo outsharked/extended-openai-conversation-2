@@ -214,8 +214,7 @@ async def test_mcp_oauth_setup_maps_invalid_stored_data_to_reauth(hass):
 
     with (
         patch(
-            "custom_components.extended_openai_conversation."
-            "async_get_mcp_oauth_auth",
+            "custom_components.extended_openai_conversation.async_get_mcp_oauth_auth",
             new=AsyncMock(side_effect=KeyError("authorization_url")),
         ),
         pytest.raises(ConfigEntryAuthFailed, match="configuration is invalid"),
@@ -252,18 +251,15 @@ async def test_ai_entry_creates_configured_reranker_client(hass):
 
     with (
         patch(
-            "custom_components.extended_openai_conversation."
-            "get_authenticated_client",
+            "custom_components.extended_openai_conversation.get_authenticated_client",
             new=AsyncMock(return_value=MagicMock()),
         ),
         patch(
-            "custom_components.extended_openai_conversation."
-            "async_get_clientsession",
+            "custom_components.extended_openai_conversation.async_get_clientsession",
             return_value=session,
         ),
         patch(
-            "custom_components.extended_openai_conversation."
-            "async_setup_templates",
+            "custom_components.extended_openai_conversation.async_setup_templates",
             new=AsyncMock(),
         ),
     ):
@@ -291,23 +287,19 @@ async def test_ai_entry_periodically_cleans_context_memory(hass):
 
     with (
         patch(
-            "custom_components.extended_openai_conversation."
-            "get_authenticated_client",
+            "custom_components.extended_openai_conversation.get_authenticated_client",
             new=AsyncMock(return_value=MagicMock()),
         ),
         patch(
-            "custom_components.extended_openai_conversation."
-            "EmbeddingMemoryStore",
+            "custom_components.extended_openai_conversation.EmbeddingMemoryStore",
             return_value=memory_store,
         ),
         patch(
-            "custom_components.extended_openai_conversation."
-            "async_track_time_interval",
+            "custom_components.extended_openai_conversation.async_track_time_interval",
             return_value=cancel_interval,
         ) as track_interval,
         patch(
-            "custom_components.extended_openai_conversation."
-            "async_setup_templates",
+            "custom_components.extended_openai_conversation.async_setup_templates",
             new=AsyncMock(),
         ),
     ):

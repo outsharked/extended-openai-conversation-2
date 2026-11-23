@@ -57,9 +57,9 @@ def test_scope_lists_only_allowed_loaded_mcp_services(hass):
         invalid_runtime,
     ]
 
-    services = MCPServiceManager(hass).scope(
-        {"vault", "calendar", "invalid"}
-    ).list_loaded()
+    services = (
+        MCPServiceManager(hass).scope({"vault", "calendar", "invalid"}).list_loaded()
+    )
 
     assert len(services) == 1
     assert services[0].config.server.server_id == "vault"
@@ -68,12 +68,14 @@ def test_scope_lists_only_allowed_loaded_mcp_services(hass):
         "extended_openai_conversation"
     )
 
+
 def test_empty_scope_lists_no_services(hass):
     """An agent with no selected server IDs cannot enumerate MCP services."""
     hass.config_entries.async_entries.return_value = [_mcp_entry("vault")]
 
     assert MCPServiceManager(hass).scope(set()).list_loaded() == ()
     hass.config_entries.async_entries.assert_not_called()
+
 
 @pytest.mark.parametrize("server_ids", ["vault", {"vault", 1}])
 def test_scope_rejects_malformed_server_id_collection(hass, server_ids):

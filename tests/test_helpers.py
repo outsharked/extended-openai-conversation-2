@@ -50,7 +50,10 @@ TOOLS = [{"type": "function", "function": {"name": "f"}}]
 @pytest.mark.parametrize(
     ("translations", "expected"),
     [
-        ({MCP_DEFAULT_PROMPT_TRANSLATION_KEY: "Localized MCP prompt"}, "Localized MCP prompt"),
+        (
+            {MCP_DEFAULT_PROMPT_TRANSLATION_KEY: "Localized MCP prompt"},
+            "Localized MCP prompt",
+        ),
         ({}, DEFAULT_MCP_PROMPT),
     ],
 )
@@ -84,8 +87,7 @@ async def test_get_context_compaction_text_localizes_and_formats_runtime_text():
         ),
     }
     with patch(
-        "custom_components.extended_openai_conversation.helpers."
-        "async_get_translations",
+        "custom_components.extended_openai_conversation.helpers.async_get_translations",
         new=AsyncMock(return_value=translations),
     ):
         result = await async_get_context_compaction_text(hass, "fr", 250)
@@ -94,6 +96,7 @@ async def test_get_context_compaction_text_localizes_and_formats_runtime_text():
         "Résumé précédent :",
         "Limitez le résumé à 250 jetons.",
     )
+
 
 COMPLETION = {
     "id": "chatcmpl-1",

@@ -125,9 +125,7 @@ async def async_setup_entry(
     try:
         await embedding_memory.async_cleanup_expired()
     except Exception:  # pylint: disable=broad-except
-        _LOGGER.exception(
-            "Unable to clean expired context memory; setup will continue"
-        )
+        _LOGGER.exception("Unable to clean expired context memory; setup will continue")
 
     reranker = entry.data.get(CONF_RERANKER)
     if isinstance(reranker, Mapping):

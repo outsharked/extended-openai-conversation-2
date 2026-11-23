@@ -77,9 +77,7 @@ async def test_reranker_maps_scores_to_original_documents_and_filters():
 
 async def test_reranker_caps_request_to_available_candidates():
     """A caller ceiling above the candidate count does not inflate top_n."""
-    session = _session_response(
-        {"results": [{"index": 0, "relevance_score": 1}]}
-    )
+    session = _session_response({"results": [{"index": 0, "relevance_score": 1}]})
     client = RerankerClient(
         session,
         endpoint_url="https://reranker.example.com/rerank",

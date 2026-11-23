@@ -111,7 +111,9 @@ def _without_embedded_media(value: Any) -> Any:
     return {key: _without_embedded_media(item) for key, item in value.items()}
 
 
-def _group_compaction_contents(contents: list[conversation.Content]) -> list[list[conversation.Content]]:
+def _group_compaction_contents(
+    contents: list[conversation.Content],
+) -> list[list[conversation.Content]]:
     """Group history into complete turns without splitting tool exchanges."""
     groups: list[list[conversation.Content]] = []
     current: list[conversation.Content] = []
@@ -137,7 +139,9 @@ def _is_generated_compaction_summary(content: conversation.Content) -> bool:
     )
 
 
-def _intra_turn_reduction(contents: list[conversation.Content]) -> IntraTurnReduction | None:
+def _intra_turn_reduction(
+    contents: list[conversation.Content],
+) -> IntraTurnReduction | None:
     """Return older completed tool exchanges from the active turn."""
     latest_user_index = next(
         (
@@ -156,7 +160,10 @@ def _intra_turn_reduction(contents: list[conversation.Content]) -> IntraTurnRedu
     index = latest_user_index + 1
     while index < len(contents):
         content = contents[index]
-        if not isinstance(content, conversation.AssistantContent) or not content.tool_calls:
+        if (
+            not isinstance(content, conversation.AssistantContent)
+            or not content.tool_calls
+        ):
             index += 1
             continue
 
@@ -205,6 +212,3 @@ def _intra_turn_reduction(contents: list[conversation.Content]) -> IntraTurnRedu
         insert_at=min(remove_indexes),
         turn_id=turn_id,
     )
-
-
-

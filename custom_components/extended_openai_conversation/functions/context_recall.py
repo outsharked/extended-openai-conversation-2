@@ -73,9 +73,7 @@ def build_context_recall_function_tool(
     if rerank_min_score is not None:
         function_config["rerank_min_score"] = rerank_min_score
     if rerank_max_candidate_tokens is not None:
-        function_config["rerank_max_candidate_tokens"] = (
-            rerank_max_candidate_tokens
-        )
+        function_config["rerank_max_candidate_tokens"] = rerank_max_candidate_tokens
     return {
         "spec": {
             "name": "context_recall",
@@ -119,7 +117,9 @@ def build_context_recall_function_tool(
     }
 
 
-def build_browse_recalled_context_function_tool(entry_id: str, agent_id: str) -> dict[str, Any]:
+def build_browse_recalled_context_function_tool(
+    entry_id: str, agent_id: str
+) -> dict[str, Any]:
     """Build the model-facing tool used to browse a recall snapshot."""
     return {
         "spec": {
@@ -251,9 +251,7 @@ class ContextRecallFunction(Function):
                         "snapshot_ttl_time",
                         default=DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME,
                     ): str,
-                    vol.Optional(
-                        "rerank", default=DEFAULT_CONTEXT_RECALL_RERANK
-                    ): bool,
+                    vol.Optional("rerank", default=DEFAULT_CONTEXT_RECALL_RERANK): bool,
                     vol.Optional("rerank_min_score"): float,
                     vol.Optional("rerank_max_candidate_tokens"): vol.All(
                         int, vol.Range(min=1)
@@ -278,9 +276,7 @@ class ContextRecallFunction(Function):
         if len(query) > 2000:
             return _error("invalid_query", "The recall query exceeds 2000 characters")
 
-        max_results = arguments.get(
-            "max_results", DEFAULT_CONTEXT_RECALL_RESULTS
-        )
+        max_results = arguments.get("max_results", DEFAULT_CONTEXT_RECALL_RESULTS)
         max_tokens = function_config.get(
             "max_tokens", DEFAULT_CONTEXT_RECALL_MAX_TOKENS
         )
@@ -368,9 +364,7 @@ class ContextRecallFunction(Function):
 
         if reranker_client is not None:
             reranker_result_limit = (
-                candidate_limit
-                if close_match_tolerance is not None
-                else max_results
+                candidate_limit if close_match_tolerance is not None else max_results
             )
             try:
                 matches = merge_embedding_matches(
@@ -454,9 +448,7 @@ class ContextSearchFunction(Function):
             return _error("invalid_query", "The search query exceeds 2000 characters")
         case_sensitive = arguments.get("case_sensitive", False)
         if not isinstance(case_sensitive, bool):
-            return _error(
-                "invalid_case_sensitive", "case_sensitive must be a boolean"
-            )
+            return _error("invalid_case_sensitive", "case_sensitive must be a boolean")
 
         try:
             snapshot_ttl_time = embedding_history_retention(
@@ -501,9 +493,7 @@ class ContextSearchFunction(Function):
 
         return build_paginated_recall_result(
             matches,
-            function_config.get(
-                "max_tokens", DEFAULT_CONTEXT_RECALL_MAX_TOKENS
-            ),
+            function_config.get("max_tokens", DEFAULT_CONTEXT_RECALL_MAX_TOKENS),
             snapshot_store=runtime.recall_snapshots,
             snapshot_scope=RecallSnapshotScope(
                 agent_id=function_config["agent_id"],
@@ -542,9 +532,7 @@ class BrowseRecalledContextFunction(Function):
         snapshot_id = arguments.get("snapshot_id")
         page = arguments.get("page")
         if not isinstance(snapshot_id, str) or not snapshot_id:
-            return _error(
-                "invalid_snapshot_id", "A non-empty snapshot_id is required"
-            )
+            return _error("invalid_snapshot_id", "A non-empty snapshot_id is required")
         if not isinstance(page, int) or isinstance(page, bool) or page < 1:
             return _error("invalid_page", "page must be a positive integer")
 

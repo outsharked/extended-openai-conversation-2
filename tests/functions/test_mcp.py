@@ -22,9 +22,10 @@ def test_mcp_tool_schema_documents_actions_search_and_defaults():
     assert "require server_id and tool_name" in properties["action"]["description"]
     assert "cannot expand" in properties["server_ids"]["description"]
     assert "specific operation" in properties["server_id"]["description"]
-    assert "including a tool omitted from discovery results" in properties[
-        "tool_name"
-    ]["description"]
+    assert (
+        "including a tool omitted from discovery results"
+        in properties["tool_name"]["description"]
+    )
     assert "May be omitted" in properties["arguments"]["description"]
     assert properties["search_fields"]["items"]["enum"] == [
         "server_id",

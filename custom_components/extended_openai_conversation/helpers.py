@@ -91,14 +91,10 @@ async def async_get_context_compaction_text(
 async def async_get_embedding_recall_prefix(hass: HomeAssistant, language: str) -> str:
     """Return localized model guidance for injected embedding memories."""
     translations = await async_get_translations(
-        hass,
-        language,
-        "config",
-        integrations={DOMAIN}
+        hass, language, "config", integrations={DOMAIN}
     )
     return translations.get(
-        EMBEDDING_RECALL_PREFIX_TRANSLATION_KEY,
-        DEFAULT_EMBEDDING_RECALL_PREFIX
+        EMBEDDING_RECALL_PREFIX_TRANSLATION_KEY, DEFAULT_EMBEDDING_RECALL_PREFIX
     )
 
 

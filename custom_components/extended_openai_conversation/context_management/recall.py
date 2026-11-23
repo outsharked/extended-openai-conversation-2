@@ -171,7 +171,9 @@ class ContextRecallMixin:
         )
         return tools
 
-    def _context_recall_reranker(self) -> tuple[RerankerClient | None, float | None, int | None]:
+    def _context_recall_reranker(
+        self,
+    ) -> tuple[RerankerClient | None, float | None, int | None]:
         """Return this agent's enabled reranker and normalized controls."""
         runtime = self.entry.runtime_data
         if (
@@ -297,9 +299,7 @@ class ContextRecallMixin:
                     matches, result_limit, close_match_tolerance
                 )
             reranker_result_limit = (
-                candidate_limit
-                if close_match_tolerance is not None
-                else result_limit
+                candidate_limit if close_match_tolerance is not None else result_limit
             )
             try:
                 reranked = merge_embedding_matches(
@@ -320,16 +320,22 @@ class ContextRecallMixin:
                     reranked, result_limit, close_match_tolerance
                 )
             except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Embedding memory reranking failed. Using embedding order")
+                _LOGGER.exception(
+                    "Embedding memory reranking failed. Using embedding order"
+                )
                 return split_close_embedding_matches(
                     matches, result_limit, close_match_tolerance
                 )
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Embedding memory retrieval failed. Continuing without recalled context")
+            _LOGGER.exception(
+                "Embedding memory retrieval failed. Continuing without recalled context"
+            )
             return [], []
 
     @staticmethod
-    def _embedding_recall_message(recall_result: dict[str, Any], prefix: str) -> ChatCompletionUserMessageParam:
+    def _embedding_recall_message(
+        recall_result: dict[str, Any], prefix: str
+    ) -> ChatCompletionUserMessageParam:
         """Render recalled turns as inert historical request context."""
         return ChatCompletionUserMessageParam(
             role="user",
@@ -361,5 +367,3 @@ class ContextRecallMixin:
             latest_user_index,
             cls._embedding_recall_message(recall_result, prefix),
         )
-
-

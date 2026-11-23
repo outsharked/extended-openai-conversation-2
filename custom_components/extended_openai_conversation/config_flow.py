@@ -372,12 +372,8 @@ STEP_EMBEDDINGS_ENDPOINT_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_API_KEY): str,
         vol.Optional(CONF_BASE_URL, default=DEFAULT_CONF_BASE_URL): str,
-        vol.Required(
-            CONF_EMBEDDINGS_MODEL, default=DEFAULT_EMBEDDINGS_MODEL
-        ): str,
-        vol.Optional(
-            CONF_CLEAR_EMBEDDING_HISTORY, default=False
-        ): BooleanSelector(),
+        vol.Required(CONF_EMBEDDINGS_MODEL, default=DEFAULT_EMBEDDINGS_MODEL): str,
+        vol.Optional(CONF_CLEAR_EMBEDDING_HISTORY, default=False): BooleanSelector(),
         vol.Optional(
             CONF_CLEAR_INTRA_TURN_EMBEDDINGS, default=False
         ): BooleanSelector(),
@@ -420,9 +416,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
             DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
         ),
         CONF_CONTEXT_RECALL_RERANK: DEFAULT_CONTEXT_RECALL_RERANK,
-        CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: (
-            DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE
-        ),
+        CONF_CONTEXT_RECALL_RERANK_MIN_SCORE: (DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE),
         CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS: (
             DEFAULT_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
         ),
@@ -623,9 +617,7 @@ def _validate_context_recall_max_results_input(
     methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate and normalize an agent's context-recall result ceiling."""
-    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(
-        methods
-    ):
+    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(methods):
         return {}
 
     max_results = user_input.get(
@@ -638,11 +630,7 @@ def _validate_context_recall_max_results_input(
         or int(max_results) != max_results
         or max_results < 1
     ):
-        return {
-            CONF_CONTEXT_RECALL_MAX_RESULTS: (
-                "invalid_context_recall_max_results"
-            )
-        }
+        return {CONF_CONTEXT_RECALL_MAX_RESULTS: ("invalid_context_recall_max_results")}
     user_input[CONF_CONTEXT_RECALL_MAX_RESULTS] = int(max_results)
     return {}
 
@@ -651,13 +639,9 @@ def _validate_embedding_chunk_size_input(
     methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate and normalize an agent's embedding chunk size."""
-    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(
-        methods
-    ):
+    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(methods):
         return {}
-    chunk_size = user_input.get(
-        CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE
-    )
+    chunk_size = user_input.get(CONF_EMBEDDING_CHUNK_SIZE, DEFAULT_EMBEDDING_CHUNK_SIZE)
     if (
         not isinstance(chunk_size, int | float)
         or isinstance(chunk_size, bool)
@@ -698,9 +682,7 @@ def _validate_context_recall_close_match_tolerance_input(
     methods: Any, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate and normalize an agent's close-match score tolerance."""
-    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(
-        methods
-    ):
+    if CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(methods):
         return {}
 
     value = str(
@@ -733,8 +715,7 @@ def _validate_context_recall_reranker_input(
 ) -> dict[str, str]:
     """Validate and normalize per-agent reranker settings."""
     if (
-        CONTEXT_PRESERVATION_METHOD_EMBEDDINGS
-        not in _selected_context_methods(methods)
+        CONTEXT_PRESERVATION_METHOD_EMBEDDINGS not in _selected_context_methods(methods)
         or not has_reranker
     ):
         return {}
@@ -757,9 +738,7 @@ def _validate_context_recall_reranker_input(
                 "invalid_context_recall_rerank_min_score"
             )
         else:
-            user_input[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] = str(
-                parsed_threshold
-            )
+            user_input[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] = str(parsed_threshold)
     else:
         user_input[CONF_CONTEXT_RECALL_RERANK_MIN_SCORE] = ""
 
@@ -779,8 +758,8 @@ def _validate_context_recall_reranker_input(
                 "invalid_context_recall_rerank_max_candidate_tokens"
             )
         else:
-            user_input[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] = (
-                str(parsed_max_candidate_tokens)
+            user_input[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] = str(
+                parsed_max_candidate_tokens
             )
     else:
         user_input[CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS] = ""
@@ -816,38 +795,28 @@ def _validate_context_compaction_target_input(
     user_input: dict[str, Any],
 ) -> dict[str, str]:
     """Validate the compacted prompt target against the request token budget."""
-    if CONTEXT_PRESERVATION_METHOD_COMPACT not in _selected_context_methods(
-        methods
-    ):
+    if CONTEXT_PRESERVATION_METHOD_COMPACT not in _selected_context_methods(methods):
         return {}
 
     value = user_input.get(CONF_CONTEXT_COMPACTION_TARGET)
     if value is None or isinstance(value, bool):
-        return {
-            CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
-        }
+        return {CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"}
     try:
         numeric_value = float(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         numeric_value = 0
 
     if not math.isfinite(numeric_value) or not numeric_value.is_integer():
-        return {
-            CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
-        }
+        return {CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"}
     target = int(numeric_value)
     if target <= 0:
-        return {
-            CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"
-        }
+        return {CONF_CONTEXT_COMPACTION_TARGET: "invalid_context_compaction_target"}
 
     threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
     max_tokens = int(options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS))
     if target + max_tokens > threshold:
         return {
-            CONF_CONTEXT_COMPACTION_TARGET: (
-                "context_compaction_target_exceeds_budget"
-            )
+            CONF_CONTEXT_COMPACTION_TARGET: ("context_compaction_target_exceeds_budget")
         }
 
     user_input[CONF_CONTEXT_COMPACTION_TARGET] = target
@@ -887,9 +856,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
         await async_check_openai_connection(hass, client)
 
 
-async def validate_embeddings_input(
-    hass: HomeAssistant, data: dict[str, Any]
-) -> None:
+async def validate_embeddings_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
     """Validate an embeddings endpoint with a real embedding request."""
     model = data[CONF_EMBEDDINGS_MODEL].strip()
     if not model:
@@ -1044,9 +1011,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             embeddings_status=(
                 self._embeddings_connection_status if not is_mcp else None
             ),
-            reranker_status=(
-                self._reranker_connection_status if not is_mcp else None
-            ),
+            reranker_status=(self._reranker_connection_status if not is_mcp else None),
         )
 
         return self.async_show_menu(
@@ -1100,9 +1065,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             error_template = translations.get(translation_key, "**{error}**")
             lines.append(error_template.format(error=error))
         if not is_mcp and self._reranker_error_reason is not None:
-            error_key = (
-                f"component.{DOMAIN}.config.error.{self._reranker_error_reason}"
-            )
+            error_key = f"component.{DOMAIN}.config.error.{self._reranker_error_reason}"
             error = translations.get(error_key, self._reranker_error_reason)
             translation_key = (
                 f"component.{DOMAIN}.config.step."
@@ -1114,8 +1077,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             lines.append(error_template.format(error=error))
         if not is_mcp and self._embeddings_error_reason is not None:
             error_key = (
-                f"component.{DOMAIN}.config.error."
-                f"{self._embeddings_error_reason}"
+                f"component.{DOMAIN}.config.error.{self._embeddings_error_reason}"
             )
             error = translations.get(error_key, self._embeddings_error_reason)
             translation_key = (
@@ -1185,7 +1147,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 await validate_embeddings_input(self.hass, submitted_data)
             except AuthenticationError:
                 error_reason = "invalid_auth"
-            except (APIConnectionError, APIStatusError):
+            except APIConnectionError, APIStatusError:
                 error_reason = "cannot_connect"
             except HomeAssistantError:
                 error_reason = "invalid_embeddings"
@@ -1203,9 +1165,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             return await self.async_step_service_menu()
 
         suggested_values = dict(
-            self._embeddings_endpoint_draft
-            or self._embeddings_endpoint_data
-            or {}
+            self._embeddings_endpoint_draft or self._embeddings_endpoint_data or {}
         )
         suggested_values[CONF_CLEAR_EMBEDDING_HISTORY] = False
         suggested_values[CONF_CLEAR_INTRA_TURN_EMBEDDINGS] = False
@@ -1221,7 +1181,9 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
             description_placeholders=counts,
         )
 
-    async def async_step_reranker_endpoint(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_reranker_endpoint(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Configure and validate the optional reranker endpoint."""
         if self._embeddings_endpoint_data is None:
             return await self.async_step_service_menu()
@@ -1251,9 +1213,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
 
         schema = self.add_suggested_values_to_schema(
             STEP_RERANKER_ENDPOINT_DATA_SCHEMA,
-            self._reranker_endpoint_draft
-            or self._reranker_endpoint_data
-            or {},
+            self._reranker_endpoint_draft or self._reranker_endpoint_data or {},
         )
         return self.async_show_form(
             step_id="reranker_endpoint",
@@ -2210,7 +2170,7 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                 except AuthenticationError:
                     self._embeddings_connection_status = False
                     self._embeddings_error_reason = "invalid_auth"
-                except (APIConnectionError, APIStatusError):
+                except APIConnectionError, APIStatusError:
                     self._embeddings_connection_status = False
                     self._embeddings_error_reason = "cannot_connect"
                 except HomeAssistantError:
@@ -2224,7 +2184,9 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
                     self._embeddings_error_reason = None
             if self._reranker_endpoint_data is not None:
                 try:
-                    await validate_reranker_input(self.hass, dict(self._reranker_endpoint_data))
+                    await validate_reranker_input(
+                        self.hass, dict(self._reranker_endpoint_data)
+                    )
                 except _RerankerAuthenticationError:
                     self._reranker_connection_status = False
                     self._reranker_error_reason = "invalid_auth"
@@ -2481,29 +2443,19 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_PRESERVATION_METHODS,
             )
-            errors = _validate_embedding_history_retention_input(
-                methods, user_input
+            errors = _validate_embedding_history_retention_input(methods, user_input)
+            errors.update(
+                _validate_context_recall_snapshot_ttl_time_input(methods, user_input)
             )
             errors.update(
-                _validate_context_recall_snapshot_ttl_time_input(
-                    methods, user_input
-                )
-            )
-            errors.update(
-                _validate_context_recall_snapshot_ttl_turns_input(
-                    methods, user_input
-                )
+                _validate_context_recall_snapshot_ttl_turns_input(methods, user_input)
             )
             errors.update(
                 _validate_context_recall_max_results_input(methods, user_input)
             )
+            errors.update(_validate_embedding_chunk_size_input(methods, user_input))
             errors.update(
-                _validate_embedding_chunk_size_input(methods, user_input)
-            )
-            errors.update(
-                _validate_context_keyword_recall_max_tokens_input(
-                    methods, user_input
-                )
+                _validate_context_keyword_recall_max_tokens_input(methods, user_input)
             )
             errors.update(
                 _validate_context_recall_close_match_tolerance_input(
@@ -2651,9 +2603,7 @@ class ExtendedOpenAISubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_CONTEXT_COMPACTION_TARGET,
                 )
             ] = NumberSelector(
-                NumberSelectorConfig(
-                    min=1, step=1, unit_of_measurement="tokens"
-                )
+                NumberSelectorConfig(min=1, step=1, unit_of_measurement="tokens")
             )
             schema[
                 vol.Optional(
@@ -3075,29 +3025,19 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                 CONF_CONTEXT_TRUNCATE_STRATEGY,
                 DEFAULT_CONTEXT_PRESERVATION_METHODS,
             )
-            errors = _validate_embedding_history_retention_input(
-                methods, user_input
+            errors = _validate_embedding_history_retention_input(methods, user_input)
+            errors.update(
+                _validate_context_recall_snapshot_ttl_time_input(methods, user_input)
             )
             errors.update(
-                _validate_context_recall_snapshot_ttl_time_input(
-                    methods, user_input
-                )
-            )
-            errors.update(
-                _validate_context_recall_snapshot_ttl_turns_input(
-                    methods, user_input
-                )
+                _validate_context_recall_snapshot_ttl_turns_input(methods, user_input)
             )
             errors.update(
                 _validate_context_recall_max_results_input(methods, user_input)
             )
+            errors.update(_validate_embedding_chunk_size_input(methods, user_input))
             errors.update(
-                _validate_embedding_chunk_size_input(methods, user_input)
-            )
-            errors.update(
-                _validate_context_keyword_recall_max_tokens_input(
-                    methods, user_input
-                )
+                _validate_context_keyword_recall_max_tokens_input(methods, user_input)
             )
             errors.update(
                 _validate_context_recall_close_match_tolerance_input(
@@ -3245,9 +3185,7 @@ class ExtendedOpenAIAITaskSubentryFlowHandler(ConfigSubentryFlow):
                     default=DEFAULT_CONTEXT_COMPACTION_TARGET,
                 )
             ] = NumberSelector(
-                NumberSelectorConfig(
-                    min=1, step=1, unit_of_measurement="tokens"
-                )
+                NumberSelectorConfig(min=1, step=1, unit_of_measurement="tokens")
             )
             schema[
                 vol.Optional(

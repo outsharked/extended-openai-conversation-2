@@ -247,9 +247,7 @@ async def test_literal_search_returns_matching_original_messages_without_vectors
         [{"role": "assistant", "content": "Alpha is due on Friday"}],
     ]
     assert all(match.record.embedding == [] for match in matches)
-    assert await store.async_search_literal(
-        scope, "alpha", case_sensitive=True
-    ) == []
+    assert await store.async_search_literal(scope, "alpha", case_sensitive=True) == []
 
 
 async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
@@ -265,9 +263,7 @@ async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
         model="embedding-model",
         embedding=[0.0, 1.0],
         searchable_text="unrelated first chunk",
-        additional_chunks=(
-            EmbeddingMemoryChunk([1.0, 0.0], "matching second chunk"),
-        ),
+        additional_chunks=(EmbeddingMemoryChunk([1.0, 0.0], "matching second chunk"),),
         messages=[{"role": "user", "content": "complete original turn"}],
         retention=timedelta(days=1),
     )
@@ -285,7 +281,9 @@ async def test_search_ranks_one_turn_by_its_best_chunk(hass, tmp_path: Path):
     assert matches[0].matched_text == "matching second chunk"
 
 
-async def test_search_can_exclude_intra_turn_memories_from_the_current_turn(hass, tmp_path: Path):
+async def test_search_can_exclude_intra_turn_memories_from_the_current_turn(
+    hass, tmp_path: Path
+):
     """Automatic recall can omit active-turn archives without hiding older data."""
     _configure_path(hass, tmp_path)
     store = EmbeddingMemoryStore(hass, "endpoint-1")
@@ -360,12 +358,8 @@ async def test_clear_temporary_memories_is_scoped_to_the_requested_agent(
     """The manual action clears only one agent's temporary recall data."""
     _configure_path(hass, tmp_path)
     store = EmbeddingMemoryStore(hass, "endpoint-1")
-    first_scope = EmbeddingMemoryScope(
-        "endpoint-1", "agent-1", "conversation-1"
-    )
-    second_scope = EmbeddingMemoryScope(
-        "endpoint-1", "agent-2", "conversation-2"
-    )
+    first_scope = EmbeddingMemoryScope("endpoint-1", "agent-1", "conversation-1")
+    second_scope = EmbeddingMemoryScope("endpoint-1", "agent-2", "conversation-2")
     persistent = EmbeddingMemoryRecord.create(
         model="embedding-model",
         embedding=[1.0, 0.0],
@@ -408,12 +402,8 @@ async def test_memory_counts_and_persistent_clear_are_scoped_to_agent(
     """Counts and persistent clearing support agent and endpoint scopes."""
     _configure_path(hass, tmp_path)
     store = EmbeddingMemoryStore(hass, "endpoint-1")
-    first_scope = EmbeddingMemoryScope(
-        "endpoint-1", "agent-1", "conversation-1"
-    )
-    second_scope = EmbeddingMemoryScope(
-        "endpoint-1", "agent-2", "conversation-2"
-    )
+    first_scope = EmbeddingMemoryScope("endpoint-1", "agent-1", "conversation-1")
+    second_scope = EmbeddingMemoryScope("endpoint-1", "agent-2", "conversation-2")
     for scope in (first_scope, second_scope):
         await store.async_append(
             scope,
@@ -463,9 +453,7 @@ async def test_cleanup_removes_legacy_persisted_intra_turn_memories(
     """Persistent stores discard intra-turn records written by older versions."""
     _configure_path(hass, tmp_path)
     store = EmbeddingMemoryStore(hass, "endpoint-1")
-    scope = EmbeddingMemoryScope(
-        "endpoint-1", "agent-1", "conversation-1"
-    )
+    scope = EmbeddingMemoryScope("endpoint-1", "agent-1", "conversation-1")
     persistent = EmbeddingMemoryRecord.create(
         model="embedding-model",
         embedding=[1.0, 0.0],

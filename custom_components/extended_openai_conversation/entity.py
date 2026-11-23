@@ -634,9 +634,7 @@ def _convert_content_to_param(
                 msg["content"] = None
             messages.append(msg)
         elif content.role == "tool_result":
-            tool_result = tool_result_overrides.get(
-                index, _tool_result_data(content)
-            )
+            tool_result = tool_result_overrides.get(index, _tool_result_data(content))
             messages.append(
                 {
                     "role": "tool",
@@ -661,9 +659,7 @@ def _convert_content_to_param(
     return messages
 
 
-class ExtendedOpenAIBaseLLMEntity(
-    ContextRecallMixin, ContextManagementMixin, Entity
-):
+class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, Entity):
     """Extended OpenAI base entity."""
 
     _attr_has_entity_name = True
@@ -729,11 +725,11 @@ class ExtendedOpenAIBaseLLMEntity(
 
     def _get_internal_function_tools(self) -> list[dict[str, Any]]:
         """Return integration-managed tools enabled for this agent."""
-        return (self._get_mcp_function_tools() + self._get_context_recall_function_tools())
+        return (
+            self._get_mcp_function_tools() + self._get_context_recall_function_tools()
+        )
 
-    async def _async_get_mcp_agent_context(
-        self, language: str
-    ) -> MCPAgentContext:
+    async def _async_get_mcp_agent_context(self, language: str) -> MCPAgentContext:
         """Build template values and automatic context for assigned MCP services."""
         server_ids = self.subentry.data.get(CONF_MCP_SERVERS, []) or []
         if not server_ids:
@@ -876,9 +872,10 @@ class ExtendedOpenAIBaseLLMEntity(
         if isinstance(runtime, OpenAIServiceRuntime):
             runtime.recall_snapshots.advance_turn(self.subentry.subentry_id)
 
-        recalled_memories, close_recalled_memories = (
-            await self._async_recall_embedding_memories(chat_log)
-        )
+        (
+            recalled_memories,
+            close_recalled_memories,
+        ) = await self._async_recall_embedding_memories(chat_log)
         recall_result: dict[str, Any] | None = None
         automatic_snapshot_id: str | None = None
 
@@ -941,10 +938,7 @@ class ExtendedOpenAIBaseLLMEntity(
                 bounded_recall_result,
                 recall_prefix,
             )
-            if (
-                permanent_tools_placement is None
-                and default_prompt_placement is None
-            ):
+            if permanent_tools_placement is None and default_prompt_placement is None:
                 context_messages = self._mcp_context_messages(mcp_context)
                 messages: list[ChatCompletionMessageParam] = [
                     *context_messages,
@@ -955,8 +949,7 @@ class ExtendedOpenAIBaseLLMEntity(
             _place_mcp_agent_context(
                 converted_messages,
                 mcp_context,
-                permanent_tools_placement
-                or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
+                permanent_tools_placement or DEFAULT_MCP_PERMANENT_TOOLS_PLACEMENT,
                 default_prompt_placement or DEFAULT_MCP_DEFAULT_PROMPT_PLACEMENT,
             )
             return converted_messages
@@ -1094,9 +1087,10 @@ class ExtendedOpenAIBaseLLMEntity(
                     history_changed = intra_turn_changed
                 if history_changed:
                     if retrieval_enabled and not intra_turn_changed:
-                        recalled_memories, close_recalled_memories = (
-                            await self._async_recall_embedding_memories(chat_log)
-                        )
+                        (
+                            recalled_memories,
+                            close_recalled_memories,
+                        ) = await self._async_recall_embedding_memories(chat_log)
                         _refresh_recall_result()
                     messages = await _build_request_messages()
                     recent_turns_override = max(0, recent_turns_override - 1)
@@ -1176,7 +1170,9 @@ class ExtendedOpenAIBaseLLMEntity(
         if token_usage.total_tokens > options.get(
             CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD
         ):
-            await self._truncate_message_history(chat_log, token_usage, language=language)
+            await self._truncate_message_history(
+                chat_log, token_usage, language=language
+            )
 
     async def _transform_stream(
         self,
@@ -1333,11 +1329,11 @@ class ExtendedOpenAIBaseLLMEntity(
             }
         function = get_function(function_config["type"])
 
-        if (
-            function_config["type"]
-            not in {"context_recall", "context_search", "browse_recalled_context"}
-            and self.should_run_in_background(arguments)
-        ):
+        if function_config["type"] not in {
+            "context_recall",
+            "context_search",
+            "browse_recalled_context",
+        } and self.should_run_in_background(arguments):
             # create a delayed function and execute in background
             function_config = self.get_delayed_function_config(
                 function_config, arguments

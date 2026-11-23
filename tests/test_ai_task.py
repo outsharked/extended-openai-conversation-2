@@ -120,9 +120,7 @@ async def test_generate_data_provides_context_recall_for_retrieval(strategy):
     )
 
     subentry = _mock_subentry("ai_task_data", "sub_1")
-    subentry.data = {
-        CONF_CONTEXT_TRUNCATE_STRATEGY: strategy
-    }
+    subentry.data = {CONF_CONTEXT_TRUNCATE_STRATEGY: strategy}
     entry = MagicMock(entry_id="endpoint-1")
     entry.data = {CONF_EMBEDDINGS: {}}
     entity = ExtendedOpenAITaskEntity(entry, subentry)

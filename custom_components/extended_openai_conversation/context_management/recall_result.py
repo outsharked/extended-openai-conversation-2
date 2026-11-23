@@ -175,9 +175,7 @@ def _recall_pages(
         if _estimated_tokens(candidate) <= max_tokens:
             items.append(memory)
             continue
-        transcript_chunks = [
-            chunk.searchable_text for chunk in match.record.chunks
-        ]
+        transcript_chunks = [chunk.searchable_text for chunk in match.record.chunks]
         if match.matched_text:
             if match.matched_text in transcript_chunks:
                 transcript_chunks.remove(match.matched_text)
@@ -275,6 +273,3 @@ def build_paginated_recall_result(
         ),
         close_matches=close_match_summary,
     )
-
-
-

@@ -81,7 +81,6 @@ from custom_components.extended_openai_conversation.const import (
     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
     CONTEXT_PRESERVATION_METHOD_KEYWORD,
     DEFAULT_CONF_BASE_URL,
-    DEFAULT_MCP_MEDIA_TYPES,
     DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -98,6 +97,7 @@ from custom_components.extended_openai_conversation.const import (
     DEFAULT_EMBEDDING_CHUNK_SIZE,
     DEFAULT_EMBEDDING_HISTORY_RETENTION,
     DEFAULT_EMBEDDINGS_MODEL,
+    DEFAULT_MCP_MEDIA_TYPES,
     DOMAIN,
     MCP_CONTEXT_PLACEMENTS,
     MCP_MEDIA_TYPES,
@@ -211,9 +211,7 @@ def _mcp_discovery(*tools: MCPTool) -> MCPDiscoveryResult:
     )
 
 
-def _mcp_form_values(
-    config: MCPServerConfig, **overrides: Any
-) -> dict[str, Any]:
+def _mcp_form_values(config: MCPServerConfig, **overrides: Any) -> dict[str, Any]:
     """Return a complete MCP server-form submission."""
     return {
         "name": config.name,
@@ -539,9 +537,10 @@ async def test_embeddings_endpoint_validates_and_is_saved_nested(hass):
             CONF_EMBEDDINGS_MODEL: "embed-model",
         },
     }
-    assert CONF_CLEAR_EMBEDDING_HISTORY not in flow._service_configuration()[
-        CONF_EMBEDDINGS
-    ]
+    assert (
+        CONF_CLEAR_EMBEDDING_HISTORY
+        not in flow._service_configuration()[CONF_EMBEDDINGS]
+    )
     assert (
         CONF_CLEAR_INTRA_TURN_EMBEDDINGS
         not in flow._service_configuration()[CONF_EMBEDDINGS]
@@ -597,9 +596,7 @@ async def test_reranker_failure_preserves_last_known_good_config(hass):
     with patch(
         "custom_components.extended_openai_conversation.config_flow."
         "validate_reranker_input",
-        new=AsyncMock(
-            side_effect=_RerankerConnectionError("connection failed")
-        ),
+        new=AsyncMock(side_effect=_RerankerConnectionError("connection failed")),
     ):
         await flow.async_step_reranker_endpoint(
             {
@@ -636,9 +633,7 @@ async def test_reconfigure_save_performs_requested_embedding_history_wipe(hass):
     flow._clear_intra_turn_embeddings_requested = True
     entry = MagicMock(entry_id="endpoint-1")
     flow._reconfigure_entry = entry
-    flow.async_update_reload_and_abort = MagicMock(
-        return_value={"type": "abort"}
-    )
+    flow.async_update_reload_and_abort = MagicMock(return_value={"type": "abort"})
 
     with (
         patch.object(
@@ -759,8 +754,7 @@ async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
 
     with (
         patch(
-            "custom_components.extended_openai_conversation.config_flow."
-            "validate_input",
+            "custom_components.extended_openai_conversation.config_flow.validate_input",
             new=AsyncMock(),
         ) as validate_chat,
         patch(
@@ -781,9 +775,7 @@ async def test_reconfigure_extracts_and_revalidates_embeddings_config(hass):
     assert flow._embeddings_endpoint_data == entry.data[CONF_EMBEDDINGS]
     assert flow._reranker_endpoint_data == entry.data[CONF_RERANKER]
     validate_chat.assert_awaited_once_with(hass, flow._ai_endpoint_data)
-    validate_embeddings.assert_awaited_once_with(
-        hass, entry.data[CONF_EMBEDDINGS]
-    )
+    validate_embeddings.assert_awaited_once_with(hass, entry.data[CONF_EMBEDDINGS])
     validate_reranker.assert_awaited_once_with(hass, entry.data[CONF_RERANKER])
     assert flow._embeddings_connection_status is True
     assert flow._reranker_connection_status is True
@@ -809,8 +801,7 @@ async def test_service_menu_status_lines_only_include_relevant_rows(hass):
         f"component.{DOMAIN}.config.step.service_menu_error.description": (
             "**Last error: {error}**"
         ),
-        f"component.{DOMAIN}.config.step."
-        "service_menu_embeddings_error.description": (
+        f"component.{DOMAIN}.config.step.service_menu_embeddings_error.description": (
             "**Embeddings error: {error}**"
         ),
         f"component.{DOMAIN}.config.error.cannot_connect": "Failed to connect",
@@ -1303,9 +1294,7 @@ async def test_reconfigure_menu_only_offers_current_service_actions(hass):
 async def test_reconfigure_restores_discovery_with_refreshable_oauth(hass):
     """Reconfigure refreshes OAuth and restores the requested tool catalogue."""
     flow = _config_flow(hass)
-    config = MCPServiceConfig(
-        server=_mcp_server_config(use_oauth=True)
-    )
+    config = MCPServiceConfig(server=_mcp_server_config(use_oauth=True))
     old_token = {
         "access_token": "expired-token",
         "refresh_token": "refresh-token",
@@ -1395,9 +1384,7 @@ async def test_reconfigure_save_preserves_token_refreshed_after_connection_check
     entry.title = "Vault MCP"
     entry.data = {CONF_TOKEN: refreshed_token}
     flow._reconfigure_entry = entry
-    flow.async_update_reload_and_abort = MagicMock(
-        return_value={"type": "abort"}
-    )
+    flow.async_update_reload_and_abort = MagicMock(return_value={"type": "abort"})
 
     result = await flow.async_step_service_save()
 
@@ -1484,9 +1471,7 @@ async def test_mcp_connection_edit_preserves_policy_while_discovery_is_stale(
         "MCPClientConfigFlow.discover",
         new=AsyncMock(side_effect=RuntimeError("discovery failed")),
     ):
-        await flow.async_step_mcp(
-            _mcp_form_values(flow._mcp_config, **changed_value)
-        )
+        await flow.async_step_mcp(_mcp_form_values(flow._mcp_config, **changed_value))
 
     assert flow._mcp_discovery is None
     assert flow._mcp_discovery_status is False
@@ -1494,13 +1479,11 @@ async def test_mcp_connection_edit_preserves_policy_while_discovery_is_stale(
     assert flow._mcp_options[CONF_MCP_TOOL_NAME_PATTERN] == ".*delete.*"
     assert flow._mcp_service_config is not None
     if expected_value == "headers":
-        assert flow._mcp_service_config.server.headers == changed_value[
-            CONF_MCP_HEADERS
-        ]
+        assert (
+            flow._mcp_service_config.server.headers == changed_value[CONF_MCP_HEADERS]
+        )
     else:
-        assert flow._mcp_service_config.server.url == changed_value[
-            CONF_MCP_SERVER_URL
-        ]
+        assert flow._mcp_service_config.server.url == changed_value[CONF_MCP_SERVER_URL]
 
 
 async def test_successful_rediscovery_prunes_only_missing_tool_selections(hass):
@@ -1967,9 +1950,7 @@ async def test_validate_embeddings_input_makes_real_embedding_request(hass):
     """Embeddings validation checks the configured model, not the models list."""
     client = MagicMock()
     client.embeddings.create = AsyncMock(
-        return_value=SimpleNamespace(
-            data=[SimpleNamespace(embedding=[0.25, -0.5])]
-        )
+        return_value=SimpleNamespace(data=[SimpleNamespace(embedding=[0.25, -0.5])])
     )
     data = {
         CONF_API_KEY: "embedding-key",
@@ -2063,9 +2044,7 @@ async def test_validate_reranker_input_makes_real_rerank_request(hass):
             "top_n": 2,
         },
     )
-    assert data[CONF_RERANKER_URL] == (
-        "https://reranker.example.com/custom/rerank"
-    )
+    assert data[CONF_RERANKER_URL] == ("https://reranker.example.com/custom/rerank")
     assert data[CONF_RERANKER_MODEL] == "reranker-model"
 
 
@@ -2144,9 +2123,7 @@ async def test_ai_endpoint_http_error_does_not_report_success(hass):
         )
 
     assert flow._ai_endpoint_data is None
-    assert flow.async_show_form.call_args.kwargs["errors"] == {
-        "base": "cannot_connect"
-    }
+    assert flow.async_show_form.call_args.kwargs["errors"] == {"base": "cannot_connect"}
 
 
 async def test_ai_endpoint_authentication_error_is_reported(hass):
@@ -2212,9 +2189,7 @@ async def test_authentication_error_blocks_when_skip_is_disabled(hass):
         )
 
     assert flow._ai_endpoint_data is None
-    assert flow.async_show_form.call_args.kwargs["errors"] == {
-        "base": "invalid_auth"
-    }
+    assert flow.async_show_form.call_args.kwargs["errors"] == {"base": "invalid_auth"}
 
 
 async def test_skip_authentication_allows_saving_unreachable_endpoint(hass):
@@ -2227,9 +2202,7 @@ async def test_skip_authentication_allows_saving_unreachable_endpoint(hass):
         "custom_components.extended_openai_conversation.config_flow.validate_input",
         new=AsyncMock(
             side_effect=APIConnectionError(
-                request=httpx.Request(
-                    "GET", "https://missing.example.com/v1/models"
-                )
+                request=httpx.Request("GET", "https://missing.example.com/v1/models")
             )
         ),
     ):
@@ -2357,9 +2330,7 @@ def test_mcp_server_options_use_stable_ids_and_entry_titles(hass):
     ai_entry.data = {CONF_SERVICE_TYPE: SERVICE_TYPE_AI_ENDPOINT}
     hass.config_entries.async_entries.return_value = [mcp_entry, ai_entry]
 
-    assert _mcp_server_options(hass) == [
-        {"value": "vault", "label": "Vault MCP"}
-    ]
+    assert _mcp_server_options(hass) == [{"value": "vault", "label": "Vault MCP"}]
 
 
 def test_openai_config_option_schema_preserves_existing_mcp_servers():
@@ -2418,10 +2389,7 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
         assert placement_key.default() == default
         placement_selector = schema[placement_key]
         assert placement_selector.config["options"] == list(MCP_CONTEXT_PLACEMENTS)
-        assert (
-            placement_selector.config["translation_key"]
-            == "mcp_context_placement"
-        )
+        assert placement_selector.config["translation_key"] == "mcp_context_placement"
 
     assert CONF_CONTEXT_THRESHOLD in _schema_keys(schema)
     strategy_key = next(
@@ -2442,9 +2410,7 @@ async def test_ai_task_schema_includes_mcp_servers(hass):
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_agent_schema_only_offers_retrieval_with_embeddings(
-    hass, handler_type
-):
+async def test_agent_schema_only_offers_retrieval_with_embeddings(hass, handler_type):
     """Embedding retrieval is unavailable unless the parent endpoint has it."""
     handler = handler_type()
     handler.hass = hass
@@ -2584,8 +2550,7 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     retention_key = next(
         key
         for key in schema
-        if getattr(key, "schema", key)
-        == CONF_EMBEDDING_HISTORY_RETENTION
+        if getattr(key, "schema", key) == CONF_EMBEDDING_HISTORY_RETENTION
     )
     assert retention_key.default() == DEFAULT_EMBEDDING_HISTORY_RETENTION
     assert isinstance(schema[retention_key], TextSelector)
@@ -2603,9 +2568,7 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
         for key in schema
         if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
     )
-    assert snapshot_ttl_key.default() == str(
-        DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
-    )
+    assert snapshot_ttl_key.default() == str(DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS)
     assert snapshot_ttl_key.description["suggested_value"] == str(
         DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS
     )
@@ -2657,18 +2620,11 @@ async def test_agent_advanced_schema_retrieval_retention(hass, handler_type):
     close_tolerance_key = next(
         key
         for key in schema
-        if getattr(key, "schema", key)
-        == CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
     )
-    assert (
-        close_tolerance_key.default()
-        == DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
-    )
+    assert close_tolerance_key.default() == DEFAULT_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
     assert isinstance(schema[close_tolerance_key], TextSelector)
-    assert (
-        CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS
-        not in _schema_keys(schema)
-    )
+    assert CONF_CONTEXT_RECALL_RERANK_MAX_CANDIDATE_TOKENS not in _schema_keys(schema)
 
 
 @pytest.mark.parametrize(
@@ -2715,9 +2671,7 @@ async def test_agent_advanced_schema_keyword_recall(hass, handler_type):
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_new_agent_does_not_offer_temporary_embedding_cleanup(
-    hass, handler_type
-):
+async def test_new_agent_does_not_offer_temporary_embedding_cleanup(hass, handler_type):
     """A new agent cannot have temporary intra-turn embeddings to clear."""
     handler = handler_type()
     handler.hass = hass
@@ -2799,9 +2753,7 @@ async def test_agent_advanced_reports_scoped_memory_counts(hass, handler_type):
 
     assert result == {"type": "form"}
     memory_store.async_counts.assert_awaited_once_with("agent-1")
-    assert handler.async_show_form.call_args.kwargs[
-        "description_placeholders"
-    ] == {
+    assert handler.async_show_form.call_args.kwargs["description_placeholders"] == {
         "stored_memory_count": "4",
         "temporary_memory_count": "2",
     }
@@ -2861,9 +2813,7 @@ async def test_agent_memory_cleanup_is_transient(hass, handler_type):
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_agent_advanced_schema_exposes_configured_reranker(
-    hass, handler_type
-):
+async def test_agent_advanced_schema_exposes_configured_reranker(hass, handler_type):
     """Both agent types expose reranker controls for retrieval strategies."""
     handler = handler_type()
     handler.hass = hass
@@ -2891,8 +2841,7 @@ async def test_agent_advanced_schema_exposes_configured_reranker(
     threshold_key = next(
         key
         for key in schema
-        if getattr(key, "schema", key)
-        == CONF_CONTEXT_RECALL_RERANK_MIN_SCORE
+        if getattr(key, "schema", key) == CONF_CONTEXT_RECALL_RERANK_MIN_SCORE
     )
     assert threshold_key.default() == DEFAULT_CONTEXT_RECALL_RERANK_MIN_SCORE
     assert isinstance(schema[threshold_key], TextSelector)
@@ -2976,15 +2925,11 @@ async def test_agent_advanced_rejects_compaction_target_outside_request_budget(
     handler._get_entry = MagicMock(return_value=entry)
     handler.async_show_form = MagicMock(return_value={"type": "form"})
 
-    result = await handler.async_step_advanced(
-        {CONF_CONTEXT_COMPACTION_TARGET: 501}
-    )
+    result = await handler.async_step_advanced({CONF_CONTEXT_COMPACTION_TARGET: 501})
 
     assert result == {"type": "form"}
     assert handler.async_show_form.call_args.kwargs["errors"] == {
-        CONF_CONTEXT_COMPACTION_TARGET: (
-            "context_compaction_target_exceeds_budget"
-        )
+        CONF_CONTEXT_COMPACTION_TARGET: ("context_compaction_target_exceeds_budget")
     }
 
 
@@ -3011,9 +2956,7 @@ async def test_agent_advanced_rejects_malformed_compaction_target(
     handler._get_entry = MagicMock(return_value=entry)
     handler.async_show_form = MagicMock(return_value={"type": "form"})
 
-    result = await handler.async_step_advanced(
-        {CONF_CONTEXT_COMPACTION_TARGET: value}
-    )
+    result = await handler.async_step_advanced({CONF_CONTEXT_COMPACTION_TARGET: value})
 
     assert result == {"type": "form"}
     assert handler.async_show_form.call_args.kwargs["errors"] == {
@@ -3030,9 +2973,7 @@ def test_embedding_history_retention_normalization(value, expected):
     assert normalize_embedding_history_retention(value) == expected
 
 
-@pytest.mark.parametrize(
-    "value", ["", "0", "1s", "1w", "1.5h", "-1d", "10M", None]
-)
+@pytest.mark.parametrize("value", ["", "0", "1s", "1w", "1.5h", "-1d", "10M", None])
 def test_embedding_history_retention_rejects_invalid_values(value):
     """Unsupported or non-positive retention durations are rejected."""
     with pytest.raises(ValueError):
@@ -3057,17 +2998,21 @@ async def test_agent_advanced_normalizes_retrieval_retention(hass, handler_type)
     handler._get_reconfigure_subentry = MagicMock()
     handler.async_update_and_abort = MagicMock(return_value={"type": "abort"})
 
-    result = await handler.async_step_advanced(
-        {CONF_EMBEDDING_HISTORY_RETENTION: "10"}
-    )
+    result = await handler.async_step_advanced({CONF_EMBEDDING_HISTORY_RETENTION: "10"})
 
     assert result == {"type": "abort"}
-    assert handler.async_update_and_abort.call_args.kwargs["data"][
-        CONF_EMBEDDING_HISTORY_RETENTION
-    ] == "10d"
-    assert handler.async_update_and_abort.call_args.kwargs["data"][
-        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
-    ] == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+    assert (
+        handler.async_update_and_abort.call_args.kwargs["data"][
+            CONF_EMBEDDING_HISTORY_RETENTION
+        ]
+        == "10d"
+    )
+    assert (
+        handler.async_update_and_abort.call_args.kwargs["data"][
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+        ]
+        == DEFAULT_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+    )
 
 
 @pytest.mark.parametrize(
@@ -3097,18 +3042,19 @@ async def test_agent_advanced_normalizes_snapshot_time_ttl(hass, handler_type):
     )
 
     assert result == {"type": "abort"}
-    assert handler.async_update_and_abort.call_args.kwargs["data"][
-        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
-    ] == "2d"
+    assert (
+        handler.async_update_and_abort.call_args.kwargs["data"][
+            CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TIME
+        ]
+        == "2d"
+    )
 
 
 @pytest.mark.parametrize(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_agent_advanced_rejects_invalid_retrieval_retention(
-    hass, handler_type
-):
+async def test_agent_advanced_rejects_invalid_retrieval_retention(hass, handler_type):
     """Both agent flows keep the form open for an invalid duration."""
     handler = handler_type()
     handler.hass = hass
@@ -3129,9 +3075,7 @@ async def test_agent_advanced_rejects_invalid_retrieval_retention(
 
     assert result == {"type": "form"}
     assert handler.async_show_form.call_args.kwargs["errors"] == {
-        CONF_EMBEDDING_HISTORY_RETENTION: (
-            "invalid_embedding_history_retention"
-        )
+        CONF_EMBEDDING_HISTORY_RETENTION: ("invalid_embedding_history_retention")
     }
 
 
@@ -3139,9 +3083,7 @@ async def test_agent_advanced_rejects_invalid_retrieval_retention(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-@pytest.mark.parametrize(
-    "value", ["0", "0m", "0h", "0d", "", "-1h", "2w"]
-)
+@pytest.mark.parametrize("value", ["0", "0m", "0h", "0d", "", "-1h", "2w"])
 async def test_agent_advanced_rejects_invalid_snapshot_time_ttl(
     hass, handler_type, value
 ):
@@ -3237,9 +3179,7 @@ async def test_agent_advanced_rejects_invalid_snapshot_turn_ttl(
 
     assert result == {"type": "form"}
     assert handler.async_show_form.call_args.kwargs["errors"] == {
-        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: (
-            "invalid_context_recall_max_results"
-        )
+        CONF_CONTEXT_RECALL_SNAPSHOT_TTL_TURNS: ("invalid_context_recall_max_results")
     }
 
 
@@ -3386,18 +3326,19 @@ async def test_agent_advanced_blank_close_match_tolerance_disables_it(
     )
 
     assert result == {"type": "abort"}
-    assert handler.async_update_and_abort.call_args.kwargs["data"][
-        CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
-    ] == ""
+    assert (
+        handler.async_update_and_abort.call_args.kwargs["data"][
+            CONF_CONTEXT_RECALL_CLOSE_MATCH_TOLERANCE
+        ]
+        == ""
+    )
 
 
 @pytest.mark.parametrize(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_agent_advanced_rejects_invalid_reranker_options(
-    hass, handler_type
-):
+async def test_agent_advanced_rejects_invalid_reranker_options(hass, handler_type):
     """Both agent flows reject invalid reranker control values."""
     handler = handler_type()
     handler.hass = hass
@@ -3441,9 +3382,7 @@ async def test_agent_advanced_rejects_invalid_reranker_options(
     "handler_type",
     [ExtendedOpenAISubentryFlowHandler, ExtendedOpenAIAITaskSubentryFlowHandler],
 )
-async def test_agent_advanced_rejects_invalid_keyword_page_size(
-    hass, handler_type
-):
+async def test_agent_advanced_rejects_invalid_keyword_page_size(hass, handler_type):
     """Both agent flows require a positive literal-recall page budget."""
     handler = handler_type()
     handler.hass = hass

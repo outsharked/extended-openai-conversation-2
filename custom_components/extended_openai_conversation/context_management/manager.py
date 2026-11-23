@@ -153,7 +153,7 @@ class ContextManagementMixin:
         self,
         chat_log: conversation.ChatLog,
         retained_contents: list[conversation.Content],
-        prompt_tokens: int
+        prompt_tokens: int,
     ) -> int:
         """Return the available summary budget for the configured target."""
         options = self.subentry.data
@@ -278,15 +278,16 @@ class ContextManagementMixin:
                     {"role": "user", "content": candidate_payload},
                 ]
                 if (
-                    _estimate_serialized_tokens(candidate_messages)
-                    + max_summary_tokens
+                    _estimate_serialized_tokens(candidate_messages) + max_summary_tokens
                     > threshold
                 ):
                     break
                 selected_groups = candidate_groups
 
             if not selected_groups:
-                raise HomeAssistantError("A complete conversation or tool exchange is too large to compact safely")
+                raise HomeAssistantError(
+                    "A complete conversation or tool exchange is too large to compact safely"
+                )
 
             payload = json.dumps(
                 {
@@ -320,7 +321,9 @@ class ContextManagementMixin:
             )
             result = response.choices[0].message.content
             if not isinstance(result, str) or not result.strip():
-                raise HomeAssistantError("The conversation compaction returned no summary")
+                raise HomeAssistantError(
+                    "The conversation compaction returned no summary"
+                )
             summary = result.strip()
             del groups[: len(selected_groups)]
 
@@ -343,12 +346,16 @@ class ContextManagementMixin:
             recent_turns_override,
         )
         if plan is None:
-            _LOGGER.info("Context threshold exceeded, but no older history can be compacted within the configured target")
+            _LOGGER.info(
+                "Context threshold exceeded, but no older history can be compacted within the configured target"
+            )
             return False
 
         history_split_index = plan.history_split_index
         history_to_summarize = messages[1:history_split_index]
-        threshold = int(self.subentry.data.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
+        threshold = int(
+            self.subentry.data.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD)
+        )
         summary_prefix, summary = await self._summarize_compaction_groups(
             _group_compaction_contents(history_to_summarize),
             plan.max_summary_tokens,
@@ -371,9 +378,7 @@ class ContextManagementMixin:
                 native={_ROLLING_SUMMARY_NATIVE_KEY: True},
             )
         ]
-        _LOGGER.info(
-            "Context threshold exceeded, older conversation history compacted"
-        )
+        _LOGGER.info("Context threshold exceeded, older conversation history compacted")
         return True
 
     async def _archive_context_groups(
@@ -451,9 +456,7 @@ class ContextManagementMixin:
             records.append(
                 EmbeddingMemoryRecord.create(
                     model=model if embedded_chunks else None,
-                    embedding=(
-                        embedded_chunks[0].embedding if embedded_chunks else []
-                    ),
+                    embedding=(embedded_chunks[0].embedding if embedded_chunks else []),
                     searchable_text=(
                         embedded_chunks[0].text if embedded_chunks else transcript
                     ),
@@ -523,9 +526,8 @@ class ContextManagementMixin:
                 )
 
         replacement: str | None = None
-        should_compact = (
-            CONTEXT_PRESERVATION_METHOD_COMPACT in methods
-            or (archives_context(methods) and not archived)
+        should_compact = CONTEXT_PRESERVATION_METHOD_COMPACT in methods or (
+            archives_context(methods) and not archived
         )
         if should_compact:
             try:
@@ -540,7 +542,9 @@ class ContextManagementMixin:
                     token_usage.prompt_tokens,
                 )
                 if max_summary_tokens > 1:
-                    threshold = int(options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD))
+                    threshold = int(
+                        options.get(CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD)
+                    )
                     summary_prefix, summary = await self._summarize_compaction_groups(
                         [list(group) for group in reduction.summary_groups],
                         max_summary_tokens,
@@ -549,7 +553,9 @@ class ContextManagementMixin:
                     )
                     replacement = f"{summary_prefix}\n{summary}"
                 else:
-                    _LOGGER.info("Intra-turn compaction cannot produce a summary within the configured target")
+                    _LOGGER.info(
+                        "Intra-turn compaction cannot produce a summary within the configured target"
+                    )
             except Exception:
                 _LOGGER.exception("Intra-turn conversation compaction failed")
 
@@ -619,7 +625,9 @@ class ContextManagementMixin:
             messages, preserve_current_turn, recent_turns_override
         )
         if history_split_index is None or history_split_index <= 1:
-            _LOGGER.info("Context threshold exceeded, but there is no older history to archive")
+            _LOGGER.info(
+                "Context threshold exceeded, but there is no older history to archive"
+            )
             return False
 
         archivable_contents = [
@@ -740,9 +748,14 @@ class ContextManagementMixin:
                     language,
                 )
             except Exception:
-                _LOGGER.exception("Conversation compaction failed; falling back to clearing history")
+                _LOGGER.exception(
+                    "Conversation compaction failed; falling back to clearing history"
+                )
                 return self._clear_message_history(chat_log)
-        if archives_context(methods) and CONTEXT_PRESERVATION_METHOD_COMPACT not in methods:
+        if (
+            archives_context(methods)
+            and CONTEXT_PRESERVATION_METHOD_COMPACT not in methods
+        ):
             try:
                 return await self._archive_message_history(
                     chat_log,
@@ -762,7 +775,9 @@ class ContextManagementMixin:
                         language,
                     )
                 except Exception:
-                    _LOGGER.exception("Conversation compaction failed. Falling back to clearing history")
+                    _LOGGER.exception(
+                        "Conversation compaction failed. Falling back to clearing history"
+                    )
                     return self._clear_message_history(chat_log)
         if archives_context(methods) and CONTEXT_PRESERVATION_METHOD_COMPACT in methods:
             return await self._retrieve_and_compact_message_history(
@@ -773,4 +788,3 @@ class ContextManagementMixin:
                 language,
             )
         return False
-
