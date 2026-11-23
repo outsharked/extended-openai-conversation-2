@@ -2076,13 +2076,17 @@ class ExtendedOpenAIConversationConfigFlow(AbstractOAuth2FlowHandler, domain=DOM
         title = str(data.get(CONF_NAME, DEFAULT_NAME))
         if self._reconfigure_entry is not None:
             if self._selected_service_type == SERVICE_TYPE_AI_ENDPOINT:
-                memory_store = _embedding_memory_store(
-                    self.hass, self._reconfigure_entry
-                )
-                if self._clear_embedding_history_requested:
-                    await memory_store.async_clear_persistent()
-                if self._clear_intra_turn_embeddings_requested:
-                    await memory_store.async_clear_temporary()
+                if (
+                    self._clear_embedding_history_requested
+                    or self._clear_intra_turn_embeddings_requested
+                ):
+                    memory_store = _embedding_memory_store(
+                        self.hass, self._reconfigure_entry
+                    )
+                    if self._clear_embedding_history_requested:
+                        await memory_store.async_clear_persistent()
+                    if self._clear_intra_turn_embeddings_requested:
+                        await memory_store.async_clear_temporary()
                 self._clear_embedding_history_requested = False
                 self._clear_intra_turn_embeddings_requested = False
             return self.async_update_reload_and_abort(
