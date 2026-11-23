@@ -224,6 +224,20 @@ message, and `Disabled` omits its automatic insertion.
 - You can also manually specify a tool to manually expose to a conversation Agent in the prompt settings by telling it the server ID and tool name however, this method will not bypass any disabled tool filtering
 - The integration will always check for MCP server connectivity during configuration even if `Perform initial tool discovery` is disabled.
 - **SECURITY:** Only connect to MCP servers you trust and ensure their instructions do not contain malicious prompt injections
+
+### Compaction
+The integration will perform compaction based on the specified compaction strategies and targeted token limits
+- Rolling Summary: When the context limit is reached, the integration will send the entire conversation to your AI Endpoint to summarise the entire conversation then will replace the old messages with the summary. It will attempt to preserve up to the specified number of messages verbatim, however if this still exceeds the target token limit, it will keep summarising until the limit is reduced and delete the old messages. This is a lossy compaction
+- Semantic embedding recall: If an embeddings endpoint has been added, then the old messages will be stored in a local embeddings database verbatim. When any message is sent, the integration will perform an embeddings lookup for old messages related to the current message and supply that to the agent alongside the current message for additional context. The agent can also use built in functions to search the current conversation history for related messages. The old messages are still deleted from the conversation but are stored locally and supplied to the agent based on similarity
+- Literal text recall: While similar to embeddings, this does a literal text based lookup of old messages in the conversation. This does not happen automatically and requires the agent to specifically lookup the old message for matching text
+
+**NOTES**
+- Because embeddings uses semantic similarity, a reranking model can also be provided to increase the likely hood of matches. A tolerance before the integration drops similarities can also be specified. These messages are available for the agent to search on each message turn including recollection snapshots that the agent can cycle through. This is designed in such a way that each recall operates in a fixed "page" size to prevent the recollection exceeding the context limit again.
+- The message searches do not operate across conversations and are local only to the present conversation.
+- While the messages are stored in the local Home Assistant instance, a configurable expirey time is provided at which point the old messages and embeddings data is completely deleted permanently. They can also be deleted manually by enabling the clear toggles in the advanced tabs
+- When enabling multiple forms of compaction, the system will perform a fallback, starting with embeddings, then falling back to rolling summary before falling back to deletion if the others fail.
+- It is recommended to use at least `literal text` especially for long conversations as this allows the agents to recall older messages verbatim, that may have been dropped from the current context
+
 ### Functions
 
 #### Supported function types

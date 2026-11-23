@@ -12,8 +12,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import llm
 
 from ..const import (
+    BROWSE_RECALLED_CONTEXT_FUNCTION_NAME,
     CONF_EMBEDDINGS,
     CONF_EMBEDDINGS_MODEL,
+    CONTEXT_RECALL_FUNCTION_NAME,
+    CONTEXT_SEARCH_FUNCTION_NAME,
     DEFAULT_CONTEXT_RECALL_MAX_RESULTS,
     DEFAULT_CONTEXT_RECALL_MAX_TOKENS,
     DEFAULT_CONTEXT_RECALL_RERANK,
@@ -59,7 +62,7 @@ def build_context_recall_function_tool(
     """Build the model-facing conversation recall tool."""
     default_results = min(DEFAULT_CONTEXT_RECALL_RESULTS, max_results)
     function_config: dict[str, Any] = {
-        "type": "context_recall",
+        "type": CONTEXT_RECALL_FUNCTION_NAME,
         "entry_id": entry_id,
         "agent_id": agent_id,
         "max_tokens": max_tokens,
@@ -76,7 +79,7 @@ def build_context_recall_function_tool(
         function_config["rerank_max_candidate_tokens"] = rerank_max_candidate_tokens
     return {
         "spec": {
-            "name": "context_recall",
+            "name": CONTEXT_RECALL_FUNCTION_NAME,
             "description": (
                 "Semantically search older messages archived from this conversation. "
                 "Use this when relevant earlier details are not present in the active "
@@ -123,7 +126,7 @@ def build_browse_recalled_context_function_tool(
     """Build the model-facing tool used to browse a recall snapshot."""
     return {
         "spec": {
-            "name": "browse_recalled_context",
+            "name": BROWSE_RECALLED_CONTEXT_FUNCTION_NAME,
             "description": (
                 "Read another page from a paginated context_recall or "
                 "context_search result. Use the "
@@ -151,7 +154,7 @@ def build_browse_recalled_context_function_tool(
             },
         },
         "function": {
-            "type": "browse_recalled_context",
+            "type": BROWSE_RECALLED_CONTEXT_FUNCTION_NAME,
             "entry_id": entry_id,
             "agent_id": agent_id,
         },
@@ -169,7 +172,7 @@ def build_context_search_function_tool(
     """Build the model-facing literal conversation search tool."""
     return {
         "spec": {
-            "name": "context_search",
+            "name": CONTEXT_SEARCH_FUNCTION_NAME,
             "description": (
                 "Search older messages archived from this conversation for an "
                 "exact text fragment. Use this when semantic recall may miss a "
@@ -200,7 +203,7 @@ def build_context_search_function_tool(
             },
         },
         "function": {
-            "type": "context_search",
+            "type": CONTEXT_SEARCH_FUNCTION_NAME,
             "entry_id": entry_id,
             "agent_id": agent_id,
             "max_tokens": max_tokens,

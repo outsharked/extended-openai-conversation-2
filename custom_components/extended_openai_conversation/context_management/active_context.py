@@ -6,13 +6,11 @@ from typing import Any
 
 from homeassistant.components import conversation
 
+from ..const import (
+    BROWSE_RECALLED_CONTEXT_FUNCTION_NAME,
+    CONTEXT_MANAGEMENT_FUNCTION_NAMES,
+)
 from .compaction import _estimate_serialized_tokens
-
-_RECALL_TOOL_NAMES = {
-    "context_recall",
-    "context_search",
-    "browse_recalled_context",
-}
 
 
 def _tool_result_data(content: conversation.ToolResultContent) -> Any:
@@ -42,7 +40,7 @@ def _released_recall_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if "snapshot_id" in released:
         released["message"] = (
             "This page was released from active context. Use "
-            "browse_recalled_context to retrieve it again."
+            f"{BROWSE_RECALLED_CONTEXT_FUNCTION_NAME} to retrieve it again."
         )
     else:
         released["message"] = (
@@ -79,7 +77,7 @@ def _bound_active_recalled_context(
     for index, content in enumerate(contents):
         if (
             not isinstance(content, conversation.ToolResultContent)
-            or content.tool_name not in _RECALL_TOOL_NAMES
+            or content.tool_name not in CONTEXT_MANAGEMENT_FUNCTION_NAMES
         ):
             continue
         payload = _recall_result_payload(_tool_result_data(content))

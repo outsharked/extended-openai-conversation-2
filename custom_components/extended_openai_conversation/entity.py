@@ -58,6 +58,7 @@ from .const import (
     CONF_SHORTEN_TOOL_CALL_ID,
     CONF_TEMPERATURE,
     CONF_TOP_P,
+    CONTEXT_MANAGEMENT_FUNCTION_NAMES,
     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_RECENT_TURNS,
@@ -84,6 +85,7 @@ from .const import (
     MCP_CONTEXT_PLACEMENT_DEDICATED_SYSTEM,
     MCP_CONTEXT_PLACEMENT_DISABLED,
     MCP_CONTEXT_PLACEMENT_USER,
+    MCP_FUNCTION_NAME,
 )
 from .context_management import (
     EmbeddingMemoryStore,
@@ -1318,22 +1320,18 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
         """Execute a custom function."""
         arguments: dict[str, Any] = tool_input.tool_args
         function_config = function_tool["function"]
-        if function_config["type"] in {
-            "context_recall",
-            "context_search",
-            "browse_recalled_context",
-        }:
+        if function_config["type"] in CONTEXT_MANAGEMENT_FUNCTION_NAMES:
             function_config = {
                 **function_config,
                 "conversation_id": chat_log.conversation_id,
             }
         function = get_function(function_config["type"])
 
-        if function_config["type"] not in {
-            "context_recall",
-            "context_search",
-            "browse_recalled_context",
-        } and self.should_run_in_background(arguments):
+        if function_config[
+            "type"
+        ] not in CONTEXT_MANAGEMENT_FUNCTION_NAMES and self.should_run_in_background(
+            arguments
+        ):
             # create a delayed function and execute in background
             function_config = self.get_delayed_function_config(
                 function_config, arguments
@@ -1359,7 +1357,7 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
             ChatCompletionContentPartImageParam
             | ChatCompletionContentPartInputAudioParam
         ] = []
-        if function_config["type"] == "mcp":
+        if function_config["type"] == MCP_FUNCTION_NAME:
             result, media_parts = _extract_mcp_media_content(
                 result,
                 self.entry.data.get(CONF_MCP_MEDIA_TYPES, DEFAULT_MCP_MEDIA_TYPES),
@@ -1373,12 +1371,7 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
                 data={
                     "result": (
                         result
-                        if function_config["type"]
-                        in {
-                            "context_recall",
-                            "context_search",
-                            "browse_recalled_context",
-                        }
+                        if function_config["type"] in CONTEXT_MANAGEMENT_FUNCTION_NAMES
                         else str(result)
                     )
                 },

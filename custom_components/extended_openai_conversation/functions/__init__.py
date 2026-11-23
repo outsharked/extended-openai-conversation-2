@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from ..const import (
+    BROWSE_RECALLED_CONTEXT_FUNCTION_NAME,
+    CONTEXT_RECALL_FUNCTION_NAME,
+    CONTEXT_SEARCH_FUNCTION_NAME,
+    MCP_FUNCTION_NAME,
+)
 from ..exceptions import FunctionNotFound
 from .base import Function
 from .bash import BashFunction
@@ -51,10 +57,10 @@ FUNCTIONS: dict[str, Function] = {
     "read_file": ReadFileFunction(),
     "write_file": WriteFileFunction(),
     "edit_file": EditFileFunction(),
-    "mcp": MCPFunction(),
-    "context_recall": ContextRecallFunction(),
-    "context_search": ContextSearchFunction(),
-    "browse_recalled_context": BrowseRecalledContextFunction(),
+    MCP_FUNCTION_NAME: MCPFunction(),
+    CONTEXT_RECALL_FUNCTION_NAME: ContextRecallFunction(),
+    CONTEXT_SEARCH_FUNCTION_NAME: ContextSearchFunction(),
+    BROWSE_RECALLED_CONTEXT_FUNCTION_NAME: BrowseRecalledContextFunction(),
 }
 
 

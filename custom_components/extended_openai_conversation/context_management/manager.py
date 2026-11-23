@@ -31,6 +31,8 @@ from ..const import (
     CONTEXT_PRESERVATION_METHOD_COMPACT,
     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
     CONTEXT_PRESERVATION_METHOD_KEYWORD,
+    CONTEXT_RECALL_FUNCTION_NAME,
+    CONTEXT_SEARCH_FUNCTION_NAME,
     DEFAULT_CHAT_MODEL,
     DEFAULT_CONTEXT_COMPACTION_INTRA_TURN,
     DEFAULT_CONTEXT_COMPACTION_PROMPT,
@@ -571,11 +573,11 @@ class ContextManagementMixin:
                             for method, name in (
                                 (
                                     CONTEXT_PRESERVATION_METHOD_EMBEDDINGS,
-                                    "context_recall",
+                                    CONTEXT_RECALL_FUNCTION_NAME,
                                 ),
                                 (
                                     CONTEXT_PRESERVATION_METHOD_KEYWORD,
-                                    "context_search",
+                                    CONTEXT_SEARCH_FUNCTION_NAME,
                                 ),
                             )
                             if method in methods

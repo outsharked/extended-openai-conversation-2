@@ -36,11 +36,11 @@ from .const import (
     DEFAULT_WORKING_DIRECTORY,
     DOMAIN,
     EVENT_CONVERSATION_FINISHED,
+    INTERNAL_FUNCTION_NAMES,
 )
 from .entity import ExtendedOpenAIBaseLLMEntity
 from .exceptions import FunctionLoadFailed, FunctionNotFound, InvalidFunction
 from .functions import get_function
-from .functions.mcp import MCP_FUNCTION_NAME
 from .helpers import get_exposed_entities
 from .skills import Skill, SkillManager
 
@@ -252,14 +252,20 @@ class ExtendedOpenAIAgentEntity(
                     if isinstance(function_tool, dict) and "function" in function_tool:
                         function_config = function_tool["function"]
                         function_spec = function_tool.get("spec")
+                        reserved_name = (
+                            function_spec.get("name")
+                            if isinstance(function_spec, dict)
+                            and function_spec.get("name") in INTERNAL_FUNCTION_NAMES
+                            else None
+                        )
                         if (
-                            isinstance(function_spec, dict)
-                            and function_spec.get("name") == MCP_FUNCTION_NAME
-                        ) or (
-                            isinstance(function_config, dict)
-                            and function_config.get("type") == MCP_FUNCTION_NAME
+                            reserved_name is None
+                            and isinstance(function_config, dict)
+                            and function_config.get("type") in INTERNAL_FUNCTION_NAMES
                         ):
-                            raise InvalidFunction(MCP_FUNCTION_NAME)
+                            reserved_name = function_config["type"]
+                        if reserved_name is not None:
+                            raise InvalidFunction(reserved_name)
                         if (
                             isinstance(function_config, dict)
                             and "type" in function_config

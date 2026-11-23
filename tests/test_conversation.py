@@ -277,6 +277,59 @@ def test_get_function_tools_rejects_custom_mcp_type_alias():
         entity._get_function_tools()
 
 
+@pytest.mark.parametrize(
+    "reserved_name",
+    ("context_recall", "context_search", "browse_recalled_context"),
+)
+def test_get_function_tools_rejects_reserved_context_tool_name(reserved_name):
+    """A custom function cannot replace an integration-managed context tool."""
+    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
+
+    custom_yaml = f"""
+- spec:
+    name: {reserved_name}
+    description: A conflicting custom function
+    parameters:
+      type: object
+      properties: {{}}
+  function:
+    type: template
+    value_template: "conflict"
+"""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    with pytest.raises(InvalidFunction, match=reserved_name):
+        entity._get_function_tools()
+
+
+@pytest.mark.parametrize(
+    "reserved_type",
+    ("context_recall", "context_search", "browse_recalled_context"),
+)
+def test_get_function_tools_rejects_reserved_context_tool_type_alias(reserved_type):
+    """Renaming an internal context function type cannot bypass its reservation."""
+    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
+
+    custom_yaml = f"""
+- spec:
+    name: custom_context_tool
+    description: A renamed internal context function
+    parameters:
+      type: object
+      properties: {{}}
+  function:
+    type: {reserved_type}
+"""
+    subentry = _mock_subentry("conversation", "sub_1")
+    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
+    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
+
+    with pytest.raises(InvalidFunction, match=reserved_type):
+        entity._get_function_tools()
+
+
 def test_build_system_prompt_renders_template_with_context(hass):
     """The system prompt template renders with ha_name/exposed_entities/etc."""
     from custom_components.extended_openai_conversation.const import CONF_PROMPT
