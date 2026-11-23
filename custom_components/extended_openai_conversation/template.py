@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import TemplateEnvironment
 
-from .const import DEFAULT_WORKING_DIRECTORY, DOMAIN
-from .helpers import get_exposed_entities
+from .const import DEFAULT_WORKING_DIRECTORY, DOMAIN, SERVICE_TYPE_MCP
+from .helpers import get_exposed_entities, get_service_type
 from .skills import SkillManager
 
 if TYPE_CHECKING:
@@ -40,7 +40,12 @@ async def async_setup_templates(hass: HomeAssistant) -> bool:
 
 async def async_unload_templates(hass: HomeAssistant) -> bool:
     """Unload template functions for Extended OpenAI Conversation."""
-    if len(hass.config_entries.async_entries(DOMAIN)) == 1:
+    ai_entries = [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if get_service_type(entry) != SERVICE_TYPE_MCP
+    ]
+    if len(ai_entries) == 1:
         manager = hass.data.get(DOMAIN, {}).get(DATA_TEMPLATE_MANAGER)
         if manager:
             await manager.async_on_unload()

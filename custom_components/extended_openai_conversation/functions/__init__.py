@@ -2,11 +2,23 @@
 
 from __future__ import annotations
 
+from ..const import (
+    BROWSE_RECALLED_CONTEXT_FUNCTION_NAME,
+    CONTEXT_RECALL_FUNCTION_NAME,
+    CONTEXT_SEARCH_FUNCTION_NAME,
+    MCP_FUNCTION_NAME,
+)
 from ..exceptions import FunctionNotFound
 from .base import Function
 from .bash import BashFunction
 from .composite import CompositeFunction
+from .context_recall import (
+    BrowseRecalledContextFunction,
+    ContextRecallFunction,
+    ContextSearchFunction,
+)
 from .file import EditFileFunction, ReadFileFunction, WriteFileFunction
+from .mcp import MCPFunction
 from .native import NativeFunction
 from .script import ScriptFunction
 from .sqlite import SqliteFunction
@@ -15,9 +27,13 @@ from .web import RestFunction, ScrapeFunction
 
 __all__ = [
     "BashFunction",
+    "BrowseRecalledContextFunction",
     "CompositeFunction",
+    "ContextRecallFunction",
+    "ContextSearchFunction",
     "EditFileFunction",
     "Function",
+    "MCPFunction",
     "NativeFunction",
     "ReadFileFunction",
     "RestFunction",
@@ -41,6 +57,10 @@ FUNCTIONS: dict[str, Function] = {
     "read_file": ReadFileFunction(),
     "write_file": WriteFileFunction(),
     "edit_file": EditFileFunction(),
+    MCP_FUNCTION_NAME: MCPFunction(),
+    CONTEXT_RECALL_FUNCTION_NAME: ContextRecallFunction(),
+    CONTEXT_SEARCH_FUNCTION_NAME: ContextSearchFunction(),
+    BROWSE_RECALLED_CONTEXT_FUNCTION_NAME: BrowseRecalledContextFunction(),
 }
 
 
