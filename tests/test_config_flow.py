@@ -2596,8 +2596,7 @@ async def test_ai_task_advanced_schema_omits_conversation_cancellation(hass):
 
     schema = handler.async_show_form.call_args.kwargs["data_schema"].schema
     assert not any(
-        getattr(key, "schema", key) == CONF_CANCEL_ACTIVE_CONVERSATION
-        for key in schema
+        getattr(key, "schema", key) == CONF_CANCEL_ACTIVE_CONVERSATION for key in schema
     )
 
 

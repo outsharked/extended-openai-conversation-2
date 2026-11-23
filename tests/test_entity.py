@@ -1680,9 +1680,7 @@ async def test_expected_function_error_is_returned_to_model(caplog):
     entity.hass = MagicMock()
     entity._attr_entity_id = "conversation.test"
     function = MagicMock()
-    function.execute = AsyncMock(
-        side_effect=EntityAccessDenied(["lock.front_door"])
-    )
+    function.execute = AsyncMock(side_effect=EntityAccessDenied(["lock.front_door"]))
     function_tool = {
         "spec": {"name": "execute_services"},
         "function": {"type": "native", "name": "execute_service"},
@@ -1723,9 +1721,7 @@ async def test_delayed_function_error_is_returned_before_scheduling(caplog):
     entity.hass = MagicMock()
     entity._attr_entity_id = "conversation.test"
     function = MagicMock()
-    function.validate_execution.side_effect = EntityAccessDenied(
-        ["lock.front_door"]
-    )
+    function.validate_execution.side_effect = EntityAccessDenied(["lock.front_door"])
     function_tool = {
         "spec": {"name": "execute_services"},
         "function": {"type": "native", "name": "execute_service"},
@@ -1848,9 +1844,7 @@ async def test_generic_function_error_omits_exception_reason():
     entity._attr_entity_id = "conversation.test"
     entity.subentry.data[CONF_TOOL_ERROR_REPORTING] = TOOL_ERROR_REPORTING_GENERIC
     function = MagicMock()
-    function.execute = AsyncMock(
-        side_effect=EntityAccessDenied(["lock.front_door"])
-    )
+    function.execute = AsyncMock(side_effect=EntityAccessDenied(["lock.front_door"]))
     function_tool = {
         "spec": {"name": "execute_services"},
         "function": {"type": "native", "name": "execute_service"},
@@ -1898,7 +1892,9 @@ async def test_malformed_tool_json_is_returned_with_detailed_diagnostics(caplog)
             )
         ]
     )
-    tool_input = next(delta["tool_calls"][0] for delta in deltas if "tool_calls" in delta)
+    tool_input = next(
+        delta["tool_calls"][0] for delta in deltas if "tool_calls" in delta
+    )
     entity = _entity_for_compaction()
     entity.hass = MagicMock()
     entity._attr_entity_id = "conversation.test"
@@ -1974,9 +1970,7 @@ async def test_result_processing_failure_reports_detailed_exception(caplog):
     assert media_parts == []
     error = _tool_result_data(tool_result)["error"]
     assert error["code"] == "tool_result_processing_failed"
-    assert error["message"] == (
-        "The tool ran, but its result could not be processed."
-    )
+    assert error["message"] == ("The tool ran, but its result could not be processed.")
     assert error["details"]["exception"] == "ValueError"
     assert error["details"]["reason"] == "invalid base64 image data"
     assert "traceback" not in error["details"]

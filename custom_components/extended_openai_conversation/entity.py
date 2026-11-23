@@ -1284,7 +1284,9 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
                         FunctionNotFound(tool_input.tool_name),
                         error_reporting,
                     )
-                    chat_log.async_add_assistant_content_without_tools(tool_result_content)
+                    chat_log.async_add_assistant_content_without_tools(
+                        tool_result_content
+                    )
                     continue
 
                 tool_result_content, media_parts = await self._execute_function_tool(
@@ -1418,9 +1420,7 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
                                 "arguments_preview": _bounded_model_error_detail(
                                     tool_call["arguments"]
                                 ),
-                                "traceback": "".join(
-                                    traceback.format_exception(err)
-                                ),
+                                "traceback": "".join(traceback.format_exception(err)),
                             }
                         }
                     if not isinstance(args, dict):
@@ -1549,11 +1549,15 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
                     llm_context,
                     exposed_entities,
                 )
-        except (HomeAssistantError, KeyError, TypeError, ValueError, vol.Invalid) as err:
+        except (
+            HomeAssistantError,
+            KeyError,
+            TypeError,
+            ValueError,
+            vol.Invalid,
+        ) as err:
             return (
-                _tool_error_content(
-                    self.entity_id, tool_input, err, error_reporting
-                ),
+                _tool_error_content(self.entity_id, tool_input, err, error_reporting),
                 media_parts,
             )
         except Exception as err:  # pylint: disable=broad-except
@@ -1575,9 +1579,7 @@ class ExtendedOpenAIBaseLLMEntity(ContextRecallMixin, ContextManagementMixin, En
             if function_config["type"] == MCP_FUNCTION_NAME:
                 result, media_parts = _extract_mcp_media_content(
                     result,
-                    self.entry.data.get(
-                        CONF_MCP_MEDIA_TYPES, DEFAULT_MCP_MEDIA_TYPES
-                    ),
+                    self.entry.data.get(CONF_MCP_MEDIA_TYPES, DEFAULT_MCP_MEDIA_TYPES),
                 )
 
             result_data = {
