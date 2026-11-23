@@ -46,13 +46,18 @@ class TemplateFunction(Function):
                     for entity_id in entity_ids.split(",")
                     if entity_id.strip()
                 ]
-            elif (isinstance(entity_ids, list) and
-                all(isinstance(entity_id, str) for entity_id in entity_ids)):
+            elif isinstance(entity_ids, list) and all(
+                isinstance(entity_id, str) for entity_id in entity_ids
+            ):
                 normalized_entity_ids = entity_ids
             else:
-                raise HomeAssistantError("entity_id must be a string or a list of strings")
+                raise HomeAssistantError(
+                    "entity_id must be a string or a list of strings"
+                )
 
-            EntityFilter.from_config(entity_filter_config).validate(normalized_entity_ids)
+            EntityFilter.from_config(entity_filter_config).validate(
+                normalized_entity_ids
+            )
             render_arguments = {
                 **arguments,
                 "entity_id": normalized_entity_ids,
