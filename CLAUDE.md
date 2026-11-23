@@ -92,7 +92,7 @@ tests/
 
 ## Key Conventions
 
-- Python 3.14+, HA minimum 2026.9.0
+- Python 3.14+, HA minimum 2026.11.0
 - Ruff rules: E, W, F, I, UP, RUF, B, SIM (E501 and B008 ignored)
 - Import aliases enforced: `probatio` → `vol` (HA replaced voluptuous with probatio in 2026.9), `homeassistant.helpers.config_validation` → `cv`
 - All I/O is async; use `async_add_executor_job()` for sync code

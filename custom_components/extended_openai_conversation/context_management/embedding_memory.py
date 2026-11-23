@@ -1,0 +1,759 @@
+"""Persistent and temporary conversation memory for embedding retrieval."""
+
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Iterable
+from contextlib import suppress
+from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+import json
+import logging
+import math
+import os
+from pathlib import Path
+import re
+import shutil
+from typing import Any
+from uuid import uuid4
+
+from openai import AsyncClient
+
+from homeassistant.core import HomeAssistant
+
+from ..const import DOMAIN
+
+_STORAGE_VERSION = 1
+_RETENTION_PATTERN = re.compile(r"(?P<value>[1-9]\d*)(?P<unit>[mhd]?)")
+_UNIT_SECONDS = {"m": 60, "h": 60 * 60, "d": 24 * 60 * 60}
+_ESTIMATED_CHARACTERS_PER_TOKEN = 4
+
+EMBEDDING_MEMORY_SOURCE_CONVERSATION = "conversation_turn"
+EMBEDDING_MEMORY_SOURCE_INTRA_TURN = "intra_turn_tool"
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def normalize_embedding_history_retention(value: Any) -> str:
+    """Validate an embedding retention duration and add the default unit."""
+    if not isinstance(value, str):
+        raise ValueError
+    match = _RETENTION_PATTERN.fullmatch(value.strip())
+    if match is None:
+        raise ValueError
+    return f"{match.group('value')}{match.group('unit') or 'd'}"
+
+
+def embedding_history_retention(value: Any) -> timedelta:
+    """Return a validated embedding retention duration."""
+    normalized = normalize_embedding_history_retention(value)
+    unit = normalized[-1]
+    return timedelta(seconds=int(normalized[:-1]) * _UNIT_SECONDS[unit])
+
+
+def chunk_embedding_text(text: str, max_estimated_tokens: int) -> list[str]:
+    """Split text into bounded embedding inputs without dropping content."""
+    if max_estimated_tokens <= 0:
+        raise ValueError("max_estimated_tokens must be positive")
+    if not text:
+        return [text]
+
+    max_characters = max_estimated_tokens * _ESTIMATED_CHARACTERS_PER_TOKEN
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > max_characters:
+        split_at = max(
+            remaining.rfind(separator, 0, max_characters)
+            for separator in ("\n", "\t", " ")
+        )
+        if split_at < max_characters // 2:
+            split_at = max_characters
+        else:
+            split_at += 1
+        chunks.append(remaining[:split_at])
+        remaining = remaining[split_at:]
+    if remaining or not chunks:
+        chunks.append(remaining)
+    return chunks
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryScope:
+    """Identify one agent conversation within an AI endpoint."""
+
+    entry_id: str
+    agent_id: str
+    conversation_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryChunk:
+    """An additional search vector for one archived conversation turn."""
+
+    embedding: list[float]
+    searchable_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryRecord:
+    """A lossless archived conversation turn and its search vector."""
+
+    record_id: str
+    created_at: str
+    expires_at: str
+    model: str | None
+    embedding: list[float]
+    searchable_text: str
+    messages: list[dict[str, Any]]
+    additional_chunks: tuple[EmbeddingMemoryChunk, ...] = ()
+    source: str = EMBEDDING_MEMORY_SOURCE_CONVERSATION
+    turn_id: str | None = None
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        model: str | None,
+        embedding: Iterable[float],
+        searchable_text: str,
+        messages: list[dict[str, Any]],
+        retention: timedelta,
+        additional_chunks: Iterable[EmbeddingMemoryChunk] = (),
+        source: str = EMBEDDING_MEMORY_SOURCE_CONVERSATION,
+        turn_id: str | None = None,
+        now: datetime | None = None,
+    ) -> EmbeddingMemoryRecord:
+        """Create a record without collapsing repeated identical turns."""
+        created_at = now or datetime.now(UTC)
+        return cls(
+            record_id=uuid4().hex,
+            created_at=created_at.isoformat(),
+            expires_at=(created_at + retention).isoformat(),
+            model=model,
+            embedding=list(embedding),
+            searchable_text=searchable_text,
+            messages=messages,
+            additional_chunks=tuple(additional_chunks),
+            source=source,
+            turn_id=turn_id,
+        )
+
+    @property
+    def chunks(self) -> tuple[EmbeddingMemoryChunk, ...]:
+        """Return every searchable chunk associated with this turn."""
+        primary = (
+            (EmbeddingMemoryChunk(self.embedding, self.searchable_text),)
+            if self.searchable_text
+            else ()
+        )
+        return (*primary, *self.additional_chunks)
+
+    def is_expired(self, now: datetime) -> bool:
+        """Return whether this record has passed its expiry time."""
+        return datetime.fromisoformat(self.expires_at) <= now
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryMatch:
+    """An archived turn and its similarity to a recall query."""
+
+    record: EmbeddingMemoryRecord
+    score: float
+    matched_text: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingMemoryCounts:
+    """Count persistent and temporary archived memories."""
+
+    persistent: int = 0
+    temporary: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddedTextChunk:
+    """Text accepted by the embeddings endpoint and its resulting vector."""
+
+    text: str
+    embedding: list[float]
+
+
+def _embedding_context_limit_error(err: Exception) -> bool:
+    """Return whether an embeddings request exceeded the endpoint context."""
+    message = str(err).casefold()
+    return (
+        "context" in message
+        and ("exceed" in message or "too large" in message or "too long" in message)
+        and ("token" in message or "length" in message or "size" in message)
+    )
+
+
+def _split_embedding_chunk(text: str) -> tuple[str, str]:
+    """Split an rejected embedding input without dropping any text."""
+    midpoint = len(text) // 2
+    split_at = max(
+        text.rfind(separator, 0, midpoint + 1) for separator in ("\n", "\t", " ")
+    )
+    if split_at < midpoint // 2:
+        split_at = midpoint
+    else:
+        split_at += 1
+    return text[:split_at], text[split_at:]
+
+
+async def async_embed_text_chunks(
+    client: AsyncClient,
+    model: str,
+    text: str,
+    max_estimated_tokens: int,
+) -> list[EmbeddedTextChunk]:
+    """Embed text losslessly, subdividing inputs rejected as too large."""
+    pending = chunk_embedding_text(text, max_estimated_tokens)
+    embedded: list[EmbeddedTextChunk] = []
+    while pending:
+        chunk = pending.pop(0)
+        try:
+            response = await client.embeddings.create(model=model, input=[chunk])
+        except Exception as err:
+            if not _embedding_context_limit_error(err) or len(chunk) < 2:
+                raise
+            first, second = _split_embedding_chunk(chunk)
+            pending[0:0] = [first, second]
+            continue
+        if (
+            len(response.data) != 1
+            or response.data[0].index != 0
+            or not response.data[0].embedding
+        ):
+            raise ValueError("The embeddings endpoint returned an incomplete response")
+        embedded.append(EmbeddedTextChunk(chunk, list(response.data[0].embedding)))
+    return embedded
+
+
+def merge_embedding_matches(
+    match_groups: Iterable[Iterable[EmbeddingMemoryMatch]], limit: int
+) -> list[EmbeddingMemoryMatch]:
+    """Deduplicate multi-vector search results using each record's best score."""
+    matches_by_record: dict[str, EmbeddingMemoryMatch] = {}
+    for group in match_groups:
+        for match in group:
+            previous = matches_by_record.get(match.record.record_id)
+            if previous is None or match.score > previous.score:
+                matches_by_record[match.record.record_id] = match
+    return sorted(
+        matches_by_record.values(), key=lambda match: match.score, reverse=True
+    )[:limit]
+
+
+def split_close_embedding_matches(
+    matches: list[EmbeddingMemoryMatch],
+    result_limit: int,
+    tolerance: float | None,
+) -> tuple[list[EmbeddingMemoryMatch], list[EmbeddingMemoryMatch]]:
+    """Split ranked matches into primary results and close excluded candidates."""
+    selected = matches[:result_limit]
+    if tolerance is None or not selected:
+        return selected, []
+    cutoff = selected[-1].score
+    close_matches = [
+        match for match in matches[result_limit:] if cutoff - match.score <= tolerance
+    ]
+    return selected, close_matches
+
+
+def _cosine_similarity(first: list[float], second: list[float]) -> float | None:
+    """Return cosine similarity, or None for incompatible zero vectors."""
+    if not first or len(first) != len(second):
+        return None
+    first_norm = math.sqrt(sum(value * value for value in first))
+    second_norm = math.sqrt(sum(value * value for value in second))
+    if first_norm == 0 or second_norm == 0:
+        return None
+    return sum(a * b for a, b in zip(first, second, strict=True)) / (
+        first_norm * second_norm
+    )
+
+
+def _literal_message_text(message: dict[str, Any]) -> str:
+    """Return lossless searchable text for one archived message."""
+    return json.dumps(message, ensure_ascii=False, default=str)
+
+
+class EmbeddingMemoryStore:
+    """Store persistent conversation and temporary intra-turn memories."""
+
+    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+        """Initialize the store for an AI endpoint."""
+        self._hass = hass
+        self._entry_id = entry_id
+        self._directory = self.storage_directory(hass, entry_id)
+        self._lock = asyncio.Lock()
+        self._temporary_records: dict[
+            EmbeddingMemoryScope, dict[str, EmbeddingMemoryRecord]
+        ] = {}
+
+    @staticmethod
+    def storage_directory(hass: HomeAssistant, entry_id: str) -> Path:
+        """Return the exact storage directory for an endpoint."""
+        safe_entry_id = sha256(entry_id.encode()).hexdigest()
+        return Path(
+            hass.config.path(".storage", f"{DOMAIN}_embedding_memory", safe_entry_id)
+        )
+
+    @classmethod
+    async def async_clear_endpoint(cls, hass: HomeAssistant, entry_id: str) -> None:
+        """Remove every embedding memory file for one endpoint."""
+        directory = cls.storage_directory(hass, entry_id)
+        await hass.async_add_executor_job(cls._clear_directory, directory)
+
+    @staticmethod
+    def _clear_directory(directory: Path) -> None:
+        """Remove one resolved endpoint storage directory."""
+        if directory.exists():
+            shutil.rmtree(directory)
+
+    def _path(self, scope: EmbeddingMemoryScope) -> Path:
+        """Return the hashed file path for a conversation scope."""
+        scope_key = f"{scope.agent_id}\0{scope.conversation_id}"
+        return self._directory / f"{sha256(scope_key.encode()).hexdigest()}.json"
+
+    async def async_append(
+        self,
+        scope: EmbeddingMemoryScope,
+        records: list[EmbeddingMemoryRecord],
+    ) -> None:
+        """Append records atomically, removing expired and duplicate records."""
+        if not records:
+            return
+        async with self._lock:
+            await self._hass.async_add_executor_job(
+                self._append, scope, records, datetime.now(UTC)
+            )
+
+    async def async_append_temporary(
+        self,
+        scope: EmbeddingMemoryScope,
+        records: list[EmbeddingMemoryRecord],
+    ) -> None:
+        """Retain intra-turn records in memory without writing them to disk."""
+        if not records:
+            return
+        if any(
+            record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN for record in records
+        ):
+            raise ValueError("Only intra-turn memories may be stored temporarily")
+        async with self._lock:
+            now = datetime.now(UTC)
+            records_by_id = {
+                record.record_id: record
+                for record in self._active_temporary_records(scope, now)
+            }
+            records_by_id.update(
+                (record.record_id, record)
+                for record in records
+                if not record.is_expired(now)
+            )
+            if records_by_id:
+                self._temporary_records[scope] = records_by_id
+            else:
+                self._temporary_records.pop(scope, None)
+
+    async def async_clear_temporary(self, agent_id: str | None = None) -> None:
+        """Remove temporary records for one agent or the entire endpoint."""
+        async with self._lock:
+            if agent_id is None:
+                self._temporary_records.clear()
+                return
+            for scope in tuple(self._temporary_records):
+                if scope.agent_id == agent_id:
+                    del self._temporary_records[scope]
+
+    async def async_clear_persistent(self, agent_id: str | None = None) -> None:
+        """Remove persistent records for one agent or the entire endpoint."""
+        async with self._lock:
+            if agent_id is None:
+                await self._hass.async_add_executor_job(
+                    self._clear_directory, self._directory
+                )
+                return
+            await self._hass.async_add_executor_job(
+                self._clear_agent, self._directory, agent_id
+            )
+
+    async def async_counts(self, agent_id: str | None = None) -> EmbeddingMemoryCounts:
+        """Count active persistent and temporary memories in one scope."""
+        async with self._lock:
+            now = datetime.now(UTC)
+            temporary = sum(
+                len(self._active_temporary_records(scope, now))
+                for scope in tuple(self._temporary_records)
+                if agent_id is None or scope.agent_id == agent_id
+            )
+            persistent = await self._hass.async_add_executor_job(
+                self._count_persistent, self._directory, agent_id, now
+            )
+        return EmbeddingMemoryCounts(persistent, temporary)
+
+    @classmethod
+    def _clear_agent(cls, directory: Path, agent_id: str) -> None:
+        """Remove persistent memory files belonging to one agent."""
+        if not directory.exists():
+            return
+        for path in directory.glob("*.json"):
+            payload = cls._read_payload(path)
+            if payload is None:
+                continue
+            scope = payload.get("scope")
+            if isinstance(scope, dict) and scope.get("agent_id") == agent_id:
+                path.unlink(missing_ok=True)
+        with suppress(OSError):
+            directory.rmdir()
+
+    @classmethod
+    def _count_persistent(
+        cls,
+        directory: Path,
+        agent_id: str | None,
+        now: datetime,
+    ) -> int:
+        """Count active persistent records for an endpoint or one agent."""
+        if not directory.exists():
+            return 0
+        count = 0
+        for path in directory.glob("*.json"):
+            payload = cls._read_payload(path)
+            if payload is None:
+                continue
+            scope = payload.get("scope")
+            if agent_id is not None and (
+                not isinstance(scope, dict) or scope.get("agent_id") != agent_id
+            ):
+                continue
+            records = [
+                record
+                for record in cls._records_from_payload(payload)
+                if not record.is_expired(now)
+                and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+            ]
+            count += len(records)
+        return count
+
+    async def async_search(
+        self,
+        scope: EmbeddingMemoryScope,
+        query_embedding: list[float],
+        limit: int,
+        model: str | None = None,
+        excluded_turn_id: str | None = None,
+    ) -> list[EmbeddingMemoryMatch]:
+        """Return the nearest unexpired memories within one conversation."""
+        if limit <= 0 or not query_embedding:
+            return []
+        async with self._lock:
+            now = datetime.now(UTC)
+            temporary_records = self._active_temporary_records(scope, now)
+            return await self._hass.async_add_executor_job(
+                self._search,
+                scope,
+                query_embedding,
+                limit,
+                model,
+                excluded_turn_id,
+                now,
+                temporary_records,
+            )
+
+    async def async_search_literal(
+        self,
+        scope: EmbeddingMemoryScope,
+        query: str,
+        *,
+        case_sensitive: bool = False,
+        excluded_turn_id: str | None = None,
+    ) -> list[EmbeddingMemoryMatch]:
+        """Return archived messages containing an exact text fragment."""
+        if not query:
+            return []
+        async with self._lock:
+            now = datetime.now(UTC)
+            temporary_records = self._active_temporary_records(scope, now)
+            return await self._hass.async_add_executor_job(
+                self._search_literal,
+                scope,
+                query,
+                case_sensitive,
+                excluded_turn_id,
+                now,
+                temporary_records,
+            )
+
+    async def async_has_memories(
+        self, scope: EmbeddingMemoryScope, model: str | None = None
+    ) -> bool:
+        """Return whether a conversation has any unexpired archived turns."""
+        async with self._lock:
+            now = datetime.now(UTC)
+            if any(
+                model is None or record.model == model
+                for record in self._active_temporary_records(scope, now)
+            ):
+                return True
+            return await self._hass.async_add_executor_job(
+                self._has_memories, scope, model, now
+            )
+
+    def _has_memories(
+        self, scope: EmbeddingMemoryScope, model: str | None, now: datetime
+    ) -> bool:
+        """Synchronously check for unexpired records."""
+        return any(
+            model is None or record.model == model
+            for record in self._active_records(self._path(scope), now)
+        )
+
+    def _search(
+        self,
+        scope: EmbeddingMemoryScope,
+        query_embedding: list[float],
+        limit: int,
+        model: str | None,
+        excluded_turn_id: str | None,
+        now: datetime,
+        temporary_records: list[EmbeddingMemoryRecord],
+    ) -> list[EmbeddingMemoryMatch]:
+        """Synchronously score memories and remove expired records."""
+        records = [
+            *self._active_records(self._path(scope), now),
+            *temporary_records,
+        ]
+
+        matches: list[EmbeddingMemoryMatch] = []
+        for record in records:
+            if model is not None and record.model != model:
+                continue
+            if (
+                excluded_turn_id is not None
+                and record.source == EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+                and record.turn_id == excluded_turn_id
+            ):
+                continue
+            scored_chunks = [
+                (score, chunk.searchable_text)
+                for chunk in record.chunks
+                if (score := _cosine_similarity(query_embedding, chunk.embedding))
+                is not None
+            ]
+            if scored_chunks:
+                score, matched_text = max(scored_chunks, key=lambda item: item[0])
+                matches.append(EmbeddingMemoryMatch(record, score, matched_text))
+        matches.sort(key=lambda match: match.score, reverse=True)
+        return matches[:limit]
+
+    def _search_literal(
+        self,
+        scope: EmbeddingMemoryScope,
+        query: str,
+        case_sensitive: bool,
+        excluded_turn_id: str | None,
+        now: datetime,
+        temporary_records: list[EmbeddingMemoryRecord],
+    ) -> list[EmbeddingMemoryMatch]:
+        """Synchronously find literal matches in original archived messages."""
+        records = [
+            *self._active_records(self._path(scope), now),
+            *temporary_records,
+        ]
+        needle = query if case_sensitive else query.casefold()
+        matches: list[EmbeddingMemoryMatch] = []
+        for record in records:
+            if (
+                excluded_turn_id is not None
+                and record.source == EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+                and record.turn_id == excluded_turn_id
+            ):
+                continue
+            for index, message in enumerate(record.messages):
+                searchable = _literal_message_text(message)
+                haystack = searchable if case_sensitive else searchable.casefold()
+                if needle not in haystack:
+                    continue
+                matching_record = replace(
+                    record,
+                    record_id=f"{record.record_id}:{index}",
+                    embedding=[],
+                    searchable_text=searchable,
+                    messages=[message],
+                    additional_chunks=(),
+                )
+                matches.append(EmbeddingMemoryMatch(matching_record, 1.0, searchable))
+        return matches
+
+    def _active_records(self, path: Path, now: datetime) -> list[EmbeddingMemoryRecord]:
+        """Read active records and persist expiry cleanup for one scope."""
+        payload = self._read_payload(path)
+        if payload is None:
+            return []
+        raw_records = payload.get("records", [])
+        records = [
+            record
+            for record in self._records_from_payload(payload)
+            if not record.is_expired(now)
+            and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+        ]
+        if not records:
+            path.unlink(missing_ok=True)
+            return []
+        if not isinstance(raw_records, list) or len(records) != len(raw_records):
+            payload["records"] = [asdict(record) for record in records]
+            self._atomic_write(path, payload)
+        return records
+
+    def _append(
+        self,
+        scope: EmbeddingMemoryScope,
+        records: list[EmbeddingMemoryRecord],
+        now: datetime,
+    ) -> None:
+        """Synchronously append records to their scoped file."""
+        path = self._path(scope)
+        existing = self._read_records(path)
+        records_by_id = {
+            record.record_id: record
+            for record in existing
+            if not record.is_expired(now)
+            and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+        }
+        records_by_id.update(
+            (record.record_id, record)
+            for record in records
+            if not record.is_expired(now)
+            and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+        )
+        if not records_by_id:
+            path.unlink(missing_ok=True)
+            return
+        payload = {
+            "version": _STORAGE_VERSION,
+            "scope": asdict(scope),
+            "records": [asdict(record) for record in records_by_id.values()],
+        }
+        self._atomic_write(path, payload)
+
+    async def async_cleanup_expired(self) -> None:
+        """Delete expired records and empty memory files."""
+        async with self._lock:
+            now = datetime.now(UTC)
+            for scope in tuple(self._temporary_records):
+                self._active_temporary_records(scope, now)
+            await self._hass.async_add_executor_job(self._cleanup_expired, now)
+
+    def _active_temporary_records(
+        self, scope: EmbeddingMemoryScope, now: datetime
+    ) -> list[EmbeddingMemoryRecord]:
+        """Return active in-memory records and discard expired entries."""
+        records_by_id = self._temporary_records.get(scope)
+        if records_by_id is None:
+            return []
+        active = {
+            record_id: record
+            for record_id, record in records_by_id.items()
+            if not record.is_expired(now)
+        }
+        if active:
+            self._temporary_records[scope] = active
+        else:
+            del self._temporary_records[scope]
+        return list(active.values())
+
+    def _cleanup_expired(self, now: datetime) -> None:
+        """Synchronously remove expired records from every scoped file."""
+        if not self._directory.exists():
+            return
+        for path in self._directory.glob("*.json"):
+            payload = self._read_payload(path)
+            if payload is None:
+                continue
+            records = [
+                record
+                for record in self._records_from_payload(payload)
+                if not record.is_expired(now)
+                and record.source != EMBEDDING_MEMORY_SOURCE_INTRA_TURN
+            ]
+            if not records:
+                path.unlink(missing_ok=True)
+                continue
+            payload["records"] = [asdict(record) for record in records]
+            self._atomic_write(path, payload)
+
+    def _read_records(self, path: Path) -> list[EmbeddingMemoryRecord]:
+        """Read valid records from a scoped file."""
+        payload = self._read_payload(path)
+        return [] if payload is None else self._records_from_payload(payload)
+
+    @staticmethod
+    def _read_payload(path: Path) -> dict[str, Any] | None:
+        """Read a supported memory payload."""
+        if not path.exists():
+            return None
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except OSError, json.JSONDecodeError:
+            _LOGGER.warning("Unable to read embedding memory file %s", path)
+            return None
+        if not isinstance(value, dict) or value.get("version") != _STORAGE_VERSION:
+            return None
+        return value
+
+    @staticmethod
+    def _records_from_payload(
+        payload: dict[str, Any],
+    ) -> list[EmbeddingMemoryRecord]:
+        """Deserialize records from a supported payload."""
+        raw_records = payload.get("records", [])
+        if not isinstance(raw_records, list):
+            return []
+        records: list[EmbeddingMemoryRecord] = []
+        for record in raw_records:
+            if not isinstance(record, dict):
+                continue
+            try:
+                record_data = dict(record)
+                raw_chunks = record_data.pop("additional_chunks", [])
+                if not isinstance(raw_chunks, list | tuple):
+                    raise TypeError
+                additional_chunks = tuple(
+                    EmbeddingMemoryChunk(**chunk)
+                    for chunk in raw_chunks
+                    if isinstance(chunk, dict)
+                )
+                if len(additional_chunks) != len(raw_chunks):
+                    raise TypeError
+                records.append(
+                    EmbeddingMemoryRecord(
+                        **record_data,
+                        additional_chunks=additional_chunks,
+                    )
+                )
+            except TypeError, ValueError:
+                _LOGGER.warning("Ignoring an invalid embedding memory record")
+        return records
+
+    @staticmethod
+    def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
+        """Write JSON through a sibling temporary file and atomic replace."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_text(
+                json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    default=str,
+                ),
+                encoding="utf-8",
+            )
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)

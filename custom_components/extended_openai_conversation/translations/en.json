@@ -2,11 +2,112 @@
     "config": {
         "error": {
             "cannot_connect": "Failed to connect",
+            "duplicate_server_id": "Another MCP service already uses this server ID.",
+            "invalid_headers": "HTTP header names and values must be valid strings.",
+            "invalid_oauth_setting": "Choose whether this server uses OAuth.",
+            "invalid_oauth_action": "Select whether to proceed with OAuth or return to the main menu.",
+            "invalid_oauth_timeout": "Enter an OAuth callback timeout of zero or more seconds.",
+            "access_denied": "Access was denied by the server.",
+            "authentication_failed": "Authentication failed. The server rejected the supplied credentials.",
+            "invalid_mcp_response": "The server returned an invalid MCP response.",
+            "mcp_server_error": "The MCP server reported an internal server error.",
+            "mcp_server_not_found": "The MCP server was not found at the configured URL.",
+            "oauth_discovery_failed": "Failed to discover OAuth settings from the configured server URL.",
+            "oauth_authorization_timeout": "OAuth authorization did not return before the configured timeout.",
+            "unknown_mcp_error": "An unexpected error occurred while communicating with the MCP server.",
+            "invalid_client_id": "Enter the OAuth client ID.",
+            "oauth_credentials_unavailable": "Home Assistant saved the credentials but could not retrieve them for this authorization server.",
+            "oauth_credentials_save_failed": "Home Assistant could not save the OAuth application credentials.",
+            "oauth_registration_failed": "Automatic OAuth client registration failed. Enter pre-registered application credentials instead.",
             "invalid_auth": "Invalid authentication",
+            "invalid_name": "Enter a name for the MCP service.",
+            "invalid_server_id": "Use lowercase letters, numbers, underscores, or hyphens; the ID must start with a letter or number.",
+            "invalid_permanent_tools": "Select only tools advertised by this MCP server.",
+            "permanent_disabled_tool_conflict": "A tool cannot be both permanently provided and disabled from on-demand discovery.",
+            "invalid_regex_timeout": "Enter a regular-expression timeout greater than zero.",
+            "invalid_filter_mode": "Select a valid include/exclude behavior.",
+            "invalid_tool_name_pattern": "Enter a valid regular expression.",
+            "mcp_discovery_required": "Discover the MCP server before selecting permanent tools.",
+            "invalid_url": "Enter a valid HTTP or HTTPS URL.",
+            "invalid_embeddings": "The embeddings endpoint did not return a valid embedding.",
+            "invalid_reranker": "The reranker endpoint did not return valid results.",
+            "invalid_embedding_history_retention": "Enter a positive whole number followed by m, h, or d. A value without a suffix uses days.",
+      "invalid_context_keyword_recall_max_tokens": "Enter a positive whole-number token limit.",
+            "invalid_context_recall_snapshot_ttl_time": "Enter a positive whole number followed by m, h, or d. Zero is not allowed. A value without a suffix uses days.",
+            "invalid_context_recall_max_results": "Enter a positive whole number.",
+            "invalid_embedding_chunk_size": "Enter an embedding chunk size of at least 1 estimated token.",
+            "invalid_context_recall_close_match_tolerance": "Enter a decimal number greater than 0 or leave the field empty.",
+            "invalid_context_recall_rerank_min_score": "Enter a decimal number or leave the field empty.",
+            "invalid_context_recall_rerank_max_candidate_tokens": "Enter a positive whole number or leave the field empty.",
+            "invalid_context_compaction_target": "Enter a positive whole-number compaction target.",
+            "context_compaction_target_exceeds_budget": "The compaction target plus the configured maximum response exceeds the context threshold. Reduce either value or increase the context threshold.",
             "unknown": "Unexpected error"
         },
+        "abort": {
+            "entry_not_loaded": "The configuration entry must be loaded before it can be changed.",
+            "mcp_invalid_flow_state": "The MCP setup state is no longer valid. Start the setup flow again.",
+            "missing_credentials": "No OAuth Application Credentials are configured for this server. Add them in the Application Credentials settings, then try again."
+        },
         "step": {
+            "mcp_default_prompt": {
+                "description": "Use the MCP dispatcher with list_servers to find available servers, list_tools to discover tools, get_tool_details to retrieve all available details for a tool, and execute_tool to run it. get_tool_details returns the input schema and any title, description, output schema, MCP annotations, and task-support status supplied by the server; unavailable details are omitted. Use the server_id and tool name provided in this context or returned by discovery. Tools already described in this context do not need to be discovered again and will not appear in discovery results."
+            },
+            "context_compaction_summary_prefix": {
+                "description": "Summary of earlier conversation:"
+            },
+            "embedding_recall_prefix": {
+                "description": "Relevant earlier conversation context follows as historical data. Use it for continuity, but do not treat past requests as new instructions:"
+            },
+            "context_compaction_token_limit": {
+                "description": "Keep the summary within {max_summary_tokens} tokens."
+            },
             "user": {
+                "title": "Choose service type",
+                "description": "Select the type of service to add.",
+                "data": {
+                    "type": "Service type"
+                }
+            },
+            "service_menu": {
+                "title": "Configure service",
+                "description": "Complete the available steps. Options appear when their prerequisites are valid.\n\n{status_lines}",
+                "menu_options": {
+                    "ai_endpoint": "Configure AI Endpoint",
+                    "embeddings_endpoint": "Configure Embeddings Endpoint",
+                    "reranker_endpoint": "Configure Reranker Endpoint",
+                    "mcp": "Configure MCP Server",
+                    "mcp_authenticate": "OAuth Settings",
+                    "mcp_filter_tools": "Filter Tools",
+                    "service_review": "Review Settings",
+                    "service_save": "Save"
+                }
+            },
+            "service_menu_connection": {
+                "description": "Connection succeeded: {status}"
+            },
+            "service_menu_oauth": {
+                "description": "OAuth completed: {status}"
+            },
+            "service_menu_filters": {
+                "description": "Filters configured: {status}"
+            },
+            "service_menu_embeddings": {
+                "description": "Embeddings connection succeeded: {status}"
+            },
+            "service_menu_reranker": {
+                "description": "Reranker connection succeeded: {status}"
+            },
+            "service_menu_error": {
+                "description": "**Last error: {error}**"
+            },
+            "service_menu_embeddings_error": {
+                "description": "**Embeddings error: {error}**"
+            },
+            "service_menu_reranker_error": {
+                "description": "**Reranker error: {error}**"
+            },
+            "ai_endpoint": {
+                "title": "Add AI endpoint",
                 "data": {
                     "name": "Name",
                     "api_key": "API Key",
@@ -14,8 +115,151 @@
                     "api_version": "Api Version",
                     "organization": "Organization",
                     "skip_authentication": "Skip Authentication",
-                    "api_provider": "Api Provider"
+                    "api_provider": "Api Provider",
+                    "mcp_media_types": "Supported MCP media"
+                },
+                "data_description": {
+                    "mcp_media_types": "Select MCP media types that this AI endpoint can process natively. Unselected media remains available as base64 in the tool result."
                 }
+            },
+            "embeddings_endpoint": {
+                "title": "Configure embeddings endpoint",
+                "description": "Configure an optional OpenAI-compatible embeddings endpoint. A real embedding request is made to validate the credentials, URL, and model.\n\nStored archived memories: {stored_memory_count}\nTemporary intra-turn memories: {temporary_memory_count}",
+                "data": {
+                    "api_key": "API Key",
+                    "base_url": "Base Url",
+                    "embedding_model": "Embedding model",
+                    "clear_embedding_history": "Clear all stored archived memories when saving",
+                    "clear_intra_turn_embeddings": "Clear all temporary intra-turn memories when saving"
+                },
+                "data_description": {
+                    "clear_embedding_history": "This action is never saved as a setting. When selected, all persistent semantic and literal-recall archives for this endpoint are removed when the service configuration is saved.",
+                    "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary in-memory intra-turn archives for this endpoint are removed when the service configuration is saved."
+                }
+            },
+            "reranker_endpoint": {
+                "title": "Configure reranker endpoint",
+                "description": "Configure an optional reranker endpoint. Enter the complete request URL; no path is appended. A real reranking request validates the credentials, URL, and model.",
+                "data": {
+                    "api_key": "API Key",
+                    "reranker_url": "Reranker endpoint URL",
+                    "reranker_model": "Reranker model"
+                }
+            },
+            "mcp": {
+                "title": "Add MCP service",
+                "description": "Configure a shared MCP server connection. Conversation agents can reference this server by its ID.",
+                "data": {
+                    "name": "Name",
+                    "server_id": "Server ID",
+                    "description": "Description",
+                    "url": "Server URL",
+                    "headers": "HTTP headers",
+                    "use_oauth": "Server uses OAuth",
+                    "perform_tool_discovery": "Perform initial tool discovery",
+                    "on_demand_discovery": "Enable on-demand discovery"
+                },
+                "data_description": {
+                    "server_id": "A short, unique ID used by conversation-agent function configuration.",
+                    "description": "Optional model-visible description of the server's purpose.",
+                    "headers": "Enter a YAML or JSON object of header names and string values. Example: Authorization: \"Bearer token\". Do not include an outer headers key. Quote numeric, boolean, or null-like values so they remain strings.",
+                    "use_oauth": "Use Home Assistant's OAuth and Application Credentials support instead of static authentication headers.",
+                    "perform_tool_discovery": "Connect and cache the server's current tool catalogue when this page is submitted. Disable this to perform only a connection check.\nDisabling this will prevent configuring permanent tools and disabling tools will be limited to Regular Expressions only",
+                    "on_demand_discovery": "Allow the model to discover non-permanent tools during conversations."
+                }
+            },
+            "mcp_authenticate": {
+                "title": "OAuth settings",
+                "description": "Authenticate with the MCP server using OAuth.",
+                "data": {
+                    "oauth_action": "Action",
+                    "oauth_timeout": "OAuth callback timeout"
+                },
+                "data_description": {
+                    "oauth_timeout": "Seconds to wait for the browser authorization callback. Set to 0 to disable the timeout."
+                },
+                "submit": "Continue"
+            },
+            "mcp_credentials": {
+                "title": "MCP OAuth application credentials",
+                "description": "The authorization server does not have reusable credentials and could not register Home Assistant automatically. Enter a client registered with this redirect URI:\n\n`{redirect_uri}`",
+                "data": {
+                    "client_id": "Client ID",
+                    "client_secret": "Client secret",
+                    "name": "Credential name"
+                },
+                "data_description": {
+                    "client_secret": "Leave empty for a public PKCE client. The credentials are stored and managed by Home Assistant."
+                },
+                "submit": "Save and authorize"
+            },
+            "mcp_filter_tools": {
+                "title": "Filter MCP tools",
+                "description": "Apply filters on what tools to expose.\n{tool_count} Tools have been discovered\nPermanent tools are supplied to the AI agent on every request. Disabled tools are made unavailable to the AI agent when it performs tool discovery",
+                "data": {
+                    "permanent_tool_mode": "Permanent tool selection behavior",
+                    "permanent_tools": "Permanent tool selection",
+                    "include_permanent_schemas": "Include permanent tool schemas",
+                    "disabled_tool_mode": "Disabled tool selection behavior",
+                    "disabled_tools": "Disabled tool selection",
+                    "tool_name_pattern": "Tool-name regular expression",
+                    "regex_timeout": "Regular-expression timeout"
+                },
+                "data_description": {
+                    "permanent_tool_mode": "Selected includes only the tools selected below. Unselected includes every discovered tool except those selected below.",
+                    "permanent_tools": "Tools used by the permanent selection behavior.",
+                    "include_permanent_schemas": "Include input schemas in the permanent context supplied on every request.",
+                    "disabled_tool_mode": "Selected disables the tools selected below. Unselected disables every discovered tool except those selected below.",
+                    "disabled_tools": "Tools selected for the disabled-tool filter. In selected mode, selected tools are disabled. In unselected mode, every tool except the selected tools is disabled.",
+                    "tool_name_pattern": "Full match regular expression to filter tools during on-demand discovery. Any tools that match this regex will be unavailable and hidden from the AI agent during on demand discovery. Leave empty for no regular-expression restriction.",
+                    "regex_timeout": "Maximum seconds allowed for each hard-filter regular-expression match before it returns no results."
+                }
+            },
+            "mcp_review": {
+                "title": "Review MCP context",
+                "description": "Connection succeeded: {connection_status}\n\nInitial discovery succeeded: {discovery_status}\n\nDiscovered tools: {discovered_tool_count}\n\nPermanent selection uses selected tools: {permanent_tools_selected}\n\nResolved permanent tools: {selected_tool_count}\n\nSchemas included: {schemas_included}\n\nOn-demand discovery: {on_demand_discovery}\n\nDisabled selection disables selected tools: {disabled_tools_selected}\n\nSelected disabled tools: {disabled_tool_count}\n\nTool-name regular expression: {tool_name_pattern}\n\nRegular-expression timeout: {regex_timeout} seconds\n\nPermanent context size: {character_count} characters ({byte_count} bytes)\n\nEstimated context cost per request: approximately {estimated_tokens} tokens",
+                "submit": "Return to workflow"
+            }
+        }
+    },
+    "selector": {
+        "service_type": {
+            "options": {
+                "ai_endpoint": "AI endpoint",
+                "mcp": "MCP server"
+            }
+        },
+        "mcp_tool_filter_mode": {
+            "options": {
+                "selected": "Selected",
+                "unselected": "Unselected"
+            }
+        },
+        "mcp_oauth_action": {
+            "options": {
+                "proceed": "Proceed with OAuth",
+                "return": "Return to Configure Service"
+            }
+        },
+        "mcp_context_placement": {
+            "options": {
+                "dedicated_system": "Dedicated system prompt",
+                "combined_system": "Merged system prompt",
+                "user": "User input",
+                "disabled": "Disabled"
+            }
+        },
+        "mcp_media_type": {
+            "options": {
+                "image": "Images",
+                "audio": "Audio"
+            }
+        },
+        "context_truncate_strategy": {
+            "options": {
+        "compact": "Rolling summary",
+        "embeddings": "Semantic embedding recall",
+        "keyword": "Literal text recall"
             }
         }
     },
@@ -34,26 +278,68 @@
                         "prompt": "Prompt Template",
                         "max_function_calls_per_conversation": "Maximum function calls per conversation",
                         "skills": "Skills",
+                        "mcp_servers": "MCP servers",
+                        "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tools",
+                        "mcp_auto_add_default_prompt": "Automatically add default MCP prompt",
                         "functions": "Functions",
                         "attach_username": "Attach Username to Message",
                         "context_threshold": "Context Threshold",
-                        "context_truncate_strategy": "Context truncation strategy when exceeded threshold",
+            "context_truncate_strategy": "Additional context preservation methods",
                         "advanced_options": "Advanced Options"
                     },
-                    "data_description": {}
+                    "data_description": {
+                        "prompt": "Use the `permanent_mcp_tools` Jinja variable to insert the assigned permanent MCP tool catalogues and `default_mcp_prompt` to insert the localized MCP usage instructions.",
+                        "mcp_auto_add_permanent_tools": "Automatically add permanent MCP tool catalogues as separate system messages. Enabling this while inserting `permanent_mcp_tools` will duplicate the catalogue.",
+                        "mcp_auto_add_default_prompt": "Automatically add the MCP usage instructions as a separate system message. Enabling this while inserting `default_mcp_prompt` will duplicate the instructions."
+                    }
                 },
                 "advanced": {
                     "title": "Advanced Options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Compacted prompt target",
+                        "context_compaction_intra_turn": "Enable intra-turn context compaction",
+                        "clear_embedding_history": "Clear this agent's stored archived memories when saving",
+                        "clear_intra_turn_embeddings": "Clear temporary intra-turn context when saving",
+                        "context_compaction_recent_turns": "Recent turns to preserve",
+                        "context_compaction_prompt": "Compaction prompt",
+            "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
+            "embedding_history_retention": "Archived conversation retention",
+            "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
+                        "context_recall_max_results": "Maximum context recall results",
+                        "context_recall_close_match_tolerance": "Recall close-match tolerance",
+                        "context_recall_rerank": "Enable recall reranking",
+                        "context_recall_rerank_min_score": "Minimum reranker relevance score",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum reranker candidate size (estimated tokens)",
+                        "context_recall_snapshot_ttl_turns": "Recall snapshot lifetime (turns)",
+                        "context_recall_snapshot_ttl_time": "Recall snapshot lifetime (time)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
+                        "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
+                        "clear_embedding_history": "This action is never saved as a setting. When selected, this agent's persistent semantic and literal-recall archives are removed when the agent configuration is saved.",
+                        "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn archived context for this agent is removed when the agent configuration is saved.",
+                        "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction. Tool calls and results remain together.",
+                        "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
+            "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input for this agent. Choose a value below the embedding model's context limit because token counts vary by model.",
+            "embedding_history_retention": "Retention shared by semantic embedding and literal text recall archives. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
+                        "context_recall_max_results": "Maximum number of memories the model may request from context_recall. The model may request fewer. Defaults to 20.",
+                        "context_recall_close_match_tolerance": "Report excluded memories whose score is within this amount of the lowest selected result. Leave empty to disable. Enter a number greater than 0 to enable. Score ranges depend on the active embedding or reranker model.",
+                        "context_recall_rerank": "Rerank embedding-selected recall candidates before returning or automatically injecting them.",
+                        "context_recall_rerank_min_score": "Discard reranked results below this score. Leave empty to accept all results. Score ranges depend on the configured reranker model.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum estimated tokens from each matched embedding chunk sent to the reranker. Leave empty to send the complete matched chunk.",
+                        "context_recall_snapshot_ttl_turns": "Number of subsequent user turns for which a truncated recall snapshot remains available. Leave blank to disable turn-based expiry. Successfully browsing the snapshot resets its lifetime.",
+                        "context_recall_snapshot_ttl_time": "Maximum time a recall snapshot remains available. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Successfully browsing the snapshot resets this lifetime."
                     }
                 }
             }
@@ -70,21 +356,65 @@
                         "name": "[%key:common::config_flow::data::name%]",
                         "chat_model": "Model",
                         "max_tokens": "Maximum tokens to return in response",
+                        "mcp_servers": "MCP servers",
+                        "mcp_permanent_tools_placement": "Permanent MCP tools placement",
+                        "mcp_default_prompt_placement": "Default MCP prompt placement",
+                        "context_threshold": "Context Threshold",
+            "context_truncate_strategy": "Additional context preservation methods",
                         "advanced_options": "Advanced options"
+                    },
+                    "data_description": {
+                        "mcp_permanent_tools_placement": "Choose where permanent MCP tool catalogues are automatically inserted, or disable their automatic insertion.",
+                        "mcp_default_prompt_placement": "Choose where the default MCP usage instructions are automatically inserted, or disable their automatic insertion."
                     }
                 },
                 "advanced": {
                     "title": "Advanced options",
+                    "description": "Stored archived memories for this agent: {stored_memory_count}\nTemporary intra-turn memories for this agent: {temporary_memory_count}",
                     "data": {
                         "temperature": "Temperature",
                         "top_p": "Top P",
                         "reasoning_effort": "Reasoning effort",
                         "extra_body": "Extra body (JSON for OpenAI-compatible backends)",
                         "service_tier": "Service tier",
-                        "shorten_tool_call_id": "Shorten tool call IDs"
+                        "shorten_tool_call_id": "Shorten tool call IDs",
+                        "context_compaction_target": "Compacted prompt target",
+                        "context_compaction_intra_turn": "Enable intra-turn context compaction",
+                        "clear_embedding_history": "Clear this agent's stored archived memories when saving",
+                        "clear_intra_turn_embeddings": "Clear temporary intra-turn context when saving",
+                        "context_compaction_recent_turns": "Recent turns to preserve",
+                        "context_compaction_prompt": "Compaction prompt",
+            "embedding_chunk_size": "Maximum embedding chunk size (estimated tokens)",
+            "embedding_history_retention": "Archived conversation retention",
+            "context_keyword_recall_max_tokens": "Literal recall page size (estimated tokens)",
+                        "context_recall_max_tokens": "Maximum active recalled context (estimated tokens)",
+                        "context_recall_max_results": "Maximum context recall results",
+                        "context_recall_close_match_tolerance": "Recall close-match tolerance",
+                        "context_recall_rerank": "Enable recall reranking",
+                        "context_recall_rerank_min_score": "Minimum reranker relevance score",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum reranker candidate size (estimated tokens)",
+                        "context_recall_snapshot_ttl_turns": "Recall snapshot lifetime (turns)",
+                        "context_recall_snapshot_ttl_time": "Recall snapshot lifetime (time)"
                     },
                     "data_description": {
-                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers."
+                        "shorten_tool_call_id": "Required for Mistral AI cloud API compatibility. Enable only if your provider requires short (9-character) tool call IDs. Keep disabled for OpenAI and most other providers.",
+                        "context_compaction_target": "Maximum active prompt size in tokens after compaction. The summary and retained context must fit within this target.",
+                        "context_compaction_intra_turn": "Allow the selected context strategy to reduce completed tool-call exchanges during an active turn when the request would otherwise exceed the context threshold.",
+                        "clear_embedding_history": "This action is never saved as a setting. When selected, this agent's persistent semantic and literal-recall archives are removed when the agent configuration is saved.",
+                        "clear_intra_turn_embeddings": "This action is never saved as a setting. When selected, all temporary intra-turn archived context for this agent is removed when the agent configuration is saved.",
+                        "context_compaction_recent_turns": "Number of complete recent conversation turns to keep verbatim after compaction. Tool calls and results remain together.",
+                        "context_compaction_prompt": "Instructions used to summarize older conversation history. The transcript and token limit are supplied separately.",
+            "embedding_chunk_size": "Maximum estimated tokens sent in one embedding input for this agent. Choose a value below the embedding model's context limit because token counts vary by model.",
+            "embedding_history_retention": "Retention shared by semantic embedding and literal text recall archives. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Examples: 10m, 5h, 50d, or 30.",
+            "context_keyword_recall_max_tokens": "Maximum estimated tokens returned on each literal-search page. Oversized matching messages are split into ordered verbatim fragments.",
+                        "context_recall_max_tokens": "Maximum total estimated tokens of embedding-derived context retained in any model request, including automatic recall, context_recall results, and browsed snapshot pages.",
+                        "context_recall_max_results": "Maximum number of memories the model may request from context_recall. The model may request fewer. Defaults to 20.",
+                        "context_recall_close_match_tolerance": "Report excluded memories whose score is within this amount of the lowest selected result. Leave empty to disable. Enter a number greater than 0 to enable. Score ranges depend on the active embedding or reranker model.",
+                        "context_recall_rerank": "Rerank embedding-selected recall candidates before returning or automatically injecting them.",
+                        "context_recall_rerank_min_score": "Discard reranked results below this score. Leave empty to accept all results. Score ranges depend on the configured reranker model.",
+                        "context_recall_rerank_max_candidate_tokens": "Maximum estimated tokens from each matched embedding chunk sent to the reranker. Leave empty to send the complete matched chunk.",
+                        "context_recall_snapshot_ttl_turns": "Number of subsequent user turns for which a truncated recall snapshot remains available. Leave blank to disable turn-based expiry. Successfully browsing the snapshot resets its lifetime.",
+                        "context_recall_snapshot_ttl_time": "Maximum time a recall snapshot remains available. Enter a positive whole number followed by m for minutes, h for hours, or d for days. With no suffix, days are used. Successfully browsing the snapshot resets this lifetime."
                     }
                 }
             }
