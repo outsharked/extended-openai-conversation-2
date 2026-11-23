@@ -237,6 +237,8 @@ The integration will perform compaction based on the specified compaction strate
 - While the messages are stored in the local Home Assistant instance, a configurable expirey time is provided at which point the old messages and embeddings data is completely deleted permanently. They can also be deleted manually by enabling the clear toggles in the advanced tabs
 - When enabling multiple forms of compaction, the system will perform a fallback, starting with embeddings, then falling back to rolling summary before falling back to deletion if the others fail.
 - It is recommended to use at least `literal text` especially for long conversations as this allows the agents to recall older messages verbatim, that may have been dropped from the current context
+- Intra turn compaction allows the integration to compact results returned from an agents tool operations during a single turn, which can occur during deeper/more complex operations
+-`browse_recalled_context`, `context_recall` and `context_search` are reserved function names for this integration and relate to compaction. They cannot be used for custom functions. The availability/visibility of these tools to the agent depends on which compaction strategy is enabled for that agent
 
 ### Functions
 

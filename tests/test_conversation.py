@@ -4,6 +4,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from custom_components.extended_openai_conversation.const import (
+    CONF_FUNCTION_TOOLS,
+    INTERNAL_FUNCTION_NAMES,
+)
 from custom_components.extended_openai_conversation.conversation import (
     ExtendedOpenAIAgentEntity,
     async_setup_entry,
@@ -230,61 +234,12 @@ def test_get_function_tools_unknown_function_type_raises():
         entity._get_function_tools()
 
 
-def test_get_function_tools_rejects_reserved_mcp_name():
-    """A custom function cannot replace the generated MCP dispatcher."""
-    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
-
-    custom_yaml = """
-- spec:
-    name: mcp
-    description: A conflicting custom function
-    parameters:
-      type: object
-      properties: {}
-  function:
-    type: template
-    value_template: "conflict"
-"""
-    subentry = _mock_subentry("conversation", "sub_1")
-    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
-    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
-
-    with pytest.raises(InvalidFunction, match="mcp"):
-        entity._get_function_tools()
-
-
-def test_get_function_tools_rejects_custom_mcp_type_alias():
-    """A renamed custom function cannot alias the internal MCP dispatcher."""
-    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
-
-    custom_yaml = """
-- spec:
-    name: custom_dispatcher
-    description: A renamed MCP dispatcher
-    parameters:
-      type: object
-      properties: {}
-  function:
-    type: mcp
-    server_ids:
-      - unassigned-server
-"""
-    subentry = _mock_subentry("conversation", "sub_1")
-    subentry.data = {CONF_FUNCTION_TOOLS: custom_yaml}
-    entity = ExtendedOpenAIAgentEntity(MagicMock(), subentry)
-
-    with pytest.raises(InvalidFunction, match="mcp"):
-        entity._get_function_tools()
-
-
 @pytest.mark.parametrize(
     "reserved_name",
-    ("context_recall", "context_search", "browse_recalled_context"),
+    sorted(INTERNAL_FUNCTION_NAMES),
 )
-def test_get_function_tools_rejects_reserved_context_tool_name(reserved_name):
-    """A custom function cannot replace an integration-managed context tool."""
-    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
-
+def test_get_function_tools_rejects_reserved_internal_name(reserved_name):
+    """A custom function cannot replace an integration-managed function."""
     custom_yaml = f"""
 - spec:
     name: {reserved_name}
@@ -306,16 +261,14 @@ def test_get_function_tools_rejects_reserved_context_tool_name(reserved_name):
 
 @pytest.mark.parametrize(
     "reserved_type",
-    ("context_recall", "context_search", "browse_recalled_context"),
+    sorted(INTERNAL_FUNCTION_NAMES),
 )
-def test_get_function_tools_rejects_reserved_context_tool_type_alias(reserved_type):
-    """Renaming an internal context function type cannot bypass its reservation."""
-    from custom_components.extended_openai_conversation.const import CONF_FUNCTION_TOOLS
-
+def test_get_function_tools_rejects_reserved_internal_type_alias(reserved_type):
+    """Renaming an internal function type cannot bypass its reservation."""
     custom_yaml = f"""
 - spec:
-    name: custom_context_tool
-    description: A renamed internal context function
+    name: custom_internal_tool
+    description: A renamed internal function
     parameters:
       type: object
       properties: {{}}
@@ -328,6 +281,13 @@ def test_get_function_tools_rejects_reserved_context_tool_type_alias(reserved_ty
 
     with pytest.raises(InvalidFunction, match=reserved_type):
         entity._get_function_tools()
+
+
+def test_reserved_internal_function_names_are_registered():
+    """Every reserved internal function name resolves through the registry."""
+    from custom_components.extended_openai_conversation.functions import FUNCTIONS
+
+    assert FUNCTIONS.keys() >= INTERNAL_FUNCTION_NAMES
 
 
 def test_build_system_prompt_renders_template_with_context(hass):
